@@ -1,6 +1,6 @@
 <template>
   <header class="myHeader">
-    <span>首页</span>
+    <NuxtLink to="/">首页</NuxtLink>
   </header>
 </template>
 
