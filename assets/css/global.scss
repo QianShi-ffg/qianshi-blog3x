@@ -223,20 +223,35 @@ pre {
 
 code {
   color: #c7254e;
-  background-color: #f9f2f4;
+  // background-color: #f9f2f4;
   border-radius: 4px;
-  font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
-  padding: 2px 4px;
-  font-size: 90%;
+  font-family: Menlo, Monaco, Consolas, "Courier New", monospace, system-ui;
+  font-weight: 700;
+  // padding: 2px 4px;
+  font-size: 80%;
+  &::before {
+    position: absolute;
+    top: 8px;
+    right: 50px;
+    display: inline-block;
+    min-width: 20px;
+    content: attr(language);
+  }
+  span.copyBtn {
+    position: absolute;
+    top: 8px;
+    right: 16px;
+    cursor: pointer;
+    transition: all 0.3s;
+    &:hover {
+      color: #ee7e9a;
+    }
+  }
 }
 
-p>code {
-  color: #c7264e;
-  background-color: #f9f2f4;
-  font-size: .95em;
-  border-radius: 3px;
-  -moz-border-radius: 3px;
-  -webkit-border-radius: 3px;
+pre {
+  position: relative;
+  padding-top: 30px;
 }
 
 figure {
