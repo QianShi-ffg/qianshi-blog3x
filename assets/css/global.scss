@@ -276,6 +276,14 @@ pre {
       color: #ee7e9a;
     }
   }
+  textarea {
+    position: absolute;
+    top: 9px;
+    right: 20px;
+    width: 10px;
+    height: 10px;
+    // display: none;
+  }
 }
 
 

@@ -33,21 +33,19 @@ const md: any = new MarkdownIt({
   // 高亮函数，会返回转义的HTML。
   // 如果结果以 <pre ... 开头，内部包装器则会跳过。
   highlight: function (str, lang) {
-    console.log(str.split('\n'), lang, hljs.getLanguage(lang));
     let currentLang: string = "";
     if (lang === "vue" || lang === "react") {
       currentLang = "js";
     } else {
       currentLang = lang;
     }
-    const linesLength = str.split(/\n/).length - 1
+    const linesLength = str.split(/\n/).length - 1;
     // 生成行号
-    let linesNum = '<span class="line-numbers-rows">'
+    let linesNum = '<span class="line-numbers-rows">';
     for (let index = 0; index < linesLength; index++) {
-      linesNum = linesNum + `<span>${index + 1}</span>`
+      linesNum = linesNum + `<span>${index + 1}</span>`;
     }
-    linesNum += '</span>'
-    console.log(linesNum)
+    linesNum += "</span>";
     if (lang && hljs.getLanguage(currentLang)) {
       try {
         return (
@@ -67,7 +65,7 @@ const html = computed(() => {
   return md.render(data.value.articleContent);
 });
 
-const init = async() => {
+const init = async () => {
   const {
     data: posts,
     pending,
@@ -78,41 +76,62 @@ const init = async() => {
   });
   await refresh();
   data.value = posts.value.data;
-}
+};
 
 onMounted(() => {
-  init()
+  init();
   nextTick(() => {
-    const copyBtn: any = document.getElementsByClassName("copyBtn");
-    console.log(copyBtn);
     window.addEventListener("click", copyText);
   });
 });
 
 onUnmounted(() => {
-  window.removeEventListener("click", copyText)
-})
+  window.removeEventListener("click", copyText);
+});
 
 const copyText = (e: any) => {
   if (e.target.className === "copyBtn") {
-    navigator.clipboard
-      .writeText(e.target.nextElementSibling.innerText)
-      .then(() => {
-        console.log(6333)
-        if (e.target.innerText !== "已复制") {
-          const originalText = e.target.innerText;
-          e.target.innerText = "已复制";
-          setTimeout(() => {
-            e.target.innerText = originalText;
-          }, 1500);
-        }
-      })
-      .catch((err) => {
-        console.log("Something went wrong", err);
-      });
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard
+        .writeText(e.target.nextElementSibling.innerText)
+        .then(() => {
+          if (e.target.innerText !== "已复制") {
+            const originalText = e.target.innerText;
+            e.target.innerText = "已复制";
+            setTimeout(() => {
+              e.target.innerText = originalText;
+            }, 1500);
+          }
+        })
+        .catch((err) => {
+          console.log("Something went wrong", err);
+        });
+    } else {
+      // 创建text area
+      const textArea = document.createElement("textarea");
+      textArea.value = `${e.target.nextElementSibling.innerText}`;
+      // 使text area不在viewport，同时设置不可见
+      e.target.parentNode.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      return new Promise((resolve, reject) => {
+        // 执行复制命令并移除文本框
+        document.execCommand("copy") ? resolve('') : reject(new Error("出错了"));
+        textArea.remove();
+      }).then(
+        () => {
+          if (e.target.innerText !== "已复制") {
+            const originalText = e.target.innerText;
+            e.target.innerText = "已复制";
+            setTimeout(() => {
+              e.target.innerText = originalText;
+            }, 1500);
+          }
+        },
+      );
+    }
   }
-}
-
+};
 
 // console.log(html)
 </script>
