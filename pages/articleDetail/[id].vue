@@ -16,12 +16,14 @@ import hljs from "highlight.js";
 // import 'highlight.js/styles/paraiso-dark.css'
 // import 'highlight.js/styles/paraiso-light.css'
 // import 'highlight.js/styles/qtcreator-light.css'
-// import 'highlight.js/styles/tokyo-night-dark.css'
+import "highlight.js/styles/tokyo-night-dark.css";
+// import 'highlight.js/styles/tokyo-night-light.css'
 
 const route = useRoute();
 const data = ref<any>({
   articleContent: ""
 });
+
 const md: any = new MarkdownIt({
   html: false, // 在源码中启用 HTML 标签
   xhtmlOut: false, // 使用 '/' 来闭合单标签 （比如 <br />）。
@@ -31,46 +33,86 @@ const md: any = new MarkdownIt({
   // 高亮函数，会返回转义的HTML。
   // 如果结果以 <pre ... 开头，内部包装器则会跳过。
   highlight: function (str, lang) {
-    console.log(str, lang, hljs.getLanguage(lang))
-    let currentLang: string = ''
-    if (lang === 'vue' || lang === 'react') {
-      currentLang = 'js'
+    console.log(str.split('\n'), lang, hljs.getLanguage(lang));
+    let currentLang: string = "";
+    if (lang === "vue" || lang === "react") {
+      currentLang = "js";
     } else {
-      currentLang = lang
+      currentLang = lang;
     }
+    const linesLength = str.split(/\n/).length - 1
+    // 生成行号
+    let linesNum = '<span class="line-numbers-rows">'
+    for (let index = 0; index < linesLength; index++) {
+      linesNum = linesNum + `<span>${index + 1}</span>`
+    }
+    linesNum += '</span>'
+    console.log(linesNum)
     if (lang && hljs.getLanguage(currentLang)) {
       try {
-        return `<pre class="hljs"><code language-${currentLang} language="${lang}"><span class="copyBtn">copy</span>` +
-            hljs.highlight(currentLang, str, true).value +
-            '</code></pre>';
+        return (
+          `<pre class="hljs">${linesNum}<span class="copyBtn">复制代码</span><code language-${currentLang} language="${lang}">` +
+          hljs.highlight(currentLang, str, true).value +
+          "</code></pre>"
+        );
       } catch (__) {}
     }
-    return '<pre class="hljs"><code>' + md.utils.escapeHtml(str) + '</code></pre>';
+    return (
+      '<pre class="hljs"><code>' + md.utils.escapeHtml(str) + "</code></pre>"
+    );
   }
 });
-
-const {
-    data: posts,
-    pending,
-    error
-  } = await useFetch(() => `/article/${route.params.id}`, {
-    baseURL: "https://oss.xingyijun.cn"
-  });
-
-onMounted(() => {
-  data.value = posts.value.data;
-  // const copyBtn: any = document.getElementsByClassName('copyBtn')[0]
-  // if (copyBtn) {
-  //   copyBtn.onclick = (e: any) => {
-  //     console.log(e, 89999999999)
-  //   };
-  // }
-});
-
 
 const html = computed(() => {
   return md.render(data.value.articleContent);
 });
+
+const init = async() => {
+  const {
+    data: posts,
+    pending,
+    error,
+    refresh
+  } = await useFetch(() => `/article/${route.params.id}`, {
+    baseURL: "https://oss.xingyijun.cn"
+  });
+  await refresh();
+  data.value = posts.value.data;
+}
+
+onMounted(() => {
+  init()
+  nextTick(() => {
+    const copyBtn: any = document.getElementsByClassName("copyBtn");
+    console.log(copyBtn);
+    window.addEventListener("click", copyText);
+  });
+});
+
+onUnmounted(() => {
+  window.removeEventListener("click", copyText)
+})
+
+const copyText = (e: any) => {
+  if (e.target.className === "copyBtn") {
+    navigator.clipboard
+      .writeText(e.target.nextElementSibling.innerText)
+      .then(() => {
+        console.log(6333)
+        if (e.target.innerText !== "已复制") {
+          const originalText = e.target.innerText;
+          e.target.innerText = "已复制";
+          setTimeout(() => {
+            e.target.innerText = originalText;
+          }, 1500);
+        }
+      })
+      .catch((err) => {
+        console.log("Something went wrong", err);
+      });
+  }
+}
+
 
 // console.log(html)
 </script>

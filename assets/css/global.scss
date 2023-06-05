@@ -232,27 +232,52 @@ code {
   &::before {
     position: absolute;
     top: 8px;
-    right: 50px;
+    right: 80px;
     display: inline-block;
     min-width: 20px;
     content: attr(language);
   }
+}
+
+pre {
+  display: flex;
+  position: relative;
+  padding-top: 30px;
+  padding-left: 10px;
+  transition: all 0.5s;
+  box-sizing: border-box;
+  border: 2px solid transparent;
   span.copyBtn {
     position: absolute;
-    top: 8px;
+    top: 9px;
     right: 16px;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all 0.5s;
+    color: #c7254e;
+    font-weight: 700;
     &:hover {
+      color: #ee7e9a;
+    }
+  }
+  .line-numbers-rows {
+    border-right: 2px solid;
+    padding-right: 6px;
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    transition: all 0.5s;
+    margin-right: 8px;
+    height: fit-content;
+    font-size: 80%;
+  }
+  &:hover {
+    border: 2px solid #ee7e9a;
+    .line-numbers-rows {
       color: #ee7e9a;
     }
   }
 }
 
-pre {
-  position: relative;
-  padding-top: 30px;
-}
 
 figure {
   margin: 1em 0;
