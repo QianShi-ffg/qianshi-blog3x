@@ -13,6 +13,9 @@
     "nuxt": "^3.5.1"
   },
   "dependencies": {
+    "@types/markdown-it": "^12.2.3",
+    "highlight.js": "^11.8.0",
+    "markdown-it": "^13.0.1",
     "sass": "^1.62.1",
     "scss": "^0.2.4"
   }
