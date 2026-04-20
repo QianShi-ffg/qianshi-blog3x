@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { Menu, X } from 'lucide-vue-next'
 import { RouterLink, useRoute } from 'vue-router'
+import ThemeToggle from './ThemeToggle.vue'
 
 const isScrolled = ref(false)
 const menuOpen = ref(false)
@@ -36,37 +37,41 @@ onUnmounted(() => {
       <div class="navbar-inner" :class="{ 'navbar-inner-scrolled': isScrolled }">
         <!-- Logo -->
         <RouterLink to="/" class="navbar-brand group">
-          <div class="navbar-logo-icon">
-            R
-          </div>
+          <div class="navbar-logo-icon">R</div>
           <span class="navbar-logo-text">QianShiBlog</span>
         </RouterLink>
 
         <!-- Desktop Nav -->
-        <nav class="navbar-desktop-nav">
-          <RouterLink
-            v-for="link in navLinks"
-            :key="link.path"
-            :to="link.path"
-            class="navbar-link"
-            :class="{ 'navbar-link-active': route.path === link.path }"
-          >
-            {{ link.name }}
-            <span
-              class="navbar-link-indicator"
-              :class="{ 'indicator-active': route.path === link.path }"
-            ></span>
-          </RouterLink>
-        </nav>
+        <div class="navbar-desktop-actions">
+          <nav class="navbar-desktop-nav">
+            <RouterLink
+              v-for="link in navLinks"
+              :key="link.path"
+              :to="link.path"
+              class="navbar-link"
+              :class="{ 'navbar-link-active': route.path === link.path }"
+            >
+              {{ link.name }}
+              <span
+                class="navbar-link-indicator"
+                :class="{ 'indicator-active': route.path === link.path }"
+              ></span>
+            </RouterLink>
+          </nav>
 
-        <!-- Mobile Menu Toggle -->
-        <button
-          @click="menuOpen = !menuOpen"
-          class="navbar-mobile-toggle"
-        >
-          <Menu v-if="!menuOpen" class="navbar-mobile-icon" />
-          <X v-else class="navbar-mobile-icon" />
-        </button>
+          <div class="navbar-theme-desktop">
+            <ThemeToggle />
+          </div>
+        </div>
+
+        <!-- Mobile Menu Toggle & Theme -->
+        <div class="navbar-mobile-actions">
+          <ThemeToggle />
+          <button @click="menuOpen = !menuOpen" class="navbar-mobile-toggle">
+            <Menu v-if="!menuOpen" class="navbar-mobile-icon" />
+            <X v-else class="navbar-mobile-icon" />
+          </button>
+        </div>
       </div>
     </div>
 
@@ -146,10 +151,10 @@ onUnmounted(() => {
 }
 
 .navbar-inner-scrolled {
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--color-card);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid var(--color-border);
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
 }
 
@@ -181,7 +186,7 @@ onUnmounted(() => {
 
 .navbar-logo-text {
   font-weight: 700; /* font-bold */
-  color: #1e293b; /* text-slate-800 */
+  color: var(--color-heading);
   letter-spacing: -0.025em; /* tracking-tight */
   font-size: 1.125rem; /* text-lg */
   transition-property: color;
@@ -192,15 +197,44 @@ onUnmounted(() => {
   color: #f43f5e; /* group-hover:text-rose-500 */
 }
 
-.navbar-desktop-nav {
+.navbar-desktop-actions {
   display: none; /* hidden */
   align-items: center;
   gap: 2rem; /* gap-8 */
 }
 
 @media (min-width: 768px) {
-  .navbar-desktop-nav {
+  .navbar-desktop-actions {
     display: flex; /* md:flex */
+  }
+}
+
+.navbar-desktop-nav {
+  display: flex;
+  align-items: center;
+  gap: 2rem; /* gap-8 */
+}
+
+.navbar-theme-desktop {
+  display: flex;
+  align-items: center;
+  padding-left: 1.5rem;
+  border-left: 1px solid #e2e8f0; /* slate-200 */
+}
+
+:global(html.dark) .navbar-theme-desktop {
+  border-left-color: #334155; /* slate-700 */
+}
+
+.navbar-mobile-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+@media (min-width: 768px) {
+  .navbar-mobile-actions {
+    display: none; /* md:hidden */
   }
 }
 
@@ -213,11 +247,11 @@ onUnmounted(() => {
   padding-top: 0.5rem; /* py-2 */
   padding-bottom: 0.5rem;
   text-decoration: none;
-  color: #64748b; /* text-slate-500 */
+  color: var(--color-text);
 }
 
 .navbar-link:hover {
-  color: #0f172a; /* hover:text-slate-900 */
+  color: var(--color-heading);
 }
 
 .navbar-link-active {
@@ -244,20 +278,23 @@ onUnmounted(() => {
 }
 
 .navbar-mobile-toggle {
-  display: block;
-  padding: 0.5rem; /* p-2 */
-  color: #475569; /* text-slate-600 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem; /* w-10 */
+  height: 2.5rem; /* h-10 */
   border-radius: 9999px; /* rounded-full */
-  transition-property: color, background-color;
-  transition-duration: 150ms;
-  background: transparent;
+  background-color: transparent;
   border: none;
   cursor: pointer;
+  color: var(--color-text);
+  transition-property: all;
+  transition-duration: 200ms;
 }
 
 .navbar-mobile-toggle:hover {
-  color: #f43f5e; /* hover:text-rose-500 */
-  background-color: #fff1f2; /* hover:bg-rose-50 */
+  background-color: var(--color-border);
+  color: var(--color-heading);
 }
 
 @media (min-width: 768px) {
@@ -279,12 +316,14 @@ onUnmounted(() => {
   margin-top: 0.5rem; /* mt-2 */
   border-radius: 1rem; /* rounded-2xl */
   overflow: hidden;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
   padding: 1rem; /* p-4 */
-  background: rgba(255, 255, 255, 0.85); /* glass-card */
+  background: var(--color-card);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid var(--color-border);
 }
 
 @media (min-width: 768px) {
@@ -300,26 +339,28 @@ onUnmounted(() => {
 }
 
 .navbar-mobile-link {
+  display: block;
   padding-left: 1rem; /* px-4 */
   padding-right: 1rem;
   padding-top: 0.75rem; /* py-3 */
   padding-bottom: 0.75rem;
   border-radius: 0.75rem; /* rounded-xl */
-  font-size: 0.875rem; /* text-sm */
+  font-size: 1rem; /* text-base */
   font-weight: 500; /* font-medium */
   transition-property: color, background-color;
   transition-duration: 150ms;
   text-decoration: none;
-  color: #475569; /* text-slate-600 */
+  color: var(--color-text);
 }
 
 .navbar-mobile-link:hover {
-  background-color: #f8fafc; /* hover:bg-slate-50 */
+  background-color: var(--color-border);
+  color: var(--color-heading);
 }
 
 .navbar-mobile-link-active {
-  background-color: #fff1f2; /* bg-rose-50 */
-  color: #e11d48; /* text-rose-600 */
+  color: #f43f5e; /* text-rose-500 */
+  background-color: var(--color-border);
 }
 
 /* Mobile Menu Transitions */
