@@ -95,7 +95,7 @@ const projects = [
         </div>
 
         <!-- Project Info -->
-        <div>
+        <router-link :to="`/portfolio/${project.id}`" class="block cursor-pointer">
           <div class="portfolio-category-wrapper">
             <span class="portfolio-category-badge">
               {{ project.category }}
@@ -120,7 +120,7 @@ const projects = [
               {{ tag }}
             </span>
           </div>
-        </div>
+        </router-link>
       </div>
     </div>
   </div>

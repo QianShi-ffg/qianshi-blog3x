@@ -106,7 +106,13 @@ const links = [
         :visible-once="{ opacity: 1, y: 0, transition: { duration: 500, delay: index * 100 } }"
         class="lk-card group"
       >
-        <div class="lk-card-inner">
+        <!-- 网站缩略图 (Hover显示) -->
+        <div class="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none rounded-3xl overflow-hidden">
+          <img :src="`https://image.thum.io/get/width/1200/crop/800/${link.url}`" :alt="link.name + ' preview'" class="w-full h-full object-cover object-top scale-100 group-hover:scale-110 transition-transform duration-[4s] ease-out opacity-90 blur-[2px] group-hover:blur-0" loading="lazy" />
+          <div class="absolute inset-0 bg-gradient-to-t from-white via-white/85 to-white/20"></div>
+        </div>
+
+        <div class="lk-card-inner relative z-10">
           <div class="lk-card-content">
             <div class="lk-icon-wrap">
               <component :is="link.icon" class="lk-icon" :class="link.color" />
@@ -195,7 +201,11 @@ const links = [
 }
 
 .lk-card {
-  @apply bg-white/70 backdrop-blur-lg border border-slate-100 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 p-6 hover:-translate-y-1 hover:shadow-xl hover:shadow-rose-500/10 h-full flex flex-col justify-center;
+  @apply bg-white/80 backdrop-blur-lg border border-white/60 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-500 p-6 hover:-translate-y-1 hover:shadow-2xl hover:shadow-rose-500/10 h-full flex flex-col justify-center relative overflow-hidden;
+}
+
+.lk-card:hover {
+  @apply border-rose-100 bg-white/40;
 }
 
 .lk-card-inner {

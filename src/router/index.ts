@@ -24,9 +24,19 @@ const router = createRouter({
       component: () => import('../views/Diary.vue')
     },
     {
+      path: '/diary/:id',
+      name: 'diary-detail',
+      component: () => import('../views/DiaryDetail.vue')
+    },
+    {
       path: '/portfolio',
       name: 'portfolio',
       component: () => import('../views/Portfolio.vue')
+    },
+    {
+      path: '/portfolio/:id',
+      name: 'portfolio-detail',
+      component: () => import('../views/PortfolioDetail.vue')
     },
     {
       path: '/resume',

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Mail, MapPin, Briefcase, GraduationCap, Code2, Download } from 'lucide-vue-next'
+import { Mail, MapPin, Briefcase, GraduationCap, FolderGit2, Download } from 'lucide-vue-next'
 </script>
 
 <template>
@@ -62,7 +62,9 @@ import { Mail, MapPin, Briefcase, GraduationCap, Code2, Download } from 'lucide-
             </div>
             <div class="resume-contact-item">
               <Mail class="resume-contact-icon" />
-              <a href="mailto:hello@example.com" class="resume-contact-link">hello@QianShiBlog.dev</a>
+              <a href="mailto:hello@example.com" class="resume-contact-link"
+                >hello@QianShiBlog.dev</a
+              >
             </div>
           </div>
         </div>
@@ -75,47 +77,31 @@ import { Mail, MapPin, Briefcase, GraduationCap, Code2, Download } from 'lucide-
           class="resume-skills-card"
         >
           <div class="resume-section-header">
-            <Code2 class="resume-section-icon" />
+            <!-- <span class="text-rose-500 font-mono font-bold">{"</>"}</span> -->
             <h3 class="resume-section-title">核心技能</h3>
           </div>
 
           <div class="resume-skills-list">
-            <div>
-              <div class="resume-skill-header">
-                <span class="resume-skill-name">Vue.js / React</span>
-                <span class="resume-skill-percent">90%</span>
-              </div>
-              <div class="resume-skill-bar-bg">
-                <div class="resume-skill-bar-fill resume-skill-90"></div>
-              </div>
+            <div class="resume-skill-item">
+              <span class="resume-skill-name">Vue.js / React</span>
+              <span class="resume-skill-tag cl-tag-rose">精通</span>
             </div>
-            <div>
-              <div class="resume-skill-header">
-                <span class="resume-skill-name">TypeScript</span>
-                <span class="resume-skill-percent">85%</span>
-              </div>
-              <div class="resume-skill-bar-bg">
-                <div class="resume-skill-bar-fill resume-skill-85"></div>
-              </div>
+            <div class="resume-skill-item">
+              <span class="resume-skill-name">TypeScript</span>
+              <span class="resume-skill-tag cl-tag-amber">掌握</span>
             </div>
-            <div>
-              <div class="resume-skill-header">
-                <span class="resume-skill-name">CSS / Tailwind</span>
-                <span class="resume-skill-percent">95%</span>
-              </div>
-              <div class="resume-skill-bar-bg">
-                <div class="resume-skill-bar-fill resume-skill-95"></div>
-              </div>
+            <div class="resume-skill-item">
+              <span class="resume-skill-name">CSS / Tailwind</span>
+              <span class="resume-skill-tag cl-tag-rose">精通</span>
             </div>
-            <div>
-              <div class="resume-skill-header">
-                <span class="resume-skill-name">Node.js</span>
-                <span class="resume-skill-percent">75%</span>
-              </div>
-              <div class="resume-skill-bar-bg">
-                <div class="resume-skill-bar-fill resume-skill-75"></div>
-              </div>
+            <div class="resume-skill-item">
+              <span class="resume-skill-name">Node.js</span>
+              <span class="resume-skill-tag cl-tag-sky">熟悉</span>
             </div>
+          </div>
+
+          <div class="mt-6 text-xs text-slate-400 text-center border-t border-slate-100 pt-4">
+            等级说明：了解 &lt; 熟悉 &lt; 掌握 &lt; 精通
           </div>
         </div>
       </div>
@@ -187,7 +173,69 @@ import { Mail, MapPin, Briefcase, GraduationCap, Code2, Download } from 'lucide-
                 <span class="resume-timeline-date">2014 - 2018</span>
               </div>
               <p class="resume-timeline-company">某知名科技大学</p>
-              <p class="resume-timeline-desc-inline">主修软件工程、数据结构、算法设计。在校期间曾获得全国大学生编程竞赛二等奖。</p>
+              <p class="resume-timeline-desc-inline">
+                主修软件工程、数据结构、算法设计。在校期间曾获得全国大学生编程竞赛二等奖。
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Projects -->
+        <div
+          v-motion
+          :initial="{ opacity: 0, x: 30 }"
+          :enter="{ opacity: 1, x: 0, transition: { duration: 800, delay: 300 } }"
+          class="resume-education-card mt-8"
+        >
+          <div class="resume-section-header-large">
+            <FolderGit2 class="resume-section-icon-large" />
+            <h3 class="resume-section-title-large">项目经历</h3>
+          </div>
+
+          <div class="resume-timeline">
+            <!-- Project 1 -->
+            <div class="resume-timeline-item mb-8">
+              <div class="resume-timeline-dot"></div>
+              <div class="resume-timeline-header">
+                <h4 class="resume-timeline-title">企业级后台管理平台</h4>
+                <span class="resume-timeline-date">2023.06 - 2024.03 | 前端开发</span>
+              </div>
+              <p class="resume-timeline-company">Vue3 + Vite + TypeScript + Tailwind + Pinia</p>
+              <ul class="resume-timeline-desc mt-2">
+                <li>• 搭建前端脚手架与组件库，形成 20+ 复用组件</li>
+                <li>• 实现动态菜单与基于 RBAC 的路由权限</li>
+                <li>• 引入 ECharts 与虚拟滚动，页面渲染性能提升约 35%</li>
+              </ul>
+            </div>
+
+            <!-- Project 2 -->
+            <div class="resume-timeline-item mb-8">
+              <div class="resume-timeline-dot"></div>
+              <div class="resume-timeline-header">
+                <h4 class="resume-timeline-title">营销落地页与表单系统</h4>
+                <span class="resume-timeline-date">2022.10 - 2023.05 | 前端负责人</span>
+              </div>
+              <p class="resume-timeline-company">React + Next.js + Tailwind + Node.js</p>
+              <ul class="resume-timeline-desc mt-2">
+                <li>• 搭建可视化表单生成器，支持 15+ 常用字段组件</li>
+                <li>• SSR 与图片懒加载，TTFB 降低 40%，转化率提升约 18%</li>
+                <li>• Node 服务编排与缓存，接口 P95 响应从 420ms 降至 210ms</li>
+              </ul>
+            </div>
+
+            <!-- Project 3 -->
+            <div class="resume-timeline-item">
+              <div class="resume-timeline-dot"></div>
+              <div class="resume-timeline-header">
+                <h4 class="resume-timeline-title">组件库与工程化优化</h4>
+                <span class="resume-timeline-date">2021.08 - 2022.08 | 工程实践</span>
+              </div>
+              <p class="resume-timeline-company">Rollup + Storybook + Vitest</p>
+              <ul class="resume-timeline-desc mt-2">
+                <li>• 沉淀 UI 组件库并接入 Storybook，覆盖 90% UI 需求</li>
+                <li>• 引入单元测试与 CI，关键模块用例覆盖率 85%+</li>
+                <li>• 包体积按需构建与 Tree-shaking，体积下降 45%</li>
+              </ul>
             </div>
           </div>
         </div>
@@ -335,33 +383,32 @@ import { Mail, MapPin, Briefcase, GraduationCap, Code2, Download } from 'lucide-
 }
 
 .resume-skills-list {
-  @apply space-y-6;
+  @apply space-y-4;
 }
 
-.resume-skill-header {
-  @apply flex justify-between text-sm mb-2;
+.resume-skill-item {
+  @apply flex justify-between items-center px-4 py-3 rounded-xl bg-slate-50/50 border border-slate-100 hover:bg-white hover:shadow-md transition-all duration-300;
 }
 
 .resume-skill-name {
   @apply font-medium text-slate-700;
 }
 
-.resume-skill-percent {
-  @apply text-rose-500;
+.resume-skill-tag {
+  @apply rounded-full px-3 py-0.5 text-xs font-semibold tracking-wide border;
 }
 
-.resume-skill-bar-bg {
-  @apply h-2 bg-slate-100 rounded-full overflow-hidden;
+.cl-tag-rose {
+  @apply bg-rose-50 text-rose-600 border-rose-100 shadow-[0_0_8px_rgba(244,63,94,0.1)];
 }
 
-.resume-skill-bar-fill {
-  @apply h-full bg-rose-500 rounded-full;
+.cl-tag-amber {
+  @apply bg-amber-50 text-amber-600 border-amber-100 shadow-[0_0_8px_rgba(245,158,11,0.1)];
 }
 
-.resume-skill-90 { width: 90%; }
-.resume-skill-85 { width: 85%; }
-.resume-skill-95 { width: 95%; }
-.resume-skill-75 { width: 75%; }
+.cl-tag-sky {
+  @apply bg-sky-50 text-sky-600 border-sky-100 shadow-[0_0_8px_rgba(14,165,233,0.1)];
+}
 
 .resume-experience-card {
   @apply p-8 bg-white/70 backdrop-blur-lg border border-slate-100 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300;

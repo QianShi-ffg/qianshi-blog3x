@@ -102,57 +102,59 @@ const getTypeIcon = (type: string) => {
         :visible-once="{ opacity: 1, y: 0, transition: { duration: 600, delay: index * 100 } }"
         class="diary-masonry-item"
       >
-        <div class="diary-card group">
+        <router-link :to="`/diary/${moment.id}`" class="block cursor-pointer">
+          <div class="diary-card group">
 
-          <!-- Type Badge -->
-          <div class="diary-type-badge">
-             <component :is="getTypeIcon(moment.type)" class="diary-icon-sm" />
-          </div>
+              <!-- Type Badge -->
+            <div class="diary-type-badge">
+               <component :is="getTypeIcon(moment.type)" class="diary-icon-sm" />
+            </div>
 
-          <!-- Media Section -->
-          <div v-if="moment.type === 'image' && moment.media" class="diary-media-wrap">
-            <img
-              :src="moment.media"
-              alt="Moment"
-              class="diary-media-img"
-            />
-            <div class="diary-media-overlay"></div>
-          </div>
+            <!-- Media Section -->
+            <div v-if="moment.type === 'image' && moment.media" class="diary-media-wrap">
+              <img
+                :src="moment.media"
+                alt="Moment"
+                class="diary-media-img"
+              />
+              <div class="diary-media-overlay"></div>
+            </div>
 
-          <div v-else-if="moment.type === 'video' && moment.media" class="diary-video-wrap group">
-            <video
-              :src="moment.media"
-              :poster="moment.poster"
-              controls
-              preload="metadata"
-              class="diary-video-element"
-            ></video>
-          </div>
+            <div v-else-if="moment.type === 'video' && moment.media" class="diary-video-wrap group">
+              <video
+                :src="moment.media"
+                :poster="moment.poster"
+                controls
+                preload="metadata"
+                class="diary-video-element"
+              ></video>
+            </div>
 
-          <!-- Text Content -->
-          <div class="diary-content-wrap" :class="{ 'diary-content-bg-text': moment.type === 'text' }">
-            <p class="diary-text-content" :class="{ 'diary-text-lg': moment.type === 'text', 'diary-text-md': moment.type !== 'text' }">
-              {{ moment.content }}
-            </p>
+            <!-- Text Content -->
+            <div class="diary-content-wrap" :class="{ 'diary-content-bg-text': moment.type === 'text' }">
+              <p class="diary-text-content" :class="{ 'diary-text-lg': moment.type === 'text', 'diary-text-md': moment.type !== 'text' }">
+                {{ moment.content }}
+              </p>
 
-            <!-- Meta -->
-            <div class="diary-meta-footer">
-              <div class="diary-meta-left">
-                <span class="diary-meta-date">
-                  <Calendar class="diary-icon-xs" />
-                  {{ moment.date }}
-                </span>
-                <span class="diary-meta-weather">
-                  {{ moment.weather }}
+              <!-- Meta -->
+              <div class="diary-meta-footer">
+                <div class="diary-meta-left">
+                  <span class="diary-meta-date">
+                    <Calendar class="diary-icon-xs" />
+                    {{ moment.date }}
+                  </span>
+                  <span class="diary-meta-weather">
+                    {{ moment.weather }}
+                  </span>
+                </div>
+                <span class="diary-meta-location">
+                  <MapPin class="diary-icon-xxs" />
+                  {{ moment.location }}
                 </span>
               </div>
-              <span class="diary-meta-location">
-                <MapPin class="diary-icon-xxs" />
-                {{ moment.location }}
-              </span>
             </div>
           </div>
-        </div>
+        </router-link>
       </div>
     </div>
   </div>
