@@ -66,14 +66,11 @@ import { RouterLink } from 'vue-router'
           class="hero-visual"
         >
           <div class="hero-image-wrapper">
-            <div class="hero-image-container">
-              <img
-                src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20minimalist%20and%20fresh%20workspace%2C%20bright%20lighting%2C%20a%20plant%2C%20soft%20colors&image_size=square"
-                alt="Workspace"
-                class="hero-image"
-              />
-              <div class="hero-image-overlay"></div>
-            </div>
+            <img
+              src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20minimalist%20and%20fresh%20workspace%2C%20bright%20lighting%2C%20a%20plant%2C%20soft%20colors&image_size=square"
+              alt="Workspace"
+              class="hero-image"
+            />
             <!-- Floating badge 1 -->
             <div class="floating-badge badge-1">
               <div class="badge-icon-wrap icon-rose">
@@ -338,27 +335,6 @@ import { RouterLink } from 'vue-router'
 }
 .hero-image-wrapper:hover {
   transform: rotate(0deg);
-}
-
-.hero-image-container {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-
-.hero-image-overlay {
-  display: none;
-}
-:global(html.dark) .hero-image-overlay {
-  display: block;
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.2); /* Dark overlay for image in night mode */
-  border-radius: 1rem;
-  pointer-events: none;
 }
 
 .hero-image {
