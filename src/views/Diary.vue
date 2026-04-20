@@ -162,7 +162,7 @@ const getTypeIcon = (type: string) => {
 
 <style scoped>
 .diary-page-container {
-  @apply min-h-[80vh] py-12 lg:py-20 pt-24 px-6 sm:px-12 md:px-20 lg:px-32 xl:px-48 mx-auto max-w-screen-2xl;
+  @apply min-h-[80vh] py-12 lg:py-20 lg:pt-32 pt-24 px-6 sm:px-12 md:px-20 lg:px-32 xl:px-48 mx-auto max-w-screen-2xl;
 }
 
 .diary-header-wrapper {

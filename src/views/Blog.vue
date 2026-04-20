@@ -14,7 +14,7 @@ const articles = [
     date: '2024-03-15',
     readTime: '8 min',
     category: '前端',
-    desc: '在现代前端开发中，保持代码的简洁与可维护性至关重要。本文将分享在实际项目中总结的一些经验和技巧，帮助你写出更优雅的 Vue 3 代码。'
+    desc: '在现代前端开发中，保持代码的简洁与可维护性至关重要。本文将分享在实际项目中总结的一些经验和技巧，帮助你写出更优雅的 Vue 3 代码。',
   },
   {
     id: 2,
@@ -22,7 +22,7 @@ const articles = [
     date: '2024-02-28',
     readTime: '12 min',
     category: '前端',
-    desc: '从零开始，使用 Vue 3、Vite 和 Tailwind CSS 搭建一个高性能、响应式且具有极佳交互体验的个人博客。'
+    desc: '从零开始，使用 Vue 3、Vite 和 Tailwind CSS 搭建一个高性能、响应式且具有极佳交互体验的个人博客。',
   },
   {
     id: 3,
@@ -30,7 +30,7 @@ const articles = [
     date: '2024-01-10',
     readTime: '6 min',
     category: '设计',
-    desc: '探讨"少即是多"的设计理念，以及如何通过合理的留白、克制的色彩和精致的排版来提升用户体验。'
+    desc: '探讨"少即是多"的设计理念，以及如何通过合理的留白、克制的色彩和精致的排版来提升用户体验。',
   },
   {
     id: 4,
@@ -38,7 +38,7 @@ const articles = [
     date: '2023-12-05',
     readTime: '5 min',
     category: '生活',
-    desc: '在快节奏的互联网行业中，如何找到工作与生活的平衡点，保持持续的创造力和学习热情。'
+    desc: '在快节奏的互联网行业中，如何找到工作与生活的平衡点，保持持续的创造力和学习热情。',
   },
   {
     id: 5,
@@ -46,13 +46,13 @@ const articles = [
     date: '2023-11-20',
     readTime: '10 min',
     category: '前端',
-    desc: '原子化 CSS 为什么会流行？Tailwind CSS 是如何解决传统 CSS 维护痛点的？本文带你一探究竟。'
-  }
+    desc: '原子化 CSS 为什么会流行？Tailwind CSS 是如何解决传统 CSS 维护痛点的？本文带你一探究竟。',
+  },
 ]
 
 const filteredArticles = computed(() => {
   if (activeFilter.value === '全部') return articles
-  return articles.filter(a => a.category === activeFilter.value)
+  return articles.filter((a) => a.category === activeFilter.value)
 })
 </script>
 
@@ -98,11 +98,7 @@ const filteredArticles = computed(() => {
 
     <!-- Articles Grid -->
     <div class="blog-grid-wrapper">
-      <TransitionGroup
-        name="list"
-        tag="div"
-        class="blog-grid-container"
-      >
+      <TransitionGroup name="list" tag="div" class="blog-grid-container">
         <article
           v-for="article in filteredArticles"
           :key="article.id"
@@ -139,9 +135,7 @@ const filteredArticles = computed(() => {
 
             <!-- Action -->
             <div class="blog-article-action">
-              <span class="blog-read-more">
-                阅读全文
-              </span>
+              <span class="blog-read-more"> 阅读全文 </span>
               <div class="blog-action-icon-wrap">
                 <ChevronRight class="blog-action-icon" />
               </div>
@@ -194,6 +188,11 @@ const filteredArticles = computed(() => {
 .blog-page-container {
   padding-top: 6rem; /* pt-24 overrides py-12/20 top padding */
 }
+@media (min-width: 1024px) {
+  .blog-page-container {
+    padding-top: 8rem; /* lg:pt-32 */
+  }
+}
 
 .blog-header-wrapper {
   margin-bottom: 4rem; /* mb-16 */
@@ -244,7 +243,9 @@ const filteredArticles = computed(() => {
 .blog-filter-active {
   background-color: #f43f5e; /* bg-rose-500 */
   color: #ffffff; /* text-white */
-  box-shadow: 0 4px 6px -1px rgba(244, 63, 94, 0.2), 0 2px 4px -2px rgba(244, 63, 94, 0.2); /* shadow-md shadow-rose-500/20 */
+  box-shadow:
+    0 4px 6px -1px rgba(244, 63, 94, 0.2),
+    0 2px 4px -2px rgba(244, 63, 94, 0.2); /* shadow-md shadow-rose-500/20 */
 }
 
 .blog-filter-inactive {
@@ -294,12 +295,18 @@ const filteredArticles = computed(() => {
   transition-duration: 300ms;
   width: 100%;
   grid-column: span 1 / span 1;
-  box-shadow: 0 -1px 0 0 rgb(0,0,0,0.02), 0 0 rgb(0,0,0,0.02), 0 8px 30px rgb(0,0,0,0.04);
+  box-shadow:
+    0 -1px 0 0 rgb(0, 0, 0, 0.02),
+    0 0 rgb(0, 0, 0, 0.02),
+    0 8px 30px rgb(0, 0, 0, 0.04);
 }
 .blog-article-card:hover {
   transform: translateY(-0.5rem); /* hover:-translate-y-2 */
   /* box-shadow: 0 20px 25px -5px rgba(244, 63, 94, 0.1), 0 8px 10px -6px rgba(244, 63, 94, 0.1);  */
-  box-shadow: 0 -1px 0 0 rgb(0,0,0,0.03), 0 20px 25px -5px rgb(244,63,94,0.1), 0 8px 10px -6px rgb(244,63,94,0.1);
+  box-shadow:
+    0 -1px 0 0 rgb(0, 0, 0, 0.03),
+    0 20px 25px -5px rgb(244, 63, 94, 0.1),
+    0 8px 10px -6px rgb(244, 63, 94, 0.1);
 }
 
 .blog-article-inner {

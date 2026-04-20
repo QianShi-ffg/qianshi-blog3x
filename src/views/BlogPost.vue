@@ -272,7 +272,7 @@ export function useWindowSize() {
 }
 
 .post-back-btn-wrap {
-  @apply absolute top-24 left-4 md:left-8 z-10;
+  @apply absolute top-24 md:top-32 left-4 md:left-8 z-10;
 }
 
 .post-back-btn {

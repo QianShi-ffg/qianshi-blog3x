@@ -260,7 +260,7 @@ import { Mail, MapPin, Briefcase, GraduationCap, FolderGit2, Download } from 'lu
 }
 @media (min-width: 1024px) {
   .resume-page-container {
-    @apply py-20 px-32;
+    @apply py-20 pt-32 px-32;
   }
 }
 @media (min-width: 1280px) {

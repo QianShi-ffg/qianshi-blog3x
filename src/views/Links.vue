@@ -9,7 +9,7 @@ const links = [
     url: 'https://vuejs.org',
     icon: Globe,
     color: 'cl-text-emerald',
-    tags: ['Framework', 'Frontend']
+    tags: ['Framework', 'Frontend'],
   },
   {
     id: 2,
@@ -18,7 +18,7 @@ const links = [
     url: 'https://tailwindcss.com',
     icon: Globe,
     color: 'cl-text-sky',
-    tags: ['CSS', 'Design']
+    tags: ['CSS', 'Design'],
   },
   {
     id: 3,
@@ -27,7 +27,7 @@ const links = [
     url: 'https://twitter.com/youyuxi',
     icon: Twitter,
     color: 'cl-text-blue',
-    tags: []
+    tags: [],
   },
   {
     id: 4,
@@ -36,7 +36,7 @@ const links = [
     url: 'https://github.com/antfu',
     icon: Github,
     color: 'cl-text-slate',
-    tags: []
+    tags: [],
   },
   {
     id: 5,
@@ -45,7 +45,7 @@ const links = [
     url: 'https://vitejs.dev',
     icon: Globe,
     color: 'cl-text-purple',
-    tags: ['Tooling', 'Build']
+    tags: ['Tooling', 'Build'],
   },
   {
     id: 6,
@@ -54,8 +54,8 @@ const links = [
     url: 'https://lucide.dev',
     icon: Globe,
     color: 'cl-text-rose',
-    tags: ['Icons', 'Design']
-  }
+    tags: ['Icons', 'Design'],
+  },
 ]
 </script>
 
@@ -107,8 +107,15 @@ const links = [
         class="lk-card group"
       >
         <!-- 网站缩略图 (Hover显示) -->
-        <div class="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none rounded-3xl overflow-hidden">
-          <img :src="`https://image.thum.io/get/width/1200/crop/800/${link.url}`" :alt="link.name + ' preview'" class="w-full h-full object-cover object-top scale-100 group-hover:scale-110 transition-transform duration-[4s] ease-out opacity-90 blur-[2px] group-hover:blur-0" loading="lazy" />
+        <div
+          class="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none rounded-3xl overflow-hidden"
+        >
+          <img
+            :src="`https://image.thum.io/get/width/1200/crop/800/${link.url}`"
+            :alt="link.name + ' preview'"
+            class="w-full h-full object-cover object-top scale-100 group-hover:scale-110 transition-transform duration-[4s] ease-out opacity-90 blur-[2px] group-hover:blur-0"
+            loading="lazy"
+          />
           <div class="absolute inset-0 bg-gradient-to-t from-white via-white/85 to-white/20"></div>
         </div>
 
@@ -168,7 +175,7 @@ const links = [
 
 <style scoped>
 .lk-page-container {
-  @apply min-h-[80vh] py-12 lg:py-20 pt-24 px-6 sm:px-12 md:px-20 lg:px-32 xl:px-48 mx-auto max-w-screen-2xl;
+  @apply min-h-[80vh] py-12 lg:py-20 lg:pt-32 pt-24 px-6 sm:px-12 md:px-20 lg:px-32 xl:px-48 mx-auto max-w-screen-2xl;
 }
 
 .lk-header-wrapper {
@@ -242,8 +249,6 @@ const links = [
   @apply text-sm text-slate-500 line-clamp-2 leading-relaxed;
 }
 
-
-
 .lk-tags {
   @apply flex flex-wrap gap-2 mt-4;
 }
@@ -278,10 +283,22 @@ const links = [
 }
 
 /* Colors */
-.cl-text-emerald { @apply text-emerald-500; }
-.cl-text-sky { @apply text-sky-500; }
-.cl-text-blue { @apply text-blue-500; }
-.cl-text-slate { @apply text-slate-700; }
-.cl-text-purple { @apply text-purple-500; }
-.cl-text-rose { @apply text-rose-500; }
+.cl-text-emerald {
+  @apply text-emerald-500;
+}
+.cl-text-sky {
+  @apply text-sky-500;
+}
+.cl-text-blue {
+  @apply text-blue-500;
+}
+.cl-text-slate {
+  @apply text-slate-700;
+}
+.cl-text-purple {
+  @apply text-purple-500;
+}
+.cl-text-rose {
+  @apply text-rose-500;
+}
 </style>

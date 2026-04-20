@@ -189,6 +189,10 @@ const goBack = () => {
   @media (min-width: 768px) {
     @apply px-12 pt-32;
   }
+  
+  @media (min-width: 1024px) {
+    @apply pt-40;
+  }
 }
 
 .pd-back-wrapper {

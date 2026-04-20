@@ -54,9 +54,7 @@ import { RouterLink } from 'vue-router'
               阅读文章
               <ArrowRight class="btn-primary-icon" />
             </RouterLink>
-            <RouterLink to="/portfolio" class="btn-secondary">
-              查看作品
-            </RouterLink>
+            <RouterLink to="/portfolio" class="btn-secondary"> 查看作品 </RouterLink>
           </div>
         </div>
 
@@ -112,17 +110,19 @@ import { RouterLink } from 'vue-router'
       </div>
 
       <div class="recent-grid">
-        <RouterLink
-          v-for="i in 3" :key="i"
-          :to="`/blog/${i}`"
-          class="post-card group"
-        >
+        <RouterLink v-for="i in 3" :key="i" :to="`/blog/${i}`" class="post-card group">
           <div class="post-meta">
             <span class="post-tag">精选开发</span>
             <span class="post-date">2024-03-{{ 10 + i }}</span>
           </div>
           <h3 class="post-title">
-            {{ i === 1 ? 'Vue 3 组合式 API 最佳实践' : i === 2 ? '如何构建一个现代化的博客系统' : 'Tailwind CSS 高级技巧分享' }}
+            {{
+              i === 1
+                ? 'Vue 3 组合式 API 最佳实践'
+                : i === 2
+                  ? '如何构建一个现代化的博客系统'
+                  : 'Tailwind CSS 高级技巧分享'
+            }}
           </h3>
           <p class="post-desc">
             在现代前端开发中，保持代码的简洁与可维护性至关重要。本文将分享在实际项目中总结的一些经验和技巧，帮助你写出更优雅的代码。
@@ -131,9 +131,7 @@ import { RouterLink } from 'vue-router'
       </div>
 
       <div class="mobile-view-all">
-        <RouterLink to="/blog" class="btn-secondary w-full-btn">
-          查看全部文章
-        </RouterLink>
+        <RouterLink to="/blog" class="btn-secondary w-full-btn"> 查看全部文章 </RouterLink>
       </div>
     </section>
   </div>
@@ -185,7 +183,7 @@ import { RouterLink } from 'vue-router'
 }
 @media (min-width: 1024px) {
   .hero-section {
-    padding-top: 8rem; /* lg:py-32 */
+    padding-top: 10rem; /* lg:pt-40 lg:pb-32 */
     padding-bottom: 8rem;
   }
 }
@@ -324,7 +322,10 @@ import { RouterLink } from 'vue-router'
   transition-duration: 500ms;
   background-color: #fff;
   border-radius: 1.5rem;
-  box-shadow: 0 0 0 #000000, 0 0px 0px 0px rgba(0, 0, 0, 0.03), 0 8px 30px rgb(0,0,0,0.04); /* shadow-md */
+  box-shadow:
+    0 0 0 #000000,
+    0 0px 0px 0px rgba(0, 0, 0, 0.03),
+    0 8px 30px rgb(0, 0, 0, 0.04); /* shadow-md */
 }
 .hero-image-wrapper:hover {
   transform: rotate(0deg);
@@ -350,7 +351,9 @@ import { RouterLink } from 'vue-router'
   background-color: rgba(255, 255, 255, 0.7); /* bg-white/70 */
   backdrop-filter: blur(12px); /* backdrop-blur-md */
   border: 1px solid rgba(241, 245, 249, 0.5); /* border border-slate-100/50 */
-  box-shadow: 0 4px 10px -1px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.03); /* shadow-md */
+  box-shadow:
+    0 4px 10px -1px rgba(0, 0, 0, 0.05),
+    0 2px 6px -1px rgba(0, 0, 0, 0.03); /* shadow-md */
 }
 
 .badge-1 {
@@ -481,11 +484,17 @@ import { RouterLink } from 'vue-router'
   background-color: white; /* bg-white */
   border-radius: 1.5rem; /* rounded-3xl */
   /* box-shadow: 0 4px 6px -1px rgba(158, 158, 158, 0.05), 0 2px 4px -1px rgba(110, 110, 110, 0.05);  */
-  box-shadow: 0 -1px 0 0 rgb(0,0,0,0.02), 0 0 rgb(0,0,0,0.02), 0 8px 30px rgb(0,0,0,0.04);
+  box-shadow:
+    0 -1px 0 0 rgb(0, 0, 0, 0.02),
+    0 0 rgb(0, 0, 0, 0.02),
+    0 8px 30px rgb(0, 0, 0, 0.04);
 }
 .post-card:hover {
   transform: translateY(-0.5rem); /* hover:-translate-y-2 */
-  box-shadow: 0 -1px 0 0 rgb(0,0,0,0.03), 0 20px 25px -5px rgb(244,63,94,0.1), 0 8px 10px -6px rgb(244,63,94,0.1); /* hover:shadow-xl hover:shadow-rose-500/10 */
+  box-shadow:
+    0 -1px 0 0 rgb(0, 0, 0, 0.03),
+    0 20px 25px -5px rgb(244, 63, 94, 0.1),
+    0 8px 10px -6px rgb(244, 63, 94, 0.1); /* hover:shadow-xl hover:shadow-rose-500/10 */
 }
 
 .post-meta {

@@ -7,41 +7,45 @@ const projects = [
     title: 'QianShiBlog Space',
     category: '个人网站',
     desc: '基于 Vue 3 + Tailwind CSS 的现代极简主义个人博客，具有出色的动画和交互体验。',
-    image: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20clean%20website%20mockup%2C%20light%20theme%2C%20minimalist%2C%20soft%20red%20accents&image_size=landscape_16_9',
+    image:
+      'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20clean%20website%20mockup%2C%20light%20theme%2C%20minimalist%2C%20soft%20red%20accents&image_size=landscape_16_9',
     tags: ['Vue 3', 'Tailwind', 'Vite', 'Motion'],
     github: '#',
-    demo: '#'
+    demo: '#',
   },
   {
     id: 2,
     title: 'Design System Pro',
     category: '组件库',
     desc: '一套为企业级应用打造的高质量 UI 组件库，包含 50+ 常用组件，支持深度定制。',
-    image: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20collection%20of%20UI%20components%20floating%20in%203D%20space%2C%20clean%2C%20white%20background&image_size=landscape_16_9',
+    image:
+      'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20collection%20of%20UI%20components%20floating%20in%203D%20space%2C%20clean%2C%20white%20background&image_size=landscape_16_9',
     tags: ['React', 'TypeScript', 'Storybook'],
     github: '#',
-    demo: '#'
+    demo: '#',
   },
   {
     id: 3,
     title: 'Weather Minimal',
     category: '移动端应用',
     desc: '一款极简风格的天气应用，提供精准的实时天气和未来天气预报，界面清新优雅。',
-    image: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20minimalist%20weather%20app%20UI%20on%20a%20smartphone%20screen%2C%20pastel%20colors&image_size=landscape_16_9',
+    image:
+      'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20minimalist%20weather%20app%20UI%20on%20a%20smartphone%20screen%2C%20pastel%20colors&image_size=landscape_16_9',
     tags: ['React Native', 'Weather API'],
     github: '#',
-    demo: '#'
+    demo: '#',
   },
   {
     id: 4,
     title: 'TaskFlow',
     category: '效率工具',
     desc: '面向小团队的敏捷任务管理工具，支持看板、日历和甘特图视图。',
-    image: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20kanban%20board%20dashboard%20UI%2C%20clean%2C%20modern%2C%20soft%20shadows&image_size=landscape_16_9',
+    image:
+      'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20kanban%20board%20dashboard%20UI%2C%20clean%2C%20modern%2C%20soft%20shadows&image_size=landscape_16_9',
     tags: ['Vue 3', 'Supabase', 'Pinia'],
     github: '#',
-    demo: '#'
-  }
+    demo: '#',
+  },
 ]
 </script>
 
@@ -79,11 +83,7 @@ const projects = [
       >
         <!-- Project Image -->
         <div class="portfolio-image-wrapper">
-          <img
-            :src="project.image"
-            :alt="project.title"
-            class="portfolio-image"
-          />
+          <img :src="project.image" :alt="project.title" class="portfolio-image" />
           <div class="portfolio-overlay">
             <a :href="project.github" target="_blank" class="portfolio-action-btn">
               <Github class="portfolio-icon" />
@@ -112,11 +112,7 @@ const projects = [
           </p>
 
           <div class="portfolio-tags-wrapper">
-            <span
-              v-for="tag in project.tags"
-              :key="tag"
-              class="portfolio-tag-badge"
-            >
+            <span v-for="tag in project.tags" :key="tag" class="portfolio-tag-badge">
               {{ tag }}
             </span>
           </div>
@@ -142,7 +138,7 @@ const projects = [
 }
 @media (min-width: 1024px) {
   .portfolio-page-container {
-    @apply py-20 px-32;
+    @apply py-20 pt-32 px-32;
   }
 }
 @media (min-width: 1280px) {
