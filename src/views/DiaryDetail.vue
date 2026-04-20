@@ -118,11 +118,13 @@ const goBack = () => {
       :enter="{ opacity: 1, y: 0, transition: { duration: 400 } }"
     >
       <button @click="goBack" class="dd-back-btn group">
-        <ArrowLeft class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
-        <span>返回碎片</span>
+        <span class="dd-back-icon-wrap">
+          <ArrowLeft class="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+        </span>
+        <span class="text-sm font-medium">返回碎片</span>
       </button>
 
-      <div class="dd-type-badge">
+      <div class="dd-type-badge dd-type-badge-top">
         <component :is="getTypeIcon(moment.type)" class="w-4 h-4" />
         <span class="uppercase text-xs font-bold tracking-wider">{{ moment.type }}</span>
       </div>
@@ -139,13 +141,13 @@ const goBack = () => {
       <header class="dd-meta-header">
         <div class="dd-meta-item">
           <Calendar class="w-4 h-4 text-rose-500" />
-          <span class="font-medium text-slate-700">{{ moment.date }}</span>
+          <span class="font-medium dd-meta-text">{{ moment.date }}</span>
         </div>
-        <div class="flex items-center gap-4 text-slate-500">
+        <div class="flex items-center gap-4 dd-meta-text">
           <div class="dd-meta-item">
             <span>{{ moment.weather }}</span>
           </div>
-          <div class="dd-meta-item bg-slate-50 px-3 py-1 rounded-full">
+          <div class="dd-meta-item dd-meta-location">
             <MapPin class="w-3.5 h-3.5" />
             <span class="text-sm">{{ moment.location }}</span>
           </div>
@@ -219,16 +221,7 @@ const goBack = () => {
 
 <style scoped lang="scss">
 .dd-page-container {
-  @apply min-h-screen py-12 pt-24 px-4 sm:px-6 mx-auto;
-  max-width: 1200px;
-
-  @media (min-width: 768px) {
-    @apply pt-32;
-  }
-
-  @media (min-width: 1024px) {
-    @apply pt-40;
-  }
+  @apply max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32;
 }
 
 .dd-top-bar {
@@ -236,7 +229,30 @@ const goBack = () => {
 }
 
 .dd-back-btn {
-  @apply flex items-center gap-2 text-slate-500 font-medium hover:text-rose-500 transition-colors bg-white/50 px-4 py-2 rounded-full border border-slate-200/60 backdrop-blur-md shadow-sm;
+  @apply flex items-center gap-2 pl-2 pr-4 py-1.5 rounded-full shadow-sm transition-colors;
+  background-color: var(--color-background);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+.dd-back-icon-wrap {
+  @apply w-6 h-6 rounded-full flex items-center justify-center;
+  background-color: var(--color-border);
+}
+.dd-back-btn:hover {
+  color: var(--color-primary);
+  border-color: var(--color-secondary);
+}
+:global(html.dark) .dd-back-btn {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+}
+:global(html.dark) .dd-back-icon-wrap {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+:global(html.dark) .dd-back-btn:hover {
+  color: var(--color-primary);
+  background-color: rgba(255, 255, 255, 0.08);
 }
 
 .dd-type-badge {
@@ -249,6 +265,15 @@ const goBack = () => {
   background-color: rgba(244, 63, 94, 0.15);
   color: var(--color-primary);
   border: none;
+}
+
+.dd-type-badge-top {
+  /* Inherits from dd-type-badge but specific to top bar */
+}
+:global(html.dark) .dd-type-badge-top {
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
 }
 
 .dd-article-card {
@@ -265,15 +290,37 @@ const goBack = () => {
   }
 }
 :global(html.dark) .dd-article-card {
+  background-color: #162032;
+  border-color: rgba(255, 255, 255, 0.05);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
 }
 
 .dd-meta-header {
-  @apply flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 md:p-8 border-b border-slate-100/50;
+  @apply flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 md:p-8 border-b;
+  border-color: var(--color-border);
+}
+:global(html.dark) .dd-meta-header {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
 }
 
 .dd-meta-item {
   @apply flex items-center gap-2 text-sm;
+  color: var(--color-text);
+}
+
+.dd-meta-text {
+  color: var(--color-text);
+}
+:global(html.dark) .dd-meta-text {
+  color: #cbd5e1; /* slate-300 */
+}
+
+.dd-meta-location {
+  @apply px-3 py-1 rounded-full;
+  background-color: var(--color-background);
+}
+:global(html.dark) .dd-meta-location {
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
 .dd-media-section {
@@ -294,7 +341,7 @@ const goBack = () => {
 }
 
 .dd-quote {
-  @apply text-xl md:text-2xl font-medium leading-snug mb-10 pl-6 border-l-4 relative italic;
+  @apply text-xl md:text-2xl font-bold leading-snug mb-10 pl-6 border-l-4 relative italic;
   color: var(--color-heading);
   border-color: var(--color-primary);
 
@@ -304,10 +351,16 @@ const goBack = () => {
     color: var(--color-primary);
   }
 }
+:global(html.dark) .dd-quote {
+  color: #e2e8f0;
+}
 
 .dd-long-content {
   @apply space-y-6 text-base md:text-lg leading-relaxed;
   color: var(--color-text);
+}
+:global(html.dark) .dd-long-content {
+  color: #94a3b8;
 }
 
 .dd-interaction-footer {
