@@ -13,7 +13,8 @@ const article = ref({
   date: '2024-03-15',
   readTime: '8 min',
   category: '前端',
-  coverImage: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20minimalist%20workspace%20with%20code%20on%20a%20screen%2C%20soft%20morning%20light%2C%20clean%20aesthetic&image_size=landscape_16_9',
+  coverImage:
+    'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20minimalist%20workspace%20with%20code%20on%20a%20screen%2C%20soft%20morning%20light%2C%20clean%20aesthetic&image_size=landscape_16_9',
   content: `
 ## 引言
 
@@ -91,7 +92,7 @@ const filteredList = computed(() => {
 Vue 3 的组合式 API 为我们打开了前端架构的新世界大门。"少即是多"（Less is More），掌握这些核心 API 的最佳实践，能够让我们的代码更加健壮、易读和高效。
 
 希望这篇文章能对你的日常开发有所启发。持续学习，持续重构，代码不止！
-  `
+  `,
 })
 
 const goBack = () => {
@@ -104,20 +105,13 @@ const goBack = () => {
     <!-- Hero Header - Full Width, Partial Height -->
     <header class="post-hero-header">
       <!-- Cover Image -->
-      <img
-        :src="article.coverImage"
-        alt="Cover"
-        class="post-cover-image"
-      />
+      <img :src="article.coverImage" alt="Cover" class="post-cover-image" />
       <!-- Gradient Overlay (Darker at bottom for text readability) -->
       <div class="post-gradient-overlay"></div>
 
       <!-- Back Button -->
       <div class="post-back-btn-wrap">
-        <button
-          @click="goBack"
-          class="post-back-btn"
-        >
+        <button @click="goBack" class="post-back-btn">
           <ArrowLeft class="post-icon-sm" />
           返回文章列表
         </button>
@@ -172,19 +166,31 @@ const goBack = () => {
       >
         <!-- Markdown Content (Simulated with raw HTML for now, would normally use a markdown parser) -->
         <div class="prose">
-
           <h2 id="introduction">引言</h2>
-          <p>在现代前端开发中，保持代码的简洁与可维护性至关重要。Vue 3 的组合式 API（Composition API）为我们提供了一种全新的代码组织方式，它不仅打破了 Vue 2 选项式 API（Options API）在逻辑复用上的局限，还在 TypeScript 支持和性能优化上带来了显著的提升。</p>
-          <p>本文将分享在实际项目中总结的一些经验和技巧，帮助你写出更优雅、更高性能的 Vue 3 代码。</p>
+          <p>
+            在现代前端开发中，保持代码的简洁与可维护性至关重要。Vue 3 的组合式 API（Composition
+            API）为我们提供了一种全新的代码组织方式，它不仅打破了 Vue 2 选项式 API（Options
+            API）在逻辑复用上的局限，还在 TypeScript 支持和性能优化上带来了显著的提升。
+          </p>
+          <p>
+            本文将分享在实际项目中总结的一些经验和技巧，帮助你写出更优雅、更高性能的 Vue 3 代码。
+          </p>
           <hr />
 
           <h2 id="section-1">1. 逻辑复用：自定义 Hook 的艺术</h2>
-          <p>组合式 API 最大的魅力在于提取和复用逻辑。通过编写自定义 Hook（或称为 Composables），我们可以将复杂的业务逻辑从组件中剥离出来。</p>
+          <p>
+            组合式 API 最大的魅力在于提取和复用逻辑。通过编写自定义 Hook（或称为
+            Composables），我们可以将复杂的业务逻辑从组件中剥离出来。
+          </p>
 
           <h3>为什么需要自定义 Hook？</h3>
-          <p>在 Vue 2 中，我们通常使用 Mixins 来复用逻辑，但 Mixins 存在命名冲突、来源不清晰等问题。自定义 Hook 通过闭包和函数调用的方式，完美解决了这些痛点。</p>
+          <p>
+            在 Vue 2 中，我们通常使用 Mixins 来复用逻辑，但 Mixins
+            存在命名冲突、来源不清晰等问题。自定义 Hook
+            通过闭包和函数调用的方式，完美解决了这些痛点。
+          </p>
 
-<pre><code class="language-typescript">// useWindowSize.ts
+          <pre><code class="language-typescript">// useWindowSize.ts
 import { ref, onMounted, onUnmounted } from 'vue'
 
 export function useWindowSize() {
@@ -205,17 +211,35 @@ export function useWindowSize() {
 
           <hr />
           <h2 id="section-2">2. 响应式系统：ref vs reactive</h2>
-          <p>在 Vue 3 中，<code>ref</code> 和 <code>reactive</code> 是创建响应式状态的两个核心 API。初学者经常会纠结在什么时候该用哪一个。</p>
+          <p>
+            在 Vue 3 中，<code>ref</code> 和 <code>reactive</code> 是创建响应式状态的两个核心
+            API。初学者经常会纠结在什么时候该用哪一个。
+          </p>
 
           <h3>最佳实践建议</h3>
           <ol>
-            <li><strong>基础类型</strong>（如 <code>string</code>, <code>number</code>, <code>boolean</code>）必须使用 <code>ref</code>。</li>
-            <li><strong>引用类型</strong>（如 <code>object</code>, <code>array</code>）建议统一使用 <code>ref</code>，通过 <code>.value</code> 重新赋值不会丢失响应式。</li>
-            <li>只有当你非常明确需要一个深层响应式的对象，且不需要重新赋值整个对象时，才使用 <code>reactive</code>。</li>
+            <li>
+              <strong>基础类型</strong>（如 <code>string</code>, <code>number</code>,
+              <code>boolean</code>）必须使用 <code>ref</code>。
+            </li>
+            <li>
+              <strong>引用类型</strong>（如 <code>object</code>, <code>array</code>）建议统一使用
+              <code>ref</code>，通过 <code>.value</code> 重新赋值不会丢失响应式。
+            </li>
+            <li>
+              只有当你非常明确需要一个深层响应式的对象，且不需要重新赋值整个对象时，才使用
+              <code>reactive</code>。
+            </li>
           </ol>
 
           <blockquote>
-            <p><strong>提示</strong>：在 Vue 3.2 引入 <code>&lt;script setup&gt;</code> 之后，<code>ref</code> 的 <code>.value</code> 拆包已经变得非常智能和便捷，统一使用 <code>ref</code> 可以降低心智负担。</p>
+            <p>
+              <strong>提示</strong>：在 Vue 3.2 引入 <code>&lt;script setup&gt;</code> 之后，<code
+                >ref</code
+              >
+              的 <code>.value</code> 拆包已经变得非常智能和便捷，统一使用
+              <code>ref</code> 可以降低心智负担。
+            </p>
           </blockquote>
 
           <hr />
@@ -223,18 +247,24 @@ export function useWindowSize() {
 
           <h3>巧用 computed</h3>
           <p><code>computed</code> 具有缓存特性，只有当其依赖的响应式源发生变化时才会重新求值。</p>
-<pre><code class="language-typescript">const filteredList = computed(() => {
+          <pre><code class="language-typescript">const filteredList = computed(() => {
   // 这里的高开销计算只会在 list 或 filterText 变化时执行
   return list.value.filter(item => item.name.includes(filterText.value))
 })
 </code></pre>
 
           <h3>谨慎使用 watch</h3>
-          <p><code>watch</code> 应该主要用于处理<strong>副作用</strong>（如 API 请求、DOM 操作等）。如果是基于现有状态派生出新的状态，应该优先考虑 <code>computed</code>。</p>
+          <p>
+            <code>watch</code> 应该主要用于处理<strong>副作用</strong>（如 API 请求、DOM
+            操作等）。如果是基于现有状态派生出新的状态，应该优先考虑 <code>computed</code>。
+          </p>
 
           <hr />
           <h2 id="conclusion">结语</h2>
-          <p>Vue 3 的组合式 API 为我们打开了前端架构的新世界大门。"少即是多"（Less is More），掌握这些核心 API 的最佳实践，能够让我们的代码更加健壮、易读和高效。</p>
+          <p>
+            Vue 3 的组合式 API 为我们打开了前端架构的新世界大门。"少即是多"（Less is
+            More），掌握这些核心 API 的最佳实践，能够让我们的代码更加健壮、易读和高效。
+          </p>
           <p>希望这篇文章能对你的日常开发有所启发。持续学习，持续重构，代码不止！</p>
         </div>
       </article>
@@ -256,7 +286,7 @@ export function useWindowSize() {
 
 <style scoped>
 .blog-post-page {
-  @apply min-h-screen bg-slate-50/50 pb-20;
+  @apply min-h-screen bg-transparent pb-20;
 }
 
 .post-hero-header {
@@ -316,7 +346,15 @@ export function useWindowSize() {
 }
 
 .post-article-container {
-  @apply bg-white rounded-t-3xl md:rounded-3xl p-6 sm:p-10 md:p-16 shadow-[0_20px_50px_rgb(0,0,0,0.1)] border border-slate-100/50 backdrop-blur-sm w-full;
+  @apply rounded-t-3xl md:rounded-3xl p-6 sm:p-10 md:p-16 w-full;
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+:global(html.dark) .post-article-container {
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
 }
 
 .post-nav-bottom {
@@ -324,7 +362,15 @@ export function useWindowSize() {
 }
 
 .post-nav-btn {
-  @apply text-slate-500 hover:text-rose-500 font-medium transition-colors flex items-center gap-2;
+  @apply flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all;
+  background-color: var(--color-background);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+.post-nav-btn:hover {
+  background-color: var(--color-secondary);
+  color: var(--color-primary);
+  border-color: var(--color-secondary);
 }
 
 /*
@@ -333,7 +379,7 @@ export function useWindowSize() {
   由于项目中没有安装 @tailwindcss/typography，这里手写核心的 prose 样式以保证"简约清新"的阅读体验。
 */
 .prose {
-  color: #334155;
+  color: var(--color-text);
   line-height: 1.8;
   max-width: none;
 }
@@ -342,22 +388,22 @@ export function useWindowSize() {
   margin-top: 2.5em;
   margin-bottom: 1em;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--color-heading);
 }
 .prose h3 {
   font-size: 1.25rem;
   margin-top: 2em;
-  margin-bottom: 0.75em;
+  margin-bottom: 1em;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--color-heading);
 }
 .prose p {
   margin-top: 1.25em;
   margin-bottom: 1.25em;
 }
 .prose a {
-  color: #f43f5e;
-  text-decoration: none;
+  color: var(--color-primary);
+  text-decoration: underline;
   font-weight: 500;
 }
 .prose a:hover {
@@ -365,9 +411,10 @@ export function useWindowSize() {
 }
 .prose strong {
   font-weight: 600;
-  color: #0f172a;
+  color: var(--color-heading);
 }
-.prose ul, .prose ol {
+.prose ul,
+.prose ol {
   margin-top: 1.25em;
   margin-bottom: 1.25em;
   padding-left: 1.625em;
@@ -383,22 +430,19 @@ export function useWindowSize() {
   list-style-type: disc;
 }
 .prose hr {
-  border-color: #e2e8f0;
+  border-color: var(--color-border);
   margin-top: 3em;
   margin-bottom: 3em;
 }
 .prose blockquote {
-  font-weight: 500;
-  font-style: normal;
-  color: #475569;
+  font-style: italic;
+  color: var(--color-text);
   border-left-width: 0.25rem;
-  border-left-color: #f43f5e;
-  background-color: #fff1f2;
-  padding: 1em 1.5em;
-  border-top-right-radius: 0.75rem;
-  border-bottom-right-radius: 0.75rem;
+  border-left-color: var(--color-border);
+  quotes: '"\201C"' '"\201D"' '"\2018"' '"\2019"';
   margin-top: 1.6em;
   margin-bottom: 1.6em;
+  padding-left: 1em;
 }
 .prose pre {
   background-color: #0f172a;
@@ -412,12 +456,15 @@ export function useWindowSize() {
   line-height: 1.7142857;
 }
 .prose code {
-  color: #f43f5e;
-  background-color: #fff1f2;
-  padding: 0.2em 0.4em;
-  border-radius: 0.25rem;
+  color: var(--color-primary);
+  font-weight: 600;
   font-size: 0.875em;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  background-color: var(--color-secondary);
+  padding: 0.25rem 0.375rem;
+  border-radius: 0.375rem;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
 }
 .prose pre code {
   background-color: transparent;

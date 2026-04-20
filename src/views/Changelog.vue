@@ -165,11 +165,13 @@ const getBadgeText = (type: string) => {
 }
 
 .cl-title {
-  @apply text-4xl md:text-5xl font-bold text-slate-900 tracking-tight mb-4;
+  @apply text-4xl md:text-5xl font-bold tracking-tight mb-4;
+  color: var(--color-heading);
 }
 
 .cl-subtitle {
-  @apply text-lg text-slate-500 max-w-2xl;
+  @apply text-lg max-w-2xl;
+  color: var(--color-text);
 }
 
 .cl-timeline-wrapper {
@@ -177,7 +179,8 @@ const getBadgeText = (type: string) => {
 }
 
 .cl-timeline-line {
-  @apply absolute left-[27px] md:left-[120px] top-0 bottom-0 w-px bg-slate-200;
+  @apply absolute left-[27px] md:left-[120px] top-0 bottom-0 w-px;
+  background-color: var(--color-border);
 }
 
 .cl-logs-container {
@@ -201,7 +204,9 @@ const getBadgeText = (type: string) => {
 }
 
 .cl-log-icon-outer {
-  @apply w-14 h-14 rounded-full bg-white border border-slate-100 shadow-sm flex items-center justify-center p-1;
+  @apply w-14 h-14 rounded-full shadow-sm flex items-center justify-center p-1 border;
+  background-color: var(--color-card);
+  border-color: var(--color-border);
 }
 
 .cl-log-icon-inner {
@@ -217,11 +222,20 @@ const getBadgeText = (type: string) => {
 }
 
 .cl-glass-card {
-  @apply bg-white/70 backdrop-blur-lg border border-slate-100 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 p-6 md:p-8;
+  @apply rounded-3xl transition-all duration-300 p-6 md:p-8;
+  background-color: var(--color-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.04);
+}
+:global(html.dark) .cl-glass-card {
+  box-shadow: 0 8px 30px rgba(0,0,0,0.2);
 }
 
 .cl-log-card-header {
-  @apply flex flex-wrap items-center justify-between gap-4 mb-6 pb-6 border-b border-slate-100;
+  @apply flex flex-wrap items-center justify-between gap-4 mb-6 pb-6 border-b;
+  border-color: var(--color-border);
 }
 
 .cl-log-version-wrap {
@@ -229,15 +243,20 @@ const getBadgeText = (type: string) => {
 }
 
 .cl-log-version {
-  @apply text-2xl font-bold text-slate-900;
+  @apply text-2xl font-bold;
+  color: var(--color-heading);
 }
 
 .cl-log-tag {
-  @apply px-2 py-0.5 rounded text-xs font-bold bg-slate-100 text-slate-500 tracking-wider;
+  @apply px-2 py-0.5 rounded text-xs font-bold tracking-wider;
+  background-color: var(--color-background);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
 }
 
 .cl-log-card-title {
-  @apply text-slate-600 font-medium;
+  @apply font-medium;
+  color: var(--color-text);
 }
 
 .cl-log-date-mobile {
@@ -257,7 +276,8 @@ const getBadgeText = (type: string) => {
 }
 
 .cl-change-text {
-  @apply text-slate-600 text-sm leading-relaxed;
+  @apply text-sm leading-relaxed;
+  color: var(--color-text);
 }
 
 /* Colors */

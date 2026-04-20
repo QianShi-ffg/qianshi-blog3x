@@ -157,6 +157,9 @@ onUnmounted(() => {
   border: 1px solid var(--color-border);
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); /* shadow-sm */
 }
+:global(html.dark) .navbar-inner-scrolled {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
 
 .navbar-brand {
   display: flex;
@@ -324,6 +327,11 @@ onUnmounted(() => {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--color-border);
+}
+:global(html.dark) .navbar-mobile-dropdown {
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.3),
+    0 4px 6px -2px rgba(0, 0, 0, 0.2);
 }
 
 @media (min-width: 768px) {

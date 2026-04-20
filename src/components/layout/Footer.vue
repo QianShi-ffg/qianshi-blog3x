@@ -69,8 +69,8 @@ const scrollToTop = () => {
 
 <style scoped>
 .footer-wrapper {
-  background-color: #ffffff;
-  border-top: 1px solid #f1f5f9; /* slate-100 */
+  background-color: var(--color-background);
+  border-top: 1px solid var(--color-border);
   margin-top: 6rem; /* mt-24 */
 }
 
@@ -155,13 +155,13 @@ const scrollToTop = () => {
 
 .footer-logo-text {
   font-weight: 700;
-  color: #1e293b; /* text-slate-800 */
+  color: var(--color-heading);
   letter-spacing: -0.025em; /* tracking-tight */
   font-size: 1.25rem; /* text-xl */
 }
 
 .footer-desc {
-  color: #64748b; /* text-slate-500 */
+  color: var(--color-text);
   line-height: 1.625; /* leading-relaxed */
   max-width: 24rem; /* max-w-sm */
 }
@@ -172,7 +172,7 @@ const scrollToTop = () => {
 
 .footer-heading {
   font-weight: 600; /* font-semibold */
-  color: #0f172a; /* text-slate-900 */
+  color: var(--color-heading);
   margin-bottom: 1.5rem; /* mb-6 */
   letter-spacing: -0.025em; /* tracking-tight */
 }
@@ -184,7 +184,7 @@ const scrollToTop = () => {
 }
 
 .footer-link {
-  color: #64748b; /* text-slate-500 */
+  color: var(--color-text);
   transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
@@ -200,7 +200,7 @@ const scrollToTop = () => {
   align-items: center;
   justify-content: space-between;
   padding-top: 2rem; /* pt-8 */
-  border-top: 1px solid #f1f5f9; /* border-slate-100 */
+  border-top: 1px solid var(--color-border); /* border-slate-100 */
   gap: 1rem; /* gap-4 */
 }
 
@@ -211,18 +211,19 @@ const scrollToTop = () => {
 }
 
 .footer-copyright {
-  color: #94a3b8; /* text-slate-400 */
+  color: var(--color-text); /* text-slate-400 */
   font-size: 0.875rem; /* text-sm */
   display: flex;
   align-items: center;
   gap: 0.25rem; /* gap-1 */
+  opacity: 0.8;
 }
 
 .footer-heart-icon {
   width: 1rem; /* w-4 */
   height: 1rem; /* h-4 */
-  color: #f43f5e; /* text-rose-500 */
-  fill: #f43f5e; /* fill-rose-500 */
+  color: var(--color-primary); /* text-rose-500 */
+  fill: var(--color-primary); /* fill-rose-500 */
 }
 
 .footer-back-to-top {
@@ -231,7 +232,7 @@ const scrollToTop = () => {
   gap: 0.5rem; /* gap-2 */
   font-size: 0.875rem; /* text-sm */
   font-weight: 500; /* font-medium */
-  color: #64748b; /* text-slate-500 */
+  color: var(--color-text); /* text-slate-500 */
   transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
@@ -241,14 +242,14 @@ const scrollToTop = () => {
 }
 
 .footer-back-to-top:hover {
-  color: #f43f5e; /* hover:text-rose-500 */
+  color: var(--color-primary); /* hover:text-rose-500 */
 }
 
 .footer-btt-icon-wrap {
   width: 2rem; /* w-8 */
   height: 2rem; /* h-8 */
   border-radius: 9999px; /* rounded-full */
-  background-color: #f8fafc; /* bg-slate-50 */
+  background-color: var(--color-border); /* bg-slate-50 */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -258,7 +259,7 @@ const scrollToTop = () => {
 }
 
 .group:hover .footer-btt-icon-wrap {
-  background-color: #fff1f2; /* group-hover:bg-rose-50 */
+  background-color: var(--color-secondary); /* group-hover:bg-rose-50 */
 }
 
 .footer-btt-icon {

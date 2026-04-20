@@ -93,7 +93,7 @@
     transition-duration: 300ms;
   }
   .btn-secondary:hover {
-    background-color: #ffe4e6; /* rose-100 */
+    background-color: rgba(244, 63, 94, 0.1);
   }
 
   .glass-card {
@@ -145,6 +145,10 @@
   }
   html.dark .border-white {
     border-color: #334155 !important; /* slate-700 */
+  }
+  html.dark .border-white\/60,
+  html.dark .border-white\/20 {
+    border-color: rgba(255, 255, 255, 0.1) !important;
   }
 }
 

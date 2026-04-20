@@ -124,7 +124,9 @@ const goBack = () => {
           <LayoutGrid class="pd-info-icon" />
           <div class="pd-info-text">
             <span class="pd-info-label">技术栈</span>
-            <span class="pd-info-value">{{ project.tags.join(' / ') }}</span>
+            <div class="flex flex-wrap gap-2 mt-1">
+              <span v-for="tag in project.tags" :key="tag" class="pd-tech-tag">{{ tag }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -253,18 +255,34 @@ const goBack = () => {
       @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-medium transition-all duration-300;
 
       &-outline {
-        @apply bg-white text-slate-700 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 hover:shadow-md;
+        @apply border hover:shadow-md;
+        background-color: var(--color-secondary);
+        color: var(--color-primary);
+        border-color: var(--color-border);
+
+        &:hover {
+          background-color: rgba(244, 63, 94, 0.1);
+        }
       }
 
       &-primary {
-        @apply bg-rose-500 text-white hover:bg-rose-600 hover:shadow-lg hover:shadow-rose-500/30 hover:-translate-y-0.5;
+        @apply text-white hover:-translate-y-0.5;
+        background-color: var(--color-primary);
+
+        &:hover {
+          background-color: #e11d48;
+          box-shadow: 0 10px 15px -3px rgba(244, 63, 94, 0.3);
+        }
       }
     }
   }
 }
 
 .pd-main-media {
-  @apply w-full aspect-[16/9] md:aspect-[21/9] rounded-[2rem] overflow-hidden mb-16 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] border border-white/60 bg-slate-100 relative;
+  @apply w-full aspect-[16/9] md:aspect-[21/9] rounded-[2rem] overflow-hidden mb-16 relative;
+  box-shadow: 0 20px 40px -15px rgba(0,0,0,0.1);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-background);
 
   .pd-main-img {
     @apply w-full h-full object-cover;
@@ -272,10 +290,16 @@ const goBack = () => {
 }
 
 .pd-content-section {
-  @apply bg-white/70 backdrop-blur-lg border border-slate-100 rounded-[2rem] p-8 md:p-12 shadow-[0_8px_30px_rgb(0,0,0,0.04)];
+  @apply rounded-[2rem] p-8 md:p-12;
+  background-color: var(--color-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.04);
 
   .pd-section-title {
-    @apply text-2xl font-bold text-slate-900 mb-6 flex items-center gap-3;
+    @apply text-2xl font-bold mb-6 flex items-center gap-3;
+    color: var(--color-heading);
 
     &::before {
       content: '';
@@ -311,5 +335,12 @@ const goBack = () => {
   &:hover .pd-gallery-img {
     @apply scale-105;
   }
+}
+
+.pd-tech-tag {
+  @apply px-3 py-1 rounded-full text-sm font-medium;
+  background-color: var(--color-background);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
 }
 </style>

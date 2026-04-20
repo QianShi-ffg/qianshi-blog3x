@@ -208,11 +208,21 @@ const links = [
 }
 
 .lk-card {
-  @apply bg-white/80 backdrop-blur-lg border border-white/60 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-500 p-6 hover:-translate-y-1 hover:shadow-2xl hover:shadow-rose-500/10 h-full flex flex-col justify-center relative overflow-hidden;
+  @apply rounded-3xl transition-all duration-500 p-6 hover:-translate-y-1 hover:shadow-2xl hover:shadow-rose-500/10 h-full flex flex-col justify-center relative overflow-hidden;
+  background-color: var(--color-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
 }
 
 .lk-card:hover {
-  @apply border-rose-100 bg-white/40;
+  background-color: var(--color-background);
+  border-color: rgba(244, 63, 94, 0.2); /* rose-200 equivalent */
+}
+
+:global(html.dark) .lk-card {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
 }
 
 .lk-card-inner {
@@ -258,8 +268,16 @@ const links = [
 }
 
 .lk-apply-section {
-  @apply bg-white/70 backdrop-blur-lg border border-slate-100 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 p-8 md:p-12;
+  @apply rounded-3xl transition-all duration-300 p-8 md:p-12;
   width: 100%;
+  background-color: var(--color-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+}
+:global(html.dark) .lk-apply-section {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
 }
 
 .lk-apply-title {

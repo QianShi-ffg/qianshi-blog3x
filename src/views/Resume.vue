@@ -292,7 +292,13 @@ import { Mail, MapPin, Briefcase, GraduationCap, FolderGit2, Download } from 'lu
 }
 
 .resume-download-btn {
-  @apply inline-flex items-center justify-center px-6 py-2.5 rounded-full bg-rose-500 text-white font-medium hover:bg-rose-600 hover:shadow-lg hover:shadow-rose-500/30 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300;
+  @apply inline-flex items-center justify-center px-6 py-2.5 rounded-full font-medium hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300;
+  background-color: var(--color-primary);
+  color: white;
+}
+.resume-download-btn:hover {
+  background-color: #e11d48;
+  box-shadow: 0 10px 15px -3px rgba(244, 63, 94, 0.3);
 }
 
 .resume-download-icon {
@@ -331,7 +337,15 @@ import { Mail, MapPin, Briefcase, GraduationCap, FolderGit2, Download } from 'lu
 }
 
 .resume-profile-card {
-  @apply p-8 text-center bg-white/70 backdrop-blur-lg border border-slate-100 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300;
+  @apply p-8 text-center rounded-3xl transition-all duration-300;
+  background-color: var(--color-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+}
+:global(html.dark) .resume-profile-card {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
 }
 
 .resume-avatar-wrapper {
@@ -367,7 +381,15 @@ import { Mail, MapPin, Briefcase, GraduationCap, FolderGit2, Download } from 'lu
 }
 
 .resume-skills-card {
-  @apply p-8 bg-white/70 backdrop-blur-lg border border-slate-100 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300;
+  @apply p-8 rounded-3xl transition-all duration-300;
+  background-color: var(--color-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+}
+:global(html.dark) .resume-skills-card {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
 }
 
 .resume-section-header {
@@ -387,7 +409,15 @@ import { Mail, MapPin, Briefcase, GraduationCap, FolderGit2, Download } from 'lu
 }
 
 .resume-skill-item {
-  @apply flex justify-between items-center px-4 py-3 rounded-xl bg-slate-50/50 border border-slate-100 hover:bg-white hover:shadow-md transition-all duration-300;
+  @apply flex justify-between items-center px-4 py-3 rounded-xl transition-all duration-300;
+  background-color: var(--color-background);
+  border: 1px solid var(--color-border);
+}
+.resume-skill-item:hover {
+  background-color: var(--color-card);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .resume-skill-name {
@@ -411,7 +441,15 @@ import { Mail, MapPin, Briefcase, GraduationCap, FolderGit2, Download } from 'lu
 }
 
 .resume-experience-card {
-  @apply p-8 bg-white/70 backdrop-blur-lg border border-slate-100 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300;
+  @apply p-8 rounded-3xl transition-all duration-300;
+  background-color: var(--color-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+}
+:global(html.dark) .resume-experience-card {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
 }
 @media (min-width: 768px) {
   .resume-experience-card {
@@ -420,7 +458,15 @@ import { Mail, MapPin, Briefcase, GraduationCap, FolderGit2, Download } from 'lu
 }
 
 .resume-education-card {
-  @apply p-8 bg-white/70 backdrop-blur-lg border border-slate-100 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300;
+  @apply p-8 rounded-3xl transition-all duration-300;
+  background-color: var(--color-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+}
+:global(html.dark) .resume-education-card {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
 }
 @media (min-width: 768px) {
   .resume-education-card {
@@ -441,11 +487,13 @@ import { Mail, MapPin, Briefcase, GraduationCap, FolderGit2, Download } from 'lu
 }
 
 .resume-timeline-spaced {
-  @apply relative border-l border-slate-200 ml-3 space-y-12;
+  @apply relative border-l ml-3 space-y-12;
+  border-color: var(--color-border);
 }
 
 .resume-timeline {
-  @apply relative border-l border-slate-200 ml-3;
+  @apply relative border-l ml-3;
+  border-color: var(--color-border);
 }
 
 .resume-timeline-item {
@@ -453,11 +501,14 @@ import { Mail, MapPin, Briefcase, GraduationCap, FolderGit2, Download } from 'lu
 }
 
 .resume-timeline-dot-active {
-  @apply absolute -left-[5px] top-1.5 w-[10px] h-[10px] rounded-full bg-rose-500 ring-4 ring-rose-50;
+  @apply absolute -left-[5px] top-1.5 w-[10px] h-[10px] rounded-full bg-rose-500 ring-4;
+  --tw-ring-color: var(--color-secondary);
 }
 
 .resume-timeline-dot {
-  @apply absolute -left-[5px] top-1.5 w-[10px] h-[10px] rounded-full bg-slate-300 ring-4 ring-slate-50;
+  @apply absolute -left-[5px] top-1.5 w-[10px] h-[10px] rounded-full ring-4;
+  background-color: var(--color-text);
+  --tw-ring-color: var(--color-background);
 }
 
 .resume-timeline-header {

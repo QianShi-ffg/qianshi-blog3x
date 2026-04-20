@@ -255,9 +255,8 @@ import { RouterLink } from 'vue-router'
 
 .hero-title {
   font-size: 3rem; /* text-5xl */
-  line-height: 1;
   font-weight: 700; /* font-bold */
-  color: #0f172a; /* text-slate-900 */
+  color: var(--color-heading); /* text-slate-900 */
   letter-spacing: -0.025em; /* tracking-tight */
   line-height: 1.2; /* leading-[1.2] */
 }
@@ -271,12 +270,16 @@ import { RouterLink } from 'vue-router'
   color: transparent;
   background-clip: text;
   -webkit-background-clip: text;
-  background-image: linear-gradient(to right, #f43f5e, #fb7185); /* from-rose-500 to-rose-400 */
+  background-image: linear-gradient(
+    to right,
+    var(--color-primary),
+    #fb7185
+  ); /* from-rose-500 to-rose-400 */
 }
 
 .hero-desc {
   font-size: 1.125rem; /* text-lg */
-  color: #64748b; /* text-slate-500 */
+  color: var(--color-text); /* text-slate-500 */
   max-width: 32rem; /* max-w-lg */
   line-height: 1.625; /* leading-relaxed */
 }
@@ -320,7 +323,7 @@ import { RouterLink } from 'vue-router'
   transform: rotate(3deg);
   transition-property: transform;
   transition-duration: 500ms;
-  background-color: #fff;
+  background-color: var(--color-card);
   border-radius: 1.5rem;
   box-shadow:
     0 0 0 #000000,
@@ -348,9 +351,9 @@ import { RouterLink } from 'vue-router'
   display: flex;
   align-items: center;
   gap: 0.75rem; /* gap-3 */
-  background-color: rgba(255, 255, 255, 0.7); /* bg-white/70 */
+  background-color: var(--color-card); /* bg-white/70 */
   backdrop-filter: blur(12px); /* backdrop-blur-md */
-  border: 1px solid rgba(241, 245, 249, 0.5); /* border border-slate-100/50 */
+  border: 1px solid var(--color-border); /* border border-slate-100/50 */
   box-shadow:
     0 4px 10px -1px rgba(0, 0, 0, 0.05),
     0 2px 6px -1px rgba(0, 0, 0, 0.03); /* shadow-md */
@@ -379,7 +382,7 @@ import { RouterLink } from 'vue-router'
 
 .icon-rose {
   background-color: #ffe4e6; /* bg-rose-100 */
-  color: #f43f5e; /* text-rose-500 */
+  color: var(--color-primary); /* text-rose-500 */
 }
 
 .icon-blue {
@@ -421,19 +424,19 @@ import { RouterLink } from 'vue-router'
   font-size: 1.875rem; /* text-3xl */
   line-height: 2.25rem;
   font-weight: 700; /* font-bold */
-  color: #0f172a; /* text-slate-900 */
+  color: var(--color-heading); /* text-slate-900 */
   margin-bottom: 0.5rem; /* mb-2 */
 }
 
 .recent-desc {
-  color: #64748b; /* text-slate-500 */
+  color: var(--color-text); /* text-slate-500 */
   margin: 0;
 }
 
 .recent-view-all {
   display: none; /* hidden */
   align-items: center;
-  color: #f43f5e; /* text-rose-500 */
+  color: var(--color-primary);
   font-weight: 500; /* font-medium */
   transition-property: color;
   transition-duration: 150ms;
@@ -481,7 +484,7 @@ import { RouterLink } from 'vue-router'
   transition-duration: 300ms;
   text-decoration: none;
   display: block;
-  background-color: white; /* bg-white */
+  background-color: var(--color-card); /* bg-white */
   border-radius: 1.5rem; /* rounded-3xl */
   /* box-shadow: 0 4px 6px -1px rgba(158, 158, 158, 0.05), 0 2px 4px -1px rgba(110, 110, 110, 0.05);  */
   box-shadow:
@@ -495,6 +498,10 @@ import { RouterLink } from 'vue-router'
     0 -1px 0 0 rgb(0, 0, 0, 0.03),
     0 20px 25px -5px rgb(244, 63, 94, 0.1),
     0 8px 10px -6px rgb(244, 63, 94, 0.1); /* hover:shadow-xl hover:shadow-rose-500/10 */
+}
+
+:global(html.dark) .post-card {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
 }
 
 .post-meta {
@@ -518,14 +525,14 @@ import { RouterLink } from 'vue-router'
 
 .post-date {
   font-size: 0.75rem; /* text-xs */
-  color: #94a3b8; /* text-slate-400 */
+  color: var(--color-text); /* text-slate-400 */
 }
 
 .post-title {
   font-size: 1.25rem; /* text-xl */
   line-height: 1.75rem;
   font-weight: 700; /* font-bold */
-  color: #0f172a; /* text-slate-900 */
+  color: var(--color-heading); /* text-slate-900 */
   margin-bottom: 0.75rem; /* mb-3 */
   transition-property: color;
   transition-duration: 150ms;
@@ -535,11 +542,11 @@ import { RouterLink } from 'vue-router'
   overflow: hidden;
 }
 .post-card:hover .post-title {
-  color: #f43f5e; /* group-hover:text-rose-500 */
+  color: var(--color-primary); /* group-hover:text-rose-500 */
 }
 
 .post-desc {
-  color: #64748b; /* text-slate-500 */
+  color: var(--color-text); /* text-slate-500 */
   font-size: 0.875rem; /* text-sm */
   line-height: 1.625; /* leading-relaxed */
   display: -webkit-box;

@@ -182,9 +182,9 @@ const goBack = () => {
       <!-- Interaction Footer -->
       <footer class="dd-interaction-footer">
         <div class="flex items-center gap-6">
-          <button class="dd-action-btn group">
-            <Heart class="w-5 h-5 text-slate-400 group-hover:text-rose-500 transition-colors" />
-            <span class="group-hover:text-rose-600 transition-colors">{{ moment.likes }}</span>
+          <button class="dd-like-btn">
+            <Heart class="w-5 h-5" />
+            <span>{{ moment.likes }}</span>
           </button>
           <button class="dd-action-btn group">
             <MessageCircle
@@ -240,16 +240,27 @@ const goBack = () => {
 }
 
 .dd-type-badge {
-  @apply flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-500 rounded-full border border-slate-200 shadow-sm;
+  @apply flex items-center gap-1.5 px-3 py-1.5 rounded-full border shadow-sm;
+  background-color: var(--color-background);
+  color: var(--color-text);
+  border-color: var(--color-border);
 }
 
 .dd-article-card {
-  @apply bg-white/80 backdrop-blur-xl border border-white rounded-[2rem] shadow-[0_10px_40px_-10px_rgba(0,0,0,0.08)] overflow-hidden relative;
+  @apply rounded-[2rem] overflow-hidden relative;
+  background-color: var(--color-card);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
 
   &::before {
     content: '';
     @apply absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-rose-400 to-rose-300;
   }
+}
+:global(html.dark) .dd-article-card {
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
 }
 
 .dd-meta-header {
@@ -261,7 +272,8 @@ const goBack = () => {
 }
 
 .dd-media-section {
-  @apply w-full relative bg-slate-100;
+  @apply w-full relative;
+  background-color: var(--color-background);
 }
 
 .dd-media-img {
@@ -277,23 +289,45 @@ const goBack = () => {
 }
 
 .dd-quote {
-  @apply text-xl md:text-2xl font-medium text-slate-800 leading-snug mb-10 pl-6 border-l-4 border-rose-400 relative italic;
+  @apply text-xl md:text-2xl font-medium leading-snug mb-10 pl-6 border-l-4 relative italic;
+  color: var(--color-heading);
+  border-color: var(--color-primary);
 
   &::before {
     content: '"';
-    @apply absolute -left-2 -top-4 text-5xl text-rose-200 font-serif opacity-50;
+    @apply absolute -left-2 -top-4 text-5xl font-serif opacity-50;
+    color: var(--color-primary);
   }
 }
 
 .dd-long-content {
-  @apply space-y-6 text-slate-600 text-base md:text-lg leading-relaxed;
+  @apply space-y-6 text-base md:text-lg leading-relaxed;
+  color: var(--color-text);
 }
 
 .dd-interaction-footer {
-  @apply flex items-center justify-between px-6 md:px-10 py-5 bg-slate-50/50 border-t border-slate-100;
+  @apply flex items-center justify-between px-6 md:px-10 py-5 border-t;
+  border-color: var(--color-border);
 }
 
 .dd-action-btn {
-  @apply flex items-center gap-2 text-slate-500 font-medium text-sm;
+  @apply flex items-center gap-2 text-sm transition-colors;
+  color: var(--color-text);
+  &:hover {
+    color: var(--color-primary);
+  }
+}
+
+.dd-like-btn {
+  @apply flex items-center gap-2 px-5 py-2.5 rounded-full font-medium transition-all;
+  background-color: var(--color-background);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+
+  &:hover {
+    background-color: var(--color-secondary);
+    color: var(--color-primary);
+    border-color: var(--color-secondary);
+  }
 }
 </style>
