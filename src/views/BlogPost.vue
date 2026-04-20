@@ -158,10 +158,19 @@ const goBack = () => {
 
     <!-- Main Content Area - Optimal Reading Width -->
     <main class="post-main-area">
-      <article
+      <!-- Top decorative gradient panel spanning article width -->
+      <div
         v-motion
         :initial="{ opacity: 0, y: 40 }"
         :enter="{ opacity: 1, y: 0, transition: { duration: 800, delay: 400 } }"
+        class="post-top-gradient-panel"
+      ></div>
+
+      <!-- Main content container -->
+      <article
+        v-motion
+        :initial="{ opacity: 0, y: 40 }"
+        :enter="{ opacity: 1, y: 0, transition: { duration: 800, delay: 500 } }"
         class="post-article-container"
       >
         <!-- Markdown Content (Simulated with raw HTML for now, would normally use a markdown parser) -->
@@ -342,18 +351,36 @@ export function useWindowSize() {
 }
 
 .post-main-area {
-  @apply w-full max-w-[1200px] mx-auto -mt-16 relative z-20 px-4 sm:px-6 md:px-8 xl:px-0;
+  @apply w-full max-w-[1200px] mx-auto -mt-16 relative z-20 px-4 sm:px-6 md:px-8 xl:px-0 flex flex-col;
+}
+
+.post-top-gradient-panel {
+  @apply w-full h-16 sm:h-24 md:h-32 rounded-t-[2rem] md:rounded-t-[2.5rem] relative overflow-hidden shrink-0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, var(--color-card) 100%);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--color-border);
+  border-bottom: none;
+  /* box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.05); */
+}
+:global(html.dark) .post-top-gradient-panel {
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.6) 0%, var(--color-card) 100%);
+  border-color: rgba(255, 255, 255, 0.05);
+  /* box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.3); */
 }
 
 .post-article-container {
-  @apply rounded-t-3xl md:rounded-3xl p-6 sm:p-10 md:p-16 w-full;
+  @apply rounded-b-[2rem] md:rounded-b-[2.5rem] p-6 sm:p-10 md:p-16 w-full -mt-[1px] relative z-10;
   background-color: var(--color-card);
   border: 1px solid var(--color-border);
+  border-top: none;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
 :global(html.dark) .post-article-container {
+  background: var(--color-card);
+  border-color: rgba(255, 255, 255, 0.05);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
 }
 
