@@ -279,7 +279,11 @@ import { Mail, MapPin, Briefcase, GraduationCap, FolderGit2, Download } from 'lu
 }
 
 .resume-title {
-  @apply text-4xl font-bold text-slate-900 tracking-tight mb-4;
+  @apply text-4xl font-bold tracking-tight mb-4;
+  color: var(--color-heading);
+}
+:global(html.dark) .resume-title {
+  color: #e2e8f0;
 }
 @media (min-width: 768px) {
   .resume-title {
@@ -288,7 +292,8 @@ import { Mail, MapPin, Briefcase, GraduationCap, FolderGit2, Download } from 'lu
 }
 
 .resume-subtitle {
-  @apply text-lg text-slate-500 max-w-2xl;
+  @apply text-lg max-w-2xl;
+  color: var(--color-text);
 }
 
 .resume-download-btn {
@@ -421,7 +426,8 @@ import { Mail, MapPin, Briefcase, GraduationCap, FolderGit2, Download } from 'lu
 }
 
 .resume-skill-name {
-  @apply font-medium text-slate-700;
+  @apply font-medium;
+  color: var(--color-heading);
 }
 
 .resume-skill-tag {
@@ -475,7 +481,8 @@ import { Mail, MapPin, Briefcase, GraduationCap, FolderGit2, Download } from 'lu
 }
 
 .resume-section-header-large {
-  @apply flex items-center gap-2 mb-8 text-slate-900;
+  @apply flex items-center gap-2 mb-8;
+  color: var(--color-heading);
 }
 
 .resume-section-icon-large {
@@ -521,36 +528,54 @@ import { Mail, MapPin, Briefcase, GraduationCap, FolderGit2, Download } from 'lu
 }
 
 .resume-timeline-title {
-  @apply text-lg font-bold text-slate-900;
+  @apply text-lg font-bold;
+  color: var(--color-heading);
 }
 
 .resume-timeline-date-active {
-  @apply text-sm font-medium text-rose-500 bg-rose-50 px-3 py-1 rounded-full w-fit mt-2;
+  @apply text-sm font-medium px-3 py-1 rounded-full w-fit mt-2;
+  background-color: var(--color-secondary);
+  color: var(--color-primary);
 }
 @media (min-width: 768px) {
   .resume-timeline-date-active {
     @apply mt-0;
   }
 }
+:global(html.dark) .resume-timeline-date-active {
+  background-color: rgba(244, 63, 94, 0.15);
+  color: var(--color-primary);
+}
 
 .resume-timeline-date {
-  @apply text-sm font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full w-fit mt-2;
+  @apply text-sm font-medium px-3 py-1 rounded-full w-fit mt-2;
+  background-color: var(--color-background);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
 }
 @media (min-width: 768px) {
   .resume-timeline-date {
     @apply mt-0;
   }
 }
+:global(html.dark) .resume-timeline-date {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+}
 
 .resume-timeline-company {
-  @apply text-slate-900 font-medium mb-4;
+  @apply font-medium mb-4;
+  color: var(--color-heading);
 }
 
 .resume-timeline-desc {
-  @apply space-y-2 text-slate-500 text-sm leading-relaxed;
+  @apply space-y-2 text-sm leading-relaxed;
+  color: var(--color-text);
 }
 
 .resume-timeline-desc-inline {
-  @apply text-slate-500 text-sm;
+  @apply text-sm;
+  color: var(--color-text);
 }
 </style>

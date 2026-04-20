@@ -173,6 +173,9 @@ const getTypeIcon = (type: string) => {
   @apply text-4xl md:text-5xl font-bold tracking-tight mb-4;
   color: var(--color-heading);
 }
+:global(html.dark) .diary-title {
+  color: #e2e8f0;
+}
 
 .diary-subtitle {
   @apply text-lg max-w-2xl;
@@ -186,6 +189,10 @@ const getTypeIcon = (type: string) => {
 .diary-badge-inner {
   @apply flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium;
   background-color: var(--color-secondary);
+  color: var(--color-primary);
+}
+:global(html.dark) .diary-badge-inner {
+  background-color: rgba(244, 63, 94, 0.15);
   color: var(--color-primary);
 }
 

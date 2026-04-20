@@ -357,8 +357,8 @@ const filteredArticles = computed(() => {
   font-weight: 500; /* font-medium */
 }
 :global(html.dark) .blog-article-category {
-  background-color: var(--color-primary);
-  color: #ffffff;
+  background-color: rgba(244, 63, 94, 0.15);
+  color: var(--color-primary);
 }
 
 .blog-article-info {

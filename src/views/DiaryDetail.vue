@@ -245,6 +245,11 @@ const goBack = () => {
   color: var(--color-text);
   border-color: var(--color-border);
 }
+:global(html.dark) .dd-type-badge {
+  background-color: rgba(244, 63, 94, 0.15);
+  color: var(--color-primary);
+  border: none;
+}
 
 .dd-article-card {
   @apply rounded-[2rem] overflow-hidden relative;

@@ -168,6 +168,9 @@ const getBadgeText = (type: string) => {
   @apply text-4xl md:text-5xl font-bold tracking-tight mb-4;
   color: var(--color-heading);
 }
+:global(html.dark) .cl-title {
+  color: #e2e8f0;
+}
 
 .cl-subtitle {
   @apply text-lg max-w-2xl;
@@ -253,6 +256,11 @@ const getBadgeText = (type: string) => {
   color: var(--color-text);
   border: 1px solid var(--color-border);
 }
+:global(html.dark) .cl-log-tag {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+}
 
 .cl-log-card-title {
   @apply font-medium;
@@ -282,17 +290,26 @@ const getBadgeText = (type: string) => {
 
 /* Colors */
 .cl-icon-rose { @apply text-rose-500; }
-.cl-bg-rose { @apply bg-rose-100; }
+.cl-bg-rose { background-color: var(--color-secondary); }
 
 .cl-icon-amber { @apply text-amber-500; }
 .cl-bg-amber { @apply bg-amber-100; }
+:global(html.dark) .cl-bg-amber { background-color: rgba(245, 158, 11, 0.15); }
 
 .cl-icon-blue { @apply text-blue-500; }
 .cl-bg-blue { @apply bg-blue-100; }
+:global(html.dark) .cl-bg-blue { background-color: rgba(59, 130, 246, 0.15); }
 
 /* Badge Colors */
 .cl-badge-emerald { @apply bg-emerald-50 text-emerald-600; }
+:global(html.dark) .cl-badge-emerald { background-color: rgba(16, 185, 129, 0.15); color: #10b981; }
+
 .cl-badge-rose { @apply bg-rose-50 text-rose-600; }
+:global(html.dark) .cl-badge-rose { background-color: rgba(244, 63, 94, 0.15); color: var(--color-primary); }
+
 .cl-badge-blue { @apply bg-blue-50 text-blue-600; }
+:global(html.dark) .cl-badge-blue { background-color: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+
 .cl-badge-slate { @apply bg-slate-50 text-slate-600; }
+:global(html.dark) .cl-badge-slate { background-color: rgba(255, 255, 255, 0.05); color: #cbd5e1; }
 </style>

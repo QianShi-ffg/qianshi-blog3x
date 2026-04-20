@@ -152,7 +152,11 @@ const projects = [
 }
 
 .portfolio-title {
-  @apply text-4xl font-bold text-slate-900 tracking-tight mb-4;
+  @apply text-4xl font-bold tracking-tight mb-4;
+  color: var(--color-heading);
+}
+:global(html.dark) .portfolio-title {
+  color: #e2e8f0;
 }
 @media (min-width: 768px) {
   .portfolio-title {
@@ -161,7 +165,8 @@ const projects = [
 }
 
 .portfolio-subtitle {
-  @apply text-lg text-slate-500 max-w-2xl;
+  @apply text-lg max-w-2xl;
+  color: var(--color-text);
 }
 
 .portfolio-grid {
@@ -177,7 +182,15 @@ const projects = [
 }
 
 .portfolio-image-wrapper {
-  @apply relative overflow-hidden rounded-3xl aspect-[16/10] mb-8 bg-white/70 backdrop-blur-lg border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300;
+  @apply relative overflow-hidden rounded-3xl aspect-[16/10] mb-8 transition-all duration-300;
+  background-color: var(--color-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+}
+:global(html.dark) .portfolio-image-wrapper {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
 }
 
 .portfolio-image {
@@ -197,7 +210,15 @@ const projects = [
 }
 
 .portfolio-action-btn {
-  @apply w-12 h-12 rounded-full bg-white/90 backdrop-blur flex items-center justify-center text-slate-900 transition-all duration-300 translate-y-4 hover:text-rose-500 hover:scale-110;
+  @apply w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 translate-y-4;
+  background-color: var(--color-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--color-heading);
+}
+.portfolio-action-btn:hover {
+  color: var(--color-primary);
+  transform: scale(1.1);
 }
 
 .portfolio-card:hover .portfolio-action-btn {
@@ -217,15 +238,22 @@ const projects = [
 }
 
 .portfolio-category-badge {
-  @apply px-3 py-1 rounded-full bg-rose-50 text-rose-600 text-xs font-medium;
+  @apply px-3 py-1 rounded-full text-xs font-medium;
+  background-color: var(--color-secondary);
+  color: var(--color-primary);
+}
+:global(html.dark) .portfolio-category-badge {
+  background-color: rgba(244, 63, 94, 0.15);
+  color: var(--color-primary);
 }
 
 .portfolio-project-title {
-  @apply text-2xl font-bold text-slate-900 mb-3 flex items-center gap-2 transition-colors;
+  @apply text-2xl font-bold mb-3 flex items-center gap-2 transition-colors;
+  color: var(--color-heading);
 }
 
 .portfolio-card:hover .portfolio-project-title {
-  @apply text-rose-500;
+  color: var(--color-primary);
 }
 
 .portfolio-arrow-icon {
@@ -237,7 +265,8 @@ const projects = [
 }
 
 .portfolio-project-desc {
-  @apply text-slate-500 leading-relaxed mb-6;
+  @apply leading-relaxed mb-6;
+  color: var(--color-text);
 }
 
 .portfolio-tags-wrapper {
@@ -245,6 +274,14 @@ const projects = [
 }
 
 .portfolio-tag-badge {
-  @apply px-3 py-1 rounded-md bg-slate-50 text-slate-500 text-xs font-medium;
+  @apply px-3 py-1 rounded-md text-xs font-medium;
+  background-color: var(--color-background);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+:global(html.dark) .portfolio-tag-badge {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
 }
 </style>

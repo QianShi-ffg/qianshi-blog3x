@@ -358,6 +358,9 @@ import { RouterLink } from 'vue-router'
     0 4px 10px -1px rgba(0, 0, 0, 0.05),
     0 2px 6px -1px rgba(0, 0, 0, 0.03); /* shadow-md */
 }
+:global(html.dark) .floating-badge {
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
 
 .badge-1 {
   left: -3rem; /* -left-12 */
@@ -381,13 +384,19 @@ import { RouterLink } from 'vue-router'
 }
 
 .icon-rose {
-  background-color: #ffe4e6; /* bg-rose-100 */
+  background-color: var(--color-secondary); /* bg-rose-100 */
   color: var(--color-primary); /* text-rose-500 */
+}
+:global(html.dark) .icon-rose {
+  background-color: rgba(244, 63, 94, 0.15);
 }
 
 .icon-blue {
   background-color: #dbeafe; /* bg-blue-100 */
   color: #3b82f6; /* text-blue-500 */
+}
+:global(html.dark) .icon-blue {
+  background-color: rgba(59, 130, 246, 0.15);
 }
 
 .badge-icon {
@@ -398,13 +407,13 @@ import { RouterLink } from 'vue-router'
 .badge-title {
   font-size: 0.875rem; /* text-sm */
   font-weight: 700; /* font-bold */
-  color: #0f172a; /* text-slate-900 */
+  color: var(--color-heading); /* text-slate-900 */
   margin: 0;
 }
 
 .badge-subtitle {
   font-size: 0.75rem; /* text-xs */
-  color: #64748b; /* text-slate-500 */
+  color: var(--color-text); /* text-slate-500 */
   margin: 0;
 }
 
@@ -491,6 +500,7 @@ import { RouterLink } from 'vue-router'
     0 -1px 0 0 rgb(0, 0, 0, 0.02),
     0 0 rgb(0, 0, 0, 0.02),
     0 8px 30px rgb(0, 0, 0, 0.04);
+  border: 1px solid transparent;
 }
 .post-card:hover {
   transform: translateY(-0.5rem); /* hover:-translate-y-2 */
@@ -501,7 +511,13 @@ import { RouterLink } from 'vue-router'
 }
 
 :global(html.dark) .post-card {
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  background-color: #162032;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+:global(html.dark) .post-card:hover {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .post-meta {
@@ -517,10 +533,14 @@ import { RouterLink } from 'vue-router'
   padding-top: 0.25rem; /* py-1 */
   padding-bottom: 0.25rem;
   border-radius: 9999px; /* rounded-full */
-  background-color: #fff1f2; /* bg-rose-50 */
-  color: #e11d48; /* text-rose-600 */
+  background-color: var(--color-secondary); /* bg-rose-50 */
+  color: var(--color-primary); /* text-rose-600 */
   font-size: 0.75rem; /* text-xs */
   font-weight: 500; /* font-medium */
+}
+:global(html.dark) .post-tag {
+  background-color: rgba(244, 63, 94, 0.15);
+  color: var(--color-primary);
 }
 
 .post-date {
@@ -541,6 +561,9 @@ import { RouterLink } from 'vue-router'
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+:global(html.dark) .post-title {
+  color: #e2e8f0;
+}
 .post-card:hover .post-title {
   color: var(--color-primary); /* group-hover:text-rose-500 */
 }
@@ -554,6 +577,9 @@ import { RouterLink } from 'vue-router'
   -webkit-box-orient: vertical;
   overflow: hidden;
   margin: 0;
+}
+:global(html.dark) .post-desc {
+  color: #64748b;
 }
 
 .mobile-view-all {
