@@ -221,7 +221,8 @@ const goBack = () => {
 
 <style scoped lang="scss">
 .dd-page-container {
-  @apply max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32;
+  @apply mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32;
+  max-width: 1200px;
 }
 
 .dd-top-bar {
