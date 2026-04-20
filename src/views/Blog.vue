@@ -202,7 +202,7 @@ const filteredArticles = computed(() => {
   font-size: 2.25rem; /* text-4xl */
   line-height: 2.5rem;
   font-weight: 700; /* font-bold */
-  color: #0f172a; /* text-slate-900 */
+  color: var(--color-heading); /* text-slate-900 */
   letter-spacing: -0.025em; /* tracking-tight */
   margin-bottom: 1rem; /* mb-4 */
 }
@@ -215,7 +215,7 @@ const filteredArticles = computed(() => {
 
 .blog-subtitle {
   font-size: 1.125rem; /* text-lg */
-  color: #64748b; /* text-slate-500 */
+  color: var(--color-text); /* text-slate-500 */
   max-width: 42rem; /* max-w-2xl */
 }
 
@@ -256,6 +256,14 @@ const filteredArticles = computed(() => {
 .blog-filter-inactive:hover {
   background-color: var(--color-secondary); /* hover:bg-rose-50 */
   color: var(--color-primary); /* hover:text-rose-500 */
+}
+:global(html.dark) .blog-filter-inactive {
+  background-color: transparent;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+}
+:global(html.dark) .blog-filter-inactive:hover {
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
 .blog-grid-wrapper {
@@ -301,16 +309,21 @@ const filteredArticles = computed(() => {
     0 0 rgb(0, 0, 0, 0.02),
     0 8px 30px rgb(0, 0, 0, 0.04);
 }
+:global(html.dark) .blog-article-card {
+  background-color: #162032; /* matching the image dark navy slate */
+  border-color: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
 .blog-article-card:hover {
-  transform: translateY(-0.5rem); /* hover:-translate-y-2 */
-  /* box-shadow: 0 20px 25px -5px rgba(244, 63, 94, 0.1), 0 8px 10px -6px rgba(244, 63, 94, 0.1);  */
+  transform: translateY(-0.5rem);
   box-shadow:
     0 -1px 0 0 rgb(0, 0, 0, 0.03),
     0 20px 25px -5px rgb(244, 63, 94, 0.1),
     0 8px 10px -6px rgb(244, 63, 94, 0.1);
 }
-:global(html.dark) .blog-article-card {
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+:global(html.dark) .blog-article-card:hover {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .blog-article-inner {
@@ -338,10 +351,14 @@ const filteredArticles = computed(() => {
   padding-top: 0.25rem; /* py-1 */
   padding-bottom: 0.25rem;
   border-radius: 9999px; /* rounded-full */
-  background-color: #fff1f2; /* bg-rose-50 */
-  color: #e11d48; /* text-rose-600 */
+  background-color: var(--color-secondary); /* bg-rose-50 */
+  color: var(--color-primary); /* text-rose-600 */
   font-size: 0.75rem; /* text-xs */
   font-weight: 500; /* font-medium */
+}
+:global(html.dark) .blog-article-category {
+  background-color: var(--color-primary);
+  color: #ffffff;
 }
 
 .blog-article-info {
@@ -349,7 +366,7 @@ const filteredArticles = computed(() => {
   align-items: center;
   gap: 0.75rem; /* gap-3 */
   font-size: 0.75rem; /* text-xs */
-  color: #94a3b8; /* text-slate-400 */
+  color: var(--color-text); /* text-slate-400 */
 }
 
 .blog-article-info-item {
@@ -370,7 +387,7 @@ const filteredArticles = computed(() => {
 .blog-article-title {
   font-size: 1.25rem; /* text-xl */
   font-weight: 700; /* font-bold */
-  color: #0f172a; /* text-slate-900 */
+  color: var(--color-heading); /* text-slate-900 */
   margin-bottom: 0.75rem; /* mb-3 */
   transition-property: color;
   transition-duration: 150ms;
@@ -380,12 +397,15 @@ const filteredArticles = computed(() => {
   overflow: hidden;
   line-height: 1.375; /* leading-snug */
 }
+:global(html.dark) .blog-article-title {
+  color: #e2e8f0; /* Brighter white for titles in dark mode */
+}
 .blog-article-card:hover .blog-article-title {
-  color: #f43f5e; /* group-hover:text-rose-500 */
+  color: var(--color-primary); /* group-hover:text-rose-500 */
 }
 
 .blog-article-desc {
-  color: #64748b; /* text-slate-500 */
+  color: var(--color-text); /* text-slate-500 */
   font-size: 0.875rem; /* text-sm */
   line-height: 1.625; /* leading-relaxed */
   display: -webkit-box;
@@ -394,20 +414,26 @@ const filteredArticles = computed(() => {
   overflow: hidden;
   margin: 0;
 }
+:global(html.dark) .blog-article-desc {
+  color: #64748b; /* slate-500 for less contrast in dark mode excerpts */
+}
 
 .blog-article-action {
   margin-top: 1.5rem; /* mt-6 */
   padding-top: 1.5rem; /* pt-6 */
-  border-top: 1px solid #f1f5f9; /* border-slate-100 */
+  border-top: 1px solid var(--color-border); /* border-slate-100 */
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+:global(html.dark) .blog-article-action {
+  border-top-color: rgba(255, 255, 255, 0.1);
 }
 
 .blog-read-more {
   font-size: 0.875rem; /* text-sm */
   font-weight: 500; /* font-medium */
-  color: #f43f5e; /* text-rose-500 */
+  color: var(--color-primary); /* text-rose-500 */
   transition-property: color;
   transition-duration: 150ms;
 }
@@ -419,7 +445,7 @@ const filteredArticles = computed(() => {
   width: 2rem; /* w-8 */
   height: 2rem; /* h-8 */
   border-radius: 9999px; /* rounded-full */
-  background-color: #f8fafc; /* bg-slate-50 */
+  background-color: var(--color-background); /* bg-slate-50 */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -427,18 +453,30 @@ const filteredArticles = computed(() => {
   transition-duration: 150ms;
 }
 .blog-article-card:hover .blog-action-icon-wrap {
-  background-color: #fff1f2; /* group-hover:bg-rose-50 */
+  background-color: var(--color-secondary); /* group-hover:bg-rose-50 */
+}
+:global(html.dark) .blog-action-icon-wrap {
+  background-color: var(--color-heading);
+}
+:global(html.dark) .blog-article-card:hover .blog-action-icon-wrap {
+  background-color: var(--color-primary);
 }
 
 .blog-action-icon {
   width: 1rem; /* w-4 */
   height: 1rem; /* h-4 */
-  color: #94a3b8; /* text-slate-400 */
+  color: var(--color-text); /* text-slate-400 */
   transition-property: color;
   transition-duration: 150ms;
 }
 .blog-article-card:hover .blog-action-icon {
-  color: #f43f5e; /* group-hover:text-rose-500 */
+  color: var(--color-primary); /* group-hover:text-rose-500 */
+}
+:global(html.dark) .blog-action-icon {
+  color: var(--color-background);
+}
+:global(html.dark) .blog-article-card:hover .blog-action-icon {
+  color: #ffffff;
 }
 
 /* Transition classes from previous version */

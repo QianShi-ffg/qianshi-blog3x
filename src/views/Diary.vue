@@ -170,11 +170,13 @@ const getTypeIcon = (type: string) => {
 }
 
 .diary-title {
-  @apply text-4xl md:text-5xl font-bold text-slate-900 tracking-tight mb-4;
+  @apply text-4xl md:text-5xl font-bold tracking-tight mb-4;
+  color: var(--color-heading);
 }
 
 .diary-subtitle {
-  @apply text-lg text-slate-500 max-w-2xl;
+  @apply text-lg max-w-2xl;
+  color: var(--color-text);
 }
 
 .diary-badge-wrap {
@@ -182,7 +184,9 @@ const getTypeIcon = (type: string) => {
 }
 
 .diary-badge-inner {
-  @apply flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-600 rounded-full text-sm font-medium;
+  @apply flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium;
+  background-color: var(--color-secondary);
+  color: var(--color-primary);
 }
 
 .diary-icon-sm {
@@ -198,11 +202,33 @@ const getTypeIcon = (type: string) => {
 }
 
 .diary-card {
-  @apply bg-white/70 backdrop-blur-lg border border-slate-100 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-500 overflow-hidden hover:-translate-y-1 hover:shadow-xl hover:shadow-rose-500/10 relative;
+  @apply rounded-3xl transition-all duration-500 overflow-hidden hover:-translate-y-1 relative;
+  background-color: var(--color-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.04);
+}
+.diary-card:hover {
+  box-shadow: 0 20px 25px -5px rgba(244, 63, 94, 0.1), 0 8px 10px -6px rgba(244, 63, 94, 0.1);
+}
+:global(html.dark) .diary-card {
+  background-color: rgba(218, 223, 230, 0.05); /* Match the visual of the second image card background slightly */
+  box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 .diary-type-badge {
-  @apply absolute top-4 right-4 z-20 bg-white/80 backdrop-blur-md p-2 rounded-full shadow-sm text-slate-600;
+  @apply absolute top-4 right-4 z-20 p-2 rounded-full shadow-sm;
+  background-color: var(--color-background);
+  color: var(--color-text);
+  opacity: 0.8;
+  backdrop-filter: blur(8px);
+}
+:global(html.dark) .diary-type-badge {
+  background-color: rgba(255, 255, 255, 0.9);
+  color: #1e293b;
+  opacity: 1;
 }
 
 .diary-media-wrap {
@@ -218,7 +244,8 @@ const getTypeIcon = (type: string) => {
 }
 
 .diary-video-wrap {
-  @apply relative overflow-hidden bg-slate-100 aspect-video;
+  @apply relative overflow-hidden aspect-video;
+  background-color: var(--color-background);
 }
 
 .diary-video-element {
@@ -230,15 +257,17 @@ const getTypeIcon = (type: string) => {
 }
 
 .diary-content-bg-text {
-  @apply bg-rose-50/30;
+  background-color: rgba(244, 63, 94, 0.05); /* bg-rose-50/30 equivalent */
 }
 
 .diary-text-content {
-  @apply text-slate-700 leading-relaxed mb-6;
+  @apply leading-relaxed mb-6;
+  color: var(--color-text);
 }
 
 .diary-text-lg {
   @apply text-xl font-medium;
+  color: var(--color-heading);
 }
 
 .diary-text-md {
@@ -246,7 +275,9 @@ const getTypeIcon = (type: string) => {
 }
 
 .diary-meta-footer {
-  @apply flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-100 text-xs font-medium text-slate-400;
+  @apply flex flex-wrap items-center justify-between gap-4 pt-4 border-t text-xs font-medium;
+  color: var(--color-text);
+  border-color: var(--color-border);
 }
 
 .diary-meta-left {
@@ -254,7 +285,10 @@ const getTypeIcon = (type: string) => {
 }
 
 .diary-meta-date {
-  @apply flex items-center gap-1 hover:text-rose-500 transition-colors;
+  @apply flex items-center gap-1 transition-colors;
+}
+.diary-meta-date:hover {
+  color: var(--color-primary);
 }
 
 .diary-icon-xs {
@@ -266,7 +300,18 @@ const getTypeIcon = (type: string) => {
 }
 
 .diary-meta-location {
-  @apply flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-md text-slate-500;
+  @apply flex items-center gap-1 px-2 py-1 rounded-md;
+  background-color: var(--color-background);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+:global(html.dark) .diary-meta-location {
+  background-color: rgba(255, 255, 255, 0.9);
+  color: #1e293b;
+  border: none;
+}
+:global(html.dark) .diary-meta-footer {
+  border-top-color: rgba(255, 255, 255, 0.1);
 }
 
 .diary-icon-xxs {

@@ -18,13 +18,13 @@
 
   html.dark {
     --color-primary: #f43f5e; /* Keep primary same or slightly adjusted */
-    --color-secondary: #4c0519; /* Rose 950 */
-    --color-background: #0f172a; /* Slate 900 */
-    --color-text: #cbd5e1; /* Slate 300 */
+    --color-secondary: rgba(244, 63, 94, 0.15); /* Rose 950 -> rose slightly transparent */
+    --color-background: #0b1320; /* Darker navy like in the image */
+    --color-text: #94a3b8; /* Slate 400 for better muted text */
     --color-heading: #f8fafc; /* Slate 50 */
     --color-border: #1e293b; /* Slate 800 */
-    --color-card: rgba(30, 41, 59, 0.7); /* Slate 800 */
-    --color-card-hover: rgba(30, 41, 59, 0.9);
+    --color-card: #162032; /* Slightly lighter than background */
+    --color-card-hover: #1e293b;
   }
 
   body {
@@ -117,6 +117,10 @@
   html.dark .bg-slate-50 {
     background-color: #0f172a !important; /* slate-900 */
   }
+  html.dark .bg-slate-50\/30,
+  html.dark .bg-slate-50\/50 {
+    background-color: rgba(15, 23, 42, 0.5) !important;
+  }
   html.dark .bg-slate-100 {
     background-color: #334155 !important; /* slate-700 */
   }
@@ -124,7 +128,9 @@
   html.dark .text-slate-800 {
     color: #f8fafc !important; /* slate-50 */
   }
-  html.dark .text-slate-700,
+  html.dark .text-slate-700 {
+    color: #e2e8f0 !important; /* slate-200 */
+  }
   html.dark .text-slate-600 {
     color: #cbd5e1 !important; /* slate-300 */
   }
