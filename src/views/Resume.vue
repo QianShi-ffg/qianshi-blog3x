@@ -1,9 +1,82 @@
 <script setup lang="ts">
+import { onMounted, onUnmounted, ref } from 'vue'
 import { Mail, MapPin, Briefcase, GraduationCap, FolderGit2, Download } from 'lucide-vue-next'
+import { gsap } from 'gsap'
+
+const resumeRoot = ref<HTMLElement | null>(null)
+let ctx: gsap.Context | undefined
+const cleanups: Array<() => void> = []
+const prefersReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+
+onMounted(() => {
+  if (!resumeRoot.value || prefersReducedMotion()) return
+
+  ctx = gsap.context(() => {
+    gsap.to('.resume-avatar-orbit', {
+      rotation: 360,
+      duration: 18,
+      repeat: -1,
+      ease: 'none',
+    })
+
+    gsap.to('.resume-timeline-dot-active', {
+      scale: 1.42,
+      duration: 1.15,
+      repeat: -1,
+      yoyo: true,
+      ease: 'sine.inOut',
+    })
+
+    gsap.from('.resume-section-icon-large', {
+      scale: 0.6,
+      rotation: -10,
+      autoAlpha: 0,
+      duration: 0.5,
+      stagger: 0.08,
+      ease: 'back.out(1.8)',
+      delay: 0.25,
+    })
+  }, resumeRoot.value)
+
+  const profileCard = resumeRoot.value.querySelector<HTMLElement>('.resume-profile-card')
+  if (profileCard) {
+    const xTo = gsap.quickTo(profileCard, '--resume-spot-x', {
+      duration: 0.35,
+      ease: 'power3.out',
+    })
+    const yTo = gsap.quickTo(profileCard, '--resume-spot-y', {
+      duration: 0.35,
+      ease: 'power3.out',
+    })
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const rect = profileCard.getBoundingClientRect()
+      xTo(event.clientX - rect.left)
+      yTo(event.clientY - rect.top)
+    }
+
+    const handlePointerLeave = () => {
+      xTo(profileCard.offsetWidth / 2)
+      yTo(profileCard.offsetHeight * 0.2)
+    }
+
+    profileCard.addEventListener('pointermove', handlePointerMove)
+    profileCard.addEventListener('pointerleave', handlePointerLeave)
+    cleanups.push(() => {
+      profileCard.removeEventListener('pointermove', handlePointerMove)
+      profileCard.removeEventListener('pointerleave', handlePointerLeave)
+    })
+  }
+})
+
+onUnmounted(() => {
+  cleanups.splice(0).forEach((cleanup) => cleanup())
+  ctx?.revert()
+})
 </script>
 
 <template>
-  <div class="resume-page-container">
+  <div ref="resumeRoot" class="resume-page-container">
     <!-- Header -->
     <div class="resume-header-wrapper">
       <div>
@@ -28,7 +101,7 @@ import { Mail, MapPin, Briefcase, GraduationCap, FolderGit2, Download } from 'lu
         v-motion
         :initial="{ opacity: 0, scale: 0.9 }"
         :enter="{ opacity: 1, scale: 1, transition: { duration: 800, delay: 200 } }"
-        class="resume-download-btn"
+        class="resume-download-btn interactive-lift"
       >
         下载简历 PDF
         <Download class="resume-download-icon" />
@@ -43,9 +116,10 @@ import { Mail, MapPin, Briefcase, GraduationCap, FolderGit2, Download } from 'lu
           v-motion
           :initial="{ opacity: 0, x: -30 }"
           :enter="{ opacity: 1, x: 0, transition: { duration: 800, delay: 100 } }"
-          class="resume-profile-card"
+          class="resume-profile-card interactive-card"
         >
           <div class="resume-avatar-wrapper">
+            <span class="resume-avatar-orbit" aria-hidden="true"></span>
             <img
               src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20minimalist%20avatar%20illustration%2C%20flat%20design%2C%20soft%20colors%2C%20young%20developer&image_size=square"
               alt="Avatar"
@@ -74,7 +148,7 @@ import { Mail, MapPin, Briefcase, GraduationCap, FolderGit2, Download } from 'lu
           v-motion
           :initial="{ opacity: 0, x: -30 }"
           :enter="{ opacity: 1, x: 0, transition: { duration: 800, delay: 200 } }"
-          class="resume-skills-card"
+          class="resume-skills-card interactive-card"
         >
           <div class="resume-section-header">
             <!-- <span class="text-rose-500 font-mono font-bold">{"</>"}</span> -->
@@ -82,19 +156,19 @@ import { Mail, MapPin, Briefcase, GraduationCap, FolderGit2, Download } from 'lu
           </div>
 
           <div class="resume-skills-list">
-            <div class="resume-skill-item">
+            <div class="resume-skill-item interactive-lift">
               <span class="resume-skill-name">Vue.js / React</span>
               <span class="resume-skill-tag cl-tag-rose">精通</span>
             </div>
-            <div class="resume-skill-item">
+            <div class="resume-skill-item interactive-lift">
               <span class="resume-skill-name">TypeScript</span>
               <span class="resume-skill-tag cl-tag-amber">掌握</span>
             </div>
-            <div class="resume-skill-item">
+            <div class="resume-skill-item interactive-lift">
               <span class="resume-skill-name">CSS / Tailwind</span>
               <span class="resume-skill-tag cl-tag-rose">精通</span>
             </div>
-            <div class="resume-skill-item">
+            <div class="resume-skill-item interactive-lift">
               <span class="resume-skill-name">Node.js</span>
               <span class="resume-skill-tag cl-tag-sky">熟悉</span>
             </div>
@@ -113,7 +187,7 @@ import { Mail, MapPin, Briefcase, GraduationCap, FolderGit2, Download } from 'lu
           v-motion
           :initial="{ opacity: 0, x: 30 }"
           :enter="{ opacity: 1, x: 0, transition: { duration: 800, delay: 100 } }"
-          class="resume-experience-card"
+          class="resume-experience-card interactive-card"
         >
           <div class="resume-section-header-large">
             <Briefcase class="resume-section-icon-large" />
@@ -158,7 +232,7 @@ import { Mail, MapPin, Briefcase, GraduationCap, FolderGit2, Download } from 'lu
           v-motion
           :initial="{ opacity: 0, x: 30 }"
           :enter="{ opacity: 1, x: 0, transition: { duration: 800, delay: 200 } }"
-          class="resume-education-card"
+          class="resume-education-card interactive-card"
         >
           <div class="resume-section-header-large">
             <GraduationCap class="resume-section-icon-large" />
@@ -185,7 +259,7 @@ import { Mail, MapPin, Briefcase, GraduationCap, FolderGit2, Download } from 'lu
           v-motion
           :initial="{ opacity: 0, x: 30 }"
           :enter="{ opacity: 1, x: 0, transition: { duration: 800, delay: 300 } }"
-          class="resume-education-card mt-8"
+          class="resume-education-card interactive-card mt-8"
         >
           <div class="resume-section-header-large">
             <FolderGit2 class="resume-section-icon-large" />
@@ -297,13 +371,29 @@ import { Mail, MapPin, Briefcase, GraduationCap, FolderGit2, Download } from 'lu
 }
 
 .resume-download-btn {
-  @apply inline-flex items-center justify-center px-6 py-2.5 rounded-full font-medium hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300;
+  @apply inline-flex items-center justify-center px-6 py-2.5 rounded-full font-medium active:translate-y-0 transition-all duration-300;
   background-color: var(--color-primary);
   color: white;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 12px 26px rgba(244, 63, 94, 0.18);
+}
+.resume-download-btn::before {
+  content: '';
+  position: absolute;
+  inset: -40% auto -40% -60%;
+  width: 45%;
+  transform: skewX(-18deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.48), transparent);
+  transition: transform 520ms ease;
+  pointer-events: none;
 }
 .resume-download-btn:hover {
   background-color: #e11d48;
   box-shadow: 0 10px 15px -3px rgba(244, 63, 94, 0.3);
+}
+.resume-download-btn:hover::before {
+  transform: translateX(360%) skewX(-18deg);
 }
 
 .resume-download-icon {
@@ -348,17 +438,63 @@ import { Mail, MapPin, Briefcase, GraduationCap, FolderGit2, Download } from 'lu
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--color-border);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+  position: relative;
+  overflow: hidden;
+  --resume-spot-x: 160;
+  --resume-spot-y: 48;
+}
+.resume-profile-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    circle at calc(var(--resume-spot-x) * 1px) calc(var(--resume-spot-y) * 1px),
+    rgba(244, 63, 94, 0.18),
+    rgba(14, 165, 233, 0.08) 28%,
+    transparent 55%
+  );
+  transition: opacity 240ms ease;
+}
+.resume-profile-card:hover::before {
+  opacity: 1;
 }
 :global(html.dark) .resume-profile-card {
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
 }
 
 .resume-avatar-wrapper {
-  @apply w-32 h-32 mx-auto rounded-full overflow-hidden mb-6 border-4 border-white shadow-lg;
+  @apply w-32 h-32 mx-auto rounded-full mb-6 border-4 border-white shadow-lg;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  box-shadow:
+    0 16px 36px rgba(244, 63, 94, 0.18),
+    0 0 0 8px rgba(244, 63, 94, 0.06);
+  will-change: transform;
+}
+.resume-avatar-orbit {
+  position: absolute;
+  inset: -35%;
+  z-index: 0;
+  background: conic-gradient(
+    from 120deg,
+    rgba(244, 63, 94, 0),
+    rgba(244, 63, 94, 0.72),
+    rgba(14, 165, 233, 0.6),
+    rgba(244, 63, 94, 0)
+  );
+  filter: blur(4px);
+  opacity: 0.78;
 }
 
 .resume-avatar {
   @apply w-full h-full object-cover;
+  position: relative;
+  z-index: 1;
+  border-radius: inherit;
+  padding: 4px;
 }
 
 .resume-name {
@@ -417,6 +553,8 @@ import { Mail, MapPin, Briefcase, GraduationCap, FolderGit2, Download } from 'lu
   @apply flex justify-between items-center px-4 py-3 rounded-xl transition-all duration-300;
   background-color: var(--color-background);
   border: 1px solid var(--color-border);
+  position: relative;
+  overflow: hidden;
 }
 .resume-skill-item:hover {
   background-color: var(--color-card);
@@ -510,12 +648,24 @@ import { Mail, MapPin, Briefcase, GraduationCap, FolderGit2, Download } from 'lu
 .resume-timeline-dot-active {
   @apply absolute -left-[5px] top-1.5 w-[10px] h-[10px] rounded-full bg-rose-500 ring-4;
   --tw-ring-color: var(--color-secondary);
+  box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.32);
+  will-change: transform;
 }
 
 .resume-timeline-dot {
   @apply absolute -left-[5px] top-1.5 w-[10px] h-[10px] rounded-full ring-4;
   background-color: var(--color-text);
   --tw-ring-color: var(--color-background);
+  transition:
+    background-color 220ms ease,
+    box-shadow 220ms ease,
+    transform 220ms ease;
+}
+
+.resume-timeline-item:hover .resume-timeline-dot {
+  background-color: var(--color-primary);
+  box-shadow: 0 0 0 6px rgba(244, 63, 94, 0.12);
+  transform: scale(1.18);
 }
 
 .resume-timeline-header {

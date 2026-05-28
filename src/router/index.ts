@@ -57,8 +57,15 @@ const router = createRouter({
   scrollBehavior(to, from, savedPosition) {
     if (savedPosition) {
       return savedPosition
-    } else {
-      return { top: 0, behavior: 'smooth' }
+    }
+
+    const isArticleRouteChange =
+      (from.name === 'blog' && to.name === 'blog-post') ||
+      (from.name === 'blog-post' && to.name === 'blog')
+
+    return {
+      top: 0,
+      behavior: isArticleRouteChange ? 'auto' : 'smooth',
     }
   }
 })

@@ -132,6 +132,7 @@ const scrollToTop = () => {
   align-items: center;
   gap: 0.5rem; /* gap-2 */
   margin-bottom: 1.5rem; /* mb-6 */
+  transition: color 220ms ease;
 }
 
 .footer-logo-icon {
@@ -145,12 +146,16 @@ const scrollToTop = () => {
   color: #ffffff;
   font-weight: 700; /* font-bold */
   font-size: 1.125rem; /* text-lg */
-  transition-property: transform;
-  transition-duration: 300ms;
+  transition:
+    background-color 260ms ease,
+    box-shadow 260ms ease,
+    transform 260ms ease;
 }
 
 .group:hover .footer-logo-icon {
-  transform: scale(1.1); /* group-hover:scale-110 */
+  background-color: #fb7185;
+  box-shadow: 0 8px 18px rgba(244, 63, 94, 0.16);
+  transform: scale(1.04);
 }
 
 .footer-logo-text {
@@ -184,14 +189,44 @@ const scrollToTop = () => {
 }
 
 .footer-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 0.125rem 0.375rem;
+  margin-left: -0.375rem;
+  border-radius: 0.5rem;
+  isolation: isolate;
   color: var(--color-text);
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
+  transition:
+    color 240ms ease;
+}
+
+.footer-link::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  left: -0.35rem;
+  right: -0.35rem;
+  top: 50%;
+  height: 1.45rem;
+  border-radius: 9999px;
+  background: rgba(244, 63, 94, 0.16);
+  filter: blur(12px);
+  opacity: 0;
+  transform: translateY(-50%) scaleX(0.72);
+  transition:
+    opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .footer-link:hover {
   color: #f43f5e; /* hover:text-rose-500 */
+}
+
+.footer-link:hover::before {
+  opacity: 1;
+  transform: translateY(-50%) scaleX(1);
 }
 
 .footer-bottom {
@@ -233,9 +268,11 @@ const scrollToTop = () => {
   font-size: 0.875rem; /* text-sm */
   font-weight: 500; /* font-medium */
   color: var(--color-text); /* text-slate-500 */
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
+  padding: 0.25rem 0.25rem 0.25rem 0.75rem;
+  border-radius: 9999px;
+  transition:
+    color 240ms ease,
+    background-color 320ms cubic-bezier(0.22, 1, 0.36, 1);
   background: transparent;
   border: none;
   cursor: pointer;
@@ -243,6 +280,7 @@ const scrollToTop = () => {
 
 .footer-back-to-top:hover {
   color: var(--color-primary); /* hover:text-rose-500 */
+  background-color: rgba(244, 63, 94, 0.06);
 }
 
 .footer-btt-icon-wrap {
@@ -253,24 +291,23 @@ const scrollToTop = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
+  transition:
+    background-color 240ms ease,
+    box-shadow 240ms ease;
 }
 
 .group:hover .footer-btt-icon-wrap {
   background-color: var(--color-secondary); /* group-hover:bg-rose-50 */
+  box-shadow: inset 0 0 0 1px rgba(244, 63, 94, 0.08);
 }
 
 .footer-btt-icon {
   width: 1rem; /* w-4 */
   height: 1rem; /* h-4 */
-  transition-property: transform;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .group:hover .footer-btt-icon {
-  transform: translateY(-0.125rem) translateX(0.125rem); /* group-hover:-translate-y-0.5 group-hover:translate-x-0.5 */
+  transform: translateX(0.125rem);
 }
 </style>

@@ -1,10 +1,140 @@
 <script setup lang="ts">
+import { onMounted, onUnmounted, ref } from 'vue'
 import { ArrowRight, Code2, Coffee, Sparkles } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
+import { gsap } from 'gsap'
+
+const homeRoot = ref<HTMLElement | null>(null)
+let ctx: gsap.Context | undefined
+const cleanups: Array<() => void> = []
+const prefersReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+
+onMounted(() => {
+  if (!homeRoot.value) return
+
+  const reduceMotion = prefersReducedMotion()
+
+  ctx = gsap.context(() => {
+    const introItems = gsap.utils.toArray<HTMLElement>('.hero-animate')
+
+    if (reduceMotion) {
+      gsap.set(introItems, { autoAlpha: 1, y: 0, scaleX: 1, scaleY: 1 })
+      return
+    }
+
+    gsap
+      .timeline({ defaults: { duration: 0.72, ease: 'power3.out' } })
+      .from(introItems, {
+        autoAlpha: 0,
+        y: 24,
+        scaleX: 0.98,
+        scaleY: 0.98,
+        stagger: 0.08,
+      })
+      .from(
+        '.hero-image-wrapper',
+        {
+          autoAlpha: 0,
+          y: 28,
+          rotation: 5,
+          scaleX: 0.96,
+          scaleY: 0.96,
+          duration: 0.9,
+          ease: 'power3.out',
+        },
+        '-=0.42',
+      )
+      .from(
+        '.floating-badge',
+        {
+          autoAlpha: 0,
+          y: 18,
+          scaleX: 0.92,
+          scaleY: 0.92,
+          stagger: 0.12,
+          duration: 0.55,
+          ease: 'back.out(1.7)',
+        },
+        '-=0.35',
+      )
+
+    gsap.to('.badge-1', {
+      y: -12,
+      rotation: -2,
+      repeat: -1,
+      yoyo: true,
+      duration: 2.7,
+      ease: 'sine.inOut',
+    })
+
+    gsap.to('.badge-2', {
+      y: 10,
+      rotation: 2,
+      repeat: -1,
+      yoyo: true,
+      duration: 3.2,
+      ease: 'sine.inOut',
+    })
+
+    gsap.from('.recent-header, .post-card, .mobile-view-all', {
+      autoAlpha: 0,
+      y: 22,
+      duration: 0.65,
+      stagger: 0.08,
+      ease: 'power2.out',
+      delay: 0.45,
+    })
+  }, homeRoot.value)
+
+  if (reduceMotion || !homeRoot.value) return
+
+  const imageWrapper = homeRoot.value.querySelector<HTMLElement>('.hero-image-wrapper')
+  if (imageWrapper) {
+    const rotateTo = gsap.quickTo(imageWrapper, 'rotation', { duration: 0.45, ease: 'power3.out' })
+    const scaleXTo = gsap.quickTo(imageWrapper, 'scaleX', { duration: 0.45, ease: 'power3.out' })
+    const scaleYTo = gsap.quickTo(imageWrapper, 'scaleY', { duration: 0.45, ease: 'power3.out' })
+    const enter = () => {
+      rotateTo(0)
+      scaleXTo(1.02)
+      scaleYTo(1.02)
+    }
+    const leave = () => {
+      rotateTo(3)
+      scaleXTo(1)
+      scaleYTo(1)
+    }
+
+    imageWrapper.addEventListener('mouseenter', enter)
+    imageWrapper.addEventListener('mouseleave', leave)
+    cleanups.push(() => {
+      imageWrapper.removeEventListener('mouseenter', enter)
+      imageWrapper.removeEventListener('mouseleave', leave)
+    })
+  }
+
+  homeRoot.value.querySelectorAll<HTMLElement>('.post-card').forEach((card) => {
+    const enter = () =>
+      gsap.to(card, { y: -8, scaleX: 1.01, scaleY: 1.01, duration: 0.28, ease: 'power2.out' })
+    const leave = () =>
+      gsap.to(card, { y: 0, scaleX: 1, scaleY: 1, duration: 0.28, ease: 'power2.out' })
+
+    card.addEventListener('mouseenter', enter)
+    card.addEventListener('mouseleave', leave)
+    cleanups.push(() => {
+      card.removeEventListener('mouseenter', enter)
+      card.removeEventListener('mouseleave', leave)
+    })
+  })
+})
+
+onUnmounted(() => {
+  cleanups.splice(0).forEach((cleanup) => cleanup())
+  ctx?.revert()
+})
 </script>
 
 <template>
-  <div class="home-container">
+  <div ref="homeRoot" class="home-container">
     <!-- Hero Section -->
     <section class="hero-section">
       <!-- Decorative Background Blobs -->
@@ -14,42 +144,22 @@ import { RouterLink } from 'vue-router'
       <div class="hero-grid">
         <!-- Text Content -->
         <div class="hero-text-content">
-          <div
-            v-motion
-            :initial="{ opacity: 0, y: 20 }"
-            :enter="{ opacity: 1, y: 0, transition: { duration: 800 } }"
-            class="hero-badge"
-          >
+          <div class="hero-badge hero-animate">
             <Sparkles class="hero-badge-icon" />
             <span>欢迎来到我的数字花园</span>
           </div>
 
-          <h1
-            v-motion
-            :initial="{ opacity: 0, y: 20 }"
-            :enter="{ opacity: 1, y: 0, transition: { duration: 800, delay: 100 } }"
-            class="hero-title"
-          >
+          <h1 class="hero-title hero-animate">
             用代码 <br />
             <span class="hero-title-highlight">构建世界</span>，<br />
             用文字记录生活。
           </h1>
 
-          <p
-            v-motion
-            :initial="{ opacity: 0, y: 20 }"
-            :enter="{ opacity: 1, y: 0, transition: { duration: 800, delay: 200 } }"
-            class="hero-desc"
-          >
+          <p class="hero-desc hero-animate">
             一位热衷于创建简洁、易用且交互丰富的界面的前端开发人员。
           </p>
 
-          <div
-            v-motion
-            :initial="{ opacity: 0, y: 20 }"
-            :enter="{ opacity: 1, y: 0, transition: { duration: 800, delay: 300 } }"
-            class="hero-actions"
-          >
+          <div class="hero-actions hero-animate">
             <RouterLink to="/blog" class="btn-primary group">
               阅读文章
               <ArrowRight class="btn-primary-icon" />
@@ -59,12 +169,7 @@ import { RouterLink } from 'vue-router'
         </div>
 
         <!-- Image / Visual Content -->
-        <div
-          v-motion
-          :initial="{ opacity: 0, scale: 0.95 }"
-          :enter="{ opacity: 1, scale: 1, transition: { duration: 1000, delay: 200 } }"
-          class="hero-visual"
-        >
+        <div class="hero-visual">
           <div class="hero-image-wrapper">
             <img
               src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20minimalist%20and%20fresh%20workspace%2C%20bright%20lighting%2C%20a%20plant%2C%20soft%20colors&image_size=square"
@@ -324,17 +429,13 @@ import { RouterLink } from 'vue-router'
   margin-left: auto;
   margin-right: auto;
   transform: rotate(3deg);
-  transition-property: transform;
-  transition-duration: 500ms;
   background-color: var(--color-card);
   border-radius: 1.5rem;
+  will-change: transform;
   box-shadow:
     0 0 0 #000000,
     0 0px 0px 0px rgba(0, 0, 0, 0.03),
     0 8px 30px rgb(0, 0, 0, 0.04); /* shadow-md */
-}
-.hero-image-wrapper:hover {
-  transform: rotate(0deg);
 }
 
 .hero-image {
@@ -360,6 +461,7 @@ import { RouterLink } from 'vue-router'
   box-shadow:
     0 4px 10px -1px rgba(0, 0, 0, 0.05),
     0 2px 6px -1px rgba(0, 0, 0, 0.03); /* shadow-md */
+  will-change: transform;
 }
 :global(html.dark) .floating-badge {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
@@ -368,13 +470,11 @@ import { RouterLink } from 'vue-router'
 .badge-1 {
   left: -3rem; /* -left-12 */
   top: 3rem; /* top-12 */
-  animation: bounce 4s infinite;
 }
 
 .badge-2 {
   right: -3rem; /* -right-12 */
   bottom: 3rem; /* bottom-12 */
-  animation: bounce 5s infinite;
 }
 
 .badge-icon-wrap {
@@ -492,7 +592,7 @@ import { RouterLink } from 'vue-router'
 
 .post-card {
   padding: 1.5rem 2rem; /* p-8 */
-  transition-property: all;
+  transition-property: box-shadow, border-color, background-color;
   transition-duration: 300ms;
   text-decoration: none;
   display: block;
@@ -504,9 +604,9 @@ import { RouterLink } from 'vue-router'
     0 0 rgb(0, 0, 0, 0.02),
     0 8px 30px rgb(0, 0, 0, 0.04);
   border: 1px solid transparent;
+  will-change: transform;
 }
 .post-card:hover {
-  transform: translateY(-0.5rem); /* hover:-translate-y-2 */
   box-shadow:
     0 -1px 0 0 rgb(0, 0, 0, 0.03),
     0 20px 25px -5px rgb(244, 63, 94, 0.1),

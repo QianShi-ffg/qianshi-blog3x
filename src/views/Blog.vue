@@ -1,59 +1,235 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, reactive, computed, nextTick, onBeforeUnmount, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Calendar, Clock, ChevronRight } from 'lucide-vue-next'
+import { Calendar, Clock, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { listArticles, getClassifyIdList } from '@/api/blog'
+import type { ArticleSummary } from '@/types/content'
+import { date } from "@/util/date";
+import { useBlogStore } from '@/stores/blog'
 
 const router = useRouter()
+const blogStore = useBlogStore()
 const activeFilter = ref('全部')
-const filters = ['全部', '前端', '设计', '生活']
+const filters = reactive({
+  rows: [{ id: '全部', name: '全部', value: '0' }], // 默认添加一个“全部”分类
+  total: 0,
+});
 
-const articles = [
-  {
-    id: 1,
-    title: 'Vue 3 组合式 API 最佳实践与性能优化',
-    date: '2024-03-15',
-    readTime: '8 min',
-    category: '前端',
-    desc: '在现代前端开发中，保持代码的简洁与可维护性至关重要。本文将分享在实际项目中总结的一些经验和技巧，帮助你写出更优雅的 Vue 3 代码。',
-  },
-  {
-    id: 2,
-    title: '如何构建一个现代化的博客系统',
-    date: '2024-02-28',
-    readTime: '12 min',
-    category: '前端',
-    desc: '从零开始，使用 Vue 3、Vite 和 Tailwind CSS 搭建一个高性能、响应式且具有极佳交互体验的个人博客。',
-  },
-  {
-    id: 3,
-    title: '极简主义在数字产品设计中的应用',
-    date: '2024-01-10',
-    readTime: '6 min',
-    category: '设计',
-    desc: '探讨"少即是多"的设计理念，以及如何通过合理的留白、克制的色彩和精致的排版来提升用户体验。',
-  },
-  {
-    id: 4,
-    title: '保持热爱的同时避免职业倦怠',
-    date: '2023-12-05',
-    readTime: '5 min',
-    category: '生活',
-    desc: '在快节奏的互联网行业中，如何找到工作与生活的平衡点，保持持续的创造力和学习热情。',
-  },
-  {
-    id: 5,
-    title: '深入理解 Tailwind CSS 架构哲学',
-    date: '2023-11-20',
-    readTime: '10 min',
-    category: '前端',
-    desc: '原子化 CSS 为什么会流行？Tailwind CSS 是如何解决传统 CSS 维护痛点的？本文带你一探究竟。',
-  },
-]
+const articles = ref<ArticleSummary[]>([])
+const isArticlesLoading = ref(true)
+const articleTotal = ref(0)
+const pageSize = 6
+const filterScroller = ref<HTMLElement | null>(null)
+const canScrollFilterRight = ref(false)
+const filterDrag = reactive({
+  isDown: false,
+  startX: 0,
+  scrollLeft: 0,
+  hasMoved: false,
+})
+let filterPreventClickUntil = 0
+
+onMounted(async () => {
+  await classify();
+  await nextTick()
+  updateFilterOverflow()
+  await loadArticles(blogStore.currentPage)
+  window.addEventListener('resize', updateFilterOverflow)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateFilterOverflow)
+})
+
+
+const classify = async () => {
+  const res = await getClassifyIdList({}) as { rows: Array<{ id: string; name: string; value: string }>; total: number }
+  const allFilter = filters.rows[0]
+  if (allFilter) {
+    allFilter.value = String(res.total)
+  }
+  filters.rows.push(...res.rows)
+  filters.total = res.total
+};
+
 
 const filteredArticles = computed(() => {
-  if (activeFilter.value === '全部') return articles
-  return articles.filter((a) => a.category === activeFilter.value)
+  return pagedArticles.value
 })
+
+const totalPages = computed(() => {
+  return Math.max(1, Math.ceil(articleTotal.value / pageSize))
+})
+
+const paginationItems = computed(() => {
+  const pages: Array<number | 'ellipsis'> = []
+  const total = totalPages.value
+  const current = blogStore.currentPage
+
+  if (total <= 5) {
+    return Array.from({ length: total }, (_, index) => index + 1)
+  }
+
+  pages.push(1)
+
+  if (current > 3) {
+    pages.push('ellipsis')
+  }
+
+  const start = Math.max(2, current - 1)
+  const end = Math.min(total - 1, current + 1)
+  for (let page = start; page <= end; page += 1) {
+    pages.push(page)
+  }
+
+  if (current < total - 2) {
+    pages.push('ellipsis')
+  }
+
+  pages.push(total)
+  return pages
+})
+
+const readArticleList = (res: unknown) => {
+  if (Array.isArray(res)) {
+    return res as ArticleSummary[]
+  }
+
+  const payload = res as { rows?: ArticleSummary[] }
+  return payload.rows ?? []
+}
+
+const getCurrentFilterTotal = () => {
+  const filter = filters.rows.find((item) => item.id === activeFilter.value)
+  if (!filter) return 0
+
+  return Number(filter.value)
+}
+
+const updateArticleTotal = () => {
+  articleTotal.value = activeFilter.value === '全部' ? filters.total : getCurrentFilterTotal()
+}
+
+const pagedArticles = computed(() => {
+  if (articles.value.length <= pageSize) return articles.value
+
+  const start = (blogStore.currentPage - 1) * pageSize
+  return articles.value.slice(start, start + pageSize)
+})
+
+const getArticleRequestParams = (page: number) => {
+  return {
+    page,
+    pageSize,
+    ...(activeFilter.value === '全部' ? {} : { classifyId: activeFilter.value }),
+  }
+}
+
+const loadArticles = async (page = blogStore.currentPage) => {
+  blogStore.setPage(page)
+  isArticlesLoading.value = true
+
+  try {
+    const res = await listArticles(getArticleRequestParams(page))
+    const articleList = readArticleList(res)
+
+    articles.value = articleList
+    updateArticleTotal()
+
+    if (blogStore.currentPage > totalPages.value) {
+      await loadArticles(totalPages.value)
+    }
+  } finally {
+    isArticlesLoading.value = false
+  }
+}
+
+const changePage = async (page: number) => {
+  const nextPage = Math.min(Math.max(page, 1), totalPages.value)
+  if (nextPage === blogStore.currentPage) return
+
+  await loadArticles(nextPage)
+}
+
+const updateFilterOverflow = () => {
+  const scroller = filterScroller.value
+  if (!scroller) {
+    canScrollFilterRight.value = false
+    return
+  }
+
+  canScrollFilterRight.value =
+    scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 2
+}
+
+const scrollFilterForward = () => {
+  const scroller = filterScroller.value
+  if (!scroller) return
+
+  scroller.scrollLeft += Math.min(scroller.clientWidth * 0.6, 360)
+  window.setTimeout(updateFilterOverflow, 260)
+}
+
+const startFilterDrag = (event: PointerEvent) => {
+  if (event.pointerType === 'mouse' && event.button !== 0) return
+
+  const scroller = filterScroller.value
+  if (!scroller) return
+
+  filterDrag.isDown = true
+  filterDrag.startX = event.clientX
+  filterDrag.scrollLeft = scroller.scrollLeft
+  filterDrag.hasMoved = false
+}
+
+const moveFilterDrag = (event: PointerEvent) => {
+  if (!filterDrag.isDown || !filterScroller.value) return
+
+  const distance = event.clientX - filterDrag.startX
+  if (Math.abs(distance) > 4) {
+    filterDrag.hasMoved = true
+    if (!filterScroller.value.hasPointerCapture(event.pointerId)) {
+      filterScroller.value.setPointerCapture(event.pointerId)
+    }
+  }
+
+  if (!filterDrag.hasMoved) return
+
+  event.preventDefault()
+  filterScroller.value.scrollLeft = filterDrag.scrollLeft - distance
+  updateFilterOverflow()
+}
+
+const stopFilterDrag = (event: PointerEvent) => {
+  if (!filterDrag.isDown) return
+
+  const scroller = filterScroller.value
+  const shouldSuppressClick = filterDrag.hasMoved
+  filterDrag.isDown = false
+  filterDrag.hasMoved = false
+
+  if (scroller?.hasPointerCapture(event.pointerId)) {
+    scroller.releasePointerCapture(event.pointerId)
+  }
+
+  if (shouldSuppressClick) {
+    filterPreventClickUntil = Date.now() + 120
+  }
+  updateFilterOverflow()
+}
+
+const selectFilter = async (id: string) => {
+  if (Date.now() < filterPreventClickUntil) return
+  if (activeFilter.value === id) return
+
+  activeFilter.value = id
+  await loadArticles(1)
+}
+
+const openArticle = (article: ArticleSummary) => {
+  blogStore.setCoverUrl(article.coverUrl || '')
+  router.push({ path: `/blog/${article.id}` })
+}
 </script>
 
 <template>
@@ -83,38 +259,78 @@ const filteredArticles = computed(() => {
       v-motion
       :initial="{ opacity: 0, y: 20 }"
       :enter="{ opacity: 1, y: 0, transition: { duration: 800, delay: 200 } }"
-      class="blog-filters-container"
+      class="blog-filters-wrap"
     >
-      <button
-        v-for="filter in filters"
-        :key="filter"
-        @click="activeFilter = filter"
-        class="blog-filter-btn"
-        :class="activeFilter === filter ? 'blog-filter-active' : 'blog-filter-inactive'"
+      <div
+        ref="filterScroller"
+        class="blog-filters-container"
+        :class="{ 'blog-filters-dragging': filterDrag.hasMoved }"
+        @scroll="updateFilterOverflow"
+        @pointerdown="startFilterDrag"
+        @pointermove="moveFilterDrag"
+        @pointerup="stopFilterDrag"
+        @pointercancel="stopFilterDrag"
+        @pointerleave="stopFilterDrag"
       >
-        {{ filter }}
+        <button
+          v-for="item in filters.rows"
+          :key="item.id"
+          @click="selectFilter(item.id)"
+          class="blog-filter-btn"
+          :class="activeFilter === item.id ? 'blog-filter-active' : 'blog-filter-inactive'"
+        >
+          {{ item.name }}
+        </button>
+      </div>
+      <button
+        v-show="canScrollFilterRight"
+        type="button"
+        class="blog-filter-more"
+        aria-label="查看更多分类"
+        @click.stop="scrollFilterForward"
+      >
+        <span class="blog-filter-more-stack" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </span>
       </button>
     </div>
 
     <!-- Articles Grid -->
     <div class="blog-grid-wrapper">
-      <TransitionGroup name="list" tag="div" class="blog-grid-container">
+      <div v-if="isArticlesLoading" class="blog-grid-container" aria-live="polite" aria-busy="true">
+        <article v-for="item in pageSize" :key="item" class="blog-article-card blog-article-skeleton">
+          <div class="blog-article-inner">
+            <div class="blog-skeleton-meta">
+              <span class="blog-skeleton-pill"></span>
+              <span class="blog-skeleton-date"></span>
+            </div>
+            <span class="blog-skeleton-title"></span>
+            <span class="blog-skeleton-text"></span>
+            <span class="blog-skeleton-text blog-skeleton-text-short"></span>
+            <div class="blog-skeleton-divider"></div>
+            <span class="blog-skeleton-link"></span>
+          </div>
+        </article>
+      </div>
+      <TransitionGroup v-else name="list" tag="div" class="blog-grid-container">
         <article
           v-for="article in filteredArticles"
           :key="article.id"
-          @click="router.push(`/blog/${article.id}`)"
-          class="blog-article-card group"
+          @click="openArticle(article)"
+          class="blog-article-card interactive-card group"
         >
           <div class="blog-article-inner">
             <!-- Meta -->
             <div class="blog-article-meta">
               <span class="blog-article-category">
-                {{ article.category }}
+                {{ (filters.rows.find((ii: any) => ii.id === article.classifyId)?.name) ?? '' }}
               </span>
               <div class="blog-article-info">
                 <span class="blog-article-info-item">
                   <Calendar class="blog-icon-sm" />
-                  {{ article.date }}
+                  {{ date(article.createTime) }}
                 </span>
                 <span class="blog-article-info-item">
                   <Clock class="blog-icon-sm" />
@@ -129,7 +345,7 @@ const filteredArticles = computed(() => {
                 {{ article.title }}
               </h2>
               <p class="blog-article-desc">
-                {{ article.desc }}
+                {{ article.describe }}
               </p>
             </div>
 
@@ -144,6 +360,51 @@ const filteredArticles = computed(() => {
         </article>
       </TransitionGroup>
     </div>
+
+    <nav
+      v-if="!isArticlesLoading && articleTotal > pageSize"
+      v-motion
+      :initial="{ opacity: 0, y: 16 }"
+      :enter="{ opacity: 1, y: 0, transition: { duration: 520, delay: 120 } }"
+      class="blog-pagination"
+      aria-label="文章分页"
+    >
+      <button
+        type="button"
+        class="blog-pagination-arrow"
+        :disabled="blogStore.currentPage === 1"
+        aria-label="上一页"
+        @click="changePage(blogStore.currentPage - 1)"
+      >
+        <ChevronLeft class="blog-pagination-icon" />
+      </button>
+
+      <div class="blog-pagination-pages">
+        <template v-for="(item, index) in paginationItems" :key="`${item}-${index}`">
+          <span v-if="item === 'ellipsis'" class="blog-pagination-ellipsis">...</span>
+          <button
+            v-else
+            type="button"
+            class="blog-pagination-page"
+            :class="{ 'blog-pagination-page-active': blogStore.currentPage === item }"
+            :aria-current="blogStore.currentPage === item ? 'page' : undefined"
+            @click="changePage(item)"
+          >
+            {{ item }}
+          </button>
+        </template>
+      </div>
+
+      <button
+        type="button"
+        class="blog-pagination-arrow"
+        :disabled="blogStore.currentPage === totalPages"
+        aria-label="下一页"
+        @click="changePage(blogStore.currentPage + 1)"
+      >
+        <ChevronRight class="blog-pagination-icon" />
+      </button>
+    </nav>
   </div>
 </template>
 
@@ -219,14 +480,138 @@ const filteredArticles = computed(() => {
   max-width: 42rem; /* max-w-2xl */
 }
 
-.blog-filters-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem; /* gap-3 */
+.blog-filters-wrap {
+  position: relative;
   margin-bottom: 3rem; /* mb-12 */
 }
 
+.blog-filters-wrap::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8rem;
+  height: 2.75rem;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(252, 252, 252, 0), var(--color-background) 64%);
+}
+
+.blog-filters-container {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.75rem; /* gap-3 */
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.125rem 7rem 0.625rem 0;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+  cursor: grab;
+  user-select: none;
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 7rem), transparent calc(100% - 2rem));
+  mask-image: linear-gradient(to right, #000 calc(100% - 7rem), transparent calc(100% - 2rem));
+}
+
+.blog-filter-more {
+  position: absolute;
+  top: 0.3125rem;
+  right: 0.25rem;
+  z-index: 2;
+  width: 2.25rem;
+  height: 1.875rem;
+  border: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
+  opacity: 0.72;
+  transition:
+    transform 220ms ease,
+    opacity 180ms ease;
+}
+
+.blog-filter-more:hover {
+  transform: translateX(0.125rem);
+  opacity: 1;
+}
+
+.blog-filter-more-stack {
+  position: relative;
+  width: 1.35rem;
+  height: 1.05rem;
+  display: block;
+}
+
+.blog-filter-more-stack span {
+  position: absolute;
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 1.5px solid rgba(244, 63, 94, 0.72);
+  border-radius: 0.2rem;
+  background: rgba(255, 255, 255, 0.5);
+  transform: rotate(45deg);
+}
+
+.blog-filter-more-stack span:nth-child(1) {
+  left: 0;
+  top: 0.15rem;
+  opacity: 0.35;
+}
+
+.blog-filter-more-stack span:nth-child(2) {
+  left: 0.3rem;
+  top: 0.08rem;
+  opacity: 0.58;
+}
+
+.blog-filter-more-stack span:nth-child(3) {
+  left: 0.6rem;
+  top: 0;
+  opacity: 0.92;
+}
+
+:global(html.dark) .blog-filters-wrap::after {
+  background: linear-gradient(90deg, rgba(11, 19, 32, 0), var(--color-background) 64%);
+}
+
+:global(html.dark) .blog-filter-more {
+  opacity: 0.8;
+}
+
+:global(html.dark) .blog-filter-more-stack span {
+  background: rgba(22, 32, 50, 0.55);
+  border-color: rgba(244, 63, 94, 0.82);
+}
+
+.blog-filters-dragging {
+  cursor: grabbing;
+  scroll-behavior: auto;
+}
+
+.blog-filters-dragging .blog-filter-btn {
+  pointer-events: none;
+}
+
+.blog-filters-container::-webkit-scrollbar {
+  height: 0;
+}
+
+.blog-filters-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.blog-filters-container::-webkit-scrollbar-thumb {
+  background-color: rgba(244, 63, 94, 0.28);
+  border-radius: 9999px;
+}
+
 .blog-filter-btn {
+  flex: 0 0 auto;
   padding-left: 1.25rem; /* px-5 */
   padding-right: 1.25rem;
   padding-top: 0.5rem; /* py-2 */
@@ -234,8 +619,12 @@ const filteredArticles = computed(() => {
   border-radius: 9999px; /* rounded-full */
   font-size: 0.875rem; /* text-sm */
   font-weight: 500; /* font-medium */
-  transition-property: all;
-  transition-duration: 300ms;
+  white-space: nowrap;
+  transition:
+    color 220ms ease,
+    background-color 220ms ease,
+    border-color 220ms ease,
+    box-shadow 220ms ease;
   border: none;
   cursor: pointer;
 }
@@ -256,6 +645,8 @@ const filteredArticles = computed(() => {
 .blog-filter-inactive:hover {
   background-color: var(--color-secondary); /* hover:bg-rose-50 */
   color: var(--color-primary); /* hover:text-rose-500 */
+  border-color: rgba(244, 63, 94, 0.18);
+  box-shadow: 0 8px 18px -12px rgba(244, 63, 94, 0.35);
 }
 :global(html.dark) .blog-filter-inactive {
   background-color: transparent;
@@ -300,8 +691,11 @@ const filteredArticles = computed(() => {
   flex-direction: column;
   height: 100%;
   cursor: pointer;
-  transition-property: all;
-  transition-duration: 300ms;
+  transition:
+    transform 280ms ease,
+    border-color 280ms ease,
+    box-shadow 280ms ease,
+    background-color 280ms ease;
   width: 100%;
   grid-column: span 1 / span 1;
   box-shadow:
@@ -315,11 +709,12 @@ const filteredArticles = computed(() => {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 .blog-article-card:hover {
-  transform: translateY(-0.5rem);
+  transform: translateY(-0.375rem);
+  border-color: rgba(244, 63, 94, 0.18);
   box-shadow:
     0 -1px 0 0 rgb(0, 0, 0, 0.03),
-    0 20px 25px -5px rgb(244, 63, 94, 0.1),
-    0 8px 10px -6px rgb(244, 63, 94, 0.1);
+    0 20px 25px -5px rgba(244, 63, 94, 0.1),
+    0 8px 10px -6px rgba(244, 63, 94, 0.1);
 }
 :global(html.dark) .blog-article-card:hover {
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
@@ -449,11 +844,13 @@ const filteredArticles = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition-property: background-color;
-  transition-duration: 150ms;
+  transition:
+    background-color 180ms ease,
+    box-shadow 180ms ease;
 }
 .blog-article-card:hover .blog-action-icon-wrap {
   background-color: var(--color-secondary); /* group-hover:bg-rose-50 */
+  box-shadow: 0 8px 18px -12px rgba(244, 63, 94, 0.45);
 }
 :global(html.dark) .blog-action-icon-wrap {
   background-color: var(--color-heading);
@@ -466,17 +863,220 @@ const filteredArticles = computed(() => {
   width: 1rem; /* w-4 */
   height: 1rem; /* h-4 */
   color: var(--color-text); /* text-slate-400 */
-  transition-property: color;
-  transition-duration: 150ms;
+  transition:
+    color 180ms ease,
+    scale 180ms ease;
 }
 .blog-article-card:hover .blog-action-icon {
   color: var(--color-primary); /* group-hover:text-rose-500 */
+  scale: 1.08;
 }
 :global(html.dark) .blog-action-icon {
   color: var(--color-background);
 }
 :global(html.dark) .blog-article-card:hover .blog-action-icon {
   color: #ffffff;
+}
+
+.blog-article-skeleton {
+  cursor: default;
+  pointer-events: none;
+}
+
+.blog-article-skeleton:hover {
+  transform: none;
+}
+
+.blog-skeleton-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.75rem;
+}
+
+.blog-skeleton-pill,
+.blog-skeleton-date,
+.blog-skeleton-title,
+.blog-skeleton-text,
+.blog-skeleton-link {
+  display: block;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0.14), rgba(244, 63, 94, 0.13), rgba(148, 163, 184, 0.14));
+  background-size: 220% 100%;
+  animation: blog-skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+.blog-skeleton-pill {
+  width: 4.5rem;
+  height: 1.5rem;
+}
+
+.blog-skeleton-date {
+  width: 8.25rem;
+  height: 1rem;
+}
+
+.blog-skeleton-title {
+  width: 86%;
+  height: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.blog-skeleton-text {
+  width: 100%;
+  height: 0.875rem;
+  margin-bottom: 0.75rem;
+}
+
+.blog-skeleton-text-short {
+  width: 68%;
+}
+
+.blog-skeleton-divider {
+  width: 100%;
+  height: 1px;
+  margin: 2rem 0 1.5rem;
+  background: var(--color-border);
+}
+
+.blog-skeleton-link {
+  width: 5.75rem;
+  height: 1rem;
+}
+
+.blog-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 3rem;
+  padding: 0.5rem;
+}
+
+.blog-pagination-pages {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem;
+  border: 1px solid var(--color-border);
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.56);
+  box-shadow:
+    0 16px 40px -30px rgba(15, 23, 42, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.blog-pagination-arrow,
+.blog-pagination-page {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.68);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition:
+    transform 200ms ease,
+    color 200ms ease,
+    border-color 200ms ease,
+    background-color 200ms ease,
+    box-shadow 200ms ease;
+}
+
+.blog-pagination-arrow:hover:not(:disabled),
+.blog-pagination-page:hover {
+  transform: translateY(-0.125rem);
+  color: var(--color-primary);
+  border-color: rgba(244, 63, 94, 0.2);
+  background: rgba(255, 241, 242, 0.86);
+  box-shadow: 0 14px 24px -18px rgba(244, 63, 94, 0.55);
+}
+
+.blog-pagination-page-active {
+  color: #ffffff;
+  border-color: transparent;
+  background: var(--color-primary);
+  box-shadow:
+    0 14px 26px -16px rgba(244, 63, 94, 0.8),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}
+
+.blog-pagination-page-active:hover {
+  color: #ffffff;
+  background: var(--color-primary);
+}
+
+.blog-pagination-arrow:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+  transform: none;
+}
+
+.blog-pagination-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.blog-pagination-ellipsis {
+  min-width: 1.5rem;
+  color: var(--color-text);
+  text-align: center;
+  font-weight: 600;
+  opacity: 0.55;
+}
+
+:global(html.dark) .blog-pagination-pages {
+  background: rgba(22, 32, 50, 0.62);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 16px 38px -30px rgba(0, 0, 0, 0.8),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+:global(html.dark) .blog-pagination-arrow,
+:global(html.dark) .blog-pagination-page {
+  background: rgba(22, 32, 50, 0.7);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+}
+
+:global(html.dark) .blog-pagination-arrow:hover:not(:disabled),
+:global(html.dark) .blog-pagination-page:hover {
+  background: rgba(244, 63, 94, 0.14);
+  border-color: rgba(244, 63, 94, 0.24);
+  color: var(--color-primary);
+}
+
+:global(html.dark) .blog-pagination-page-active,
+:global(html.dark) .blog-pagination-page-active:hover {
+  color: #ffffff;
+  background: var(--color-primary);
+  border-color: transparent;
+}
+
+@media (max-width: 640px) {
+  .blog-pagination {
+    gap: 0.5rem;
+    margin-top: 2.25rem;
+  }
+
+  .blog-pagination-pages {
+    gap: 0.25rem;
+    padding: 0.25rem;
+  }
+
+  .blog-pagination-arrow,
+  .blog-pagination-page {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
 }
 
 /* Transition classes from previous version */
@@ -494,5 +1094,24 @@ const filteredArticles = computed(() => {
 
 .list-leave-active {
   display: none;
+}
+
+@keyframes blog-skeleton-shimmer {
+  0% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -120% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blog-skeleton-pill,
+  .blog-skeleton-date,
+  .blog-skeleton-title,
+  .blog-skeleton-text,
+  .blog-skeleton-link {
+    animation: none;
+  }
 }
 </style>

@@ -1,94 +1,61 @@
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { computed } from 'vue'
 import { ArrowLeft, Github, ExternalLink, Calendar, User, LayoutGrid } from 'lucide-vue-next'
+import { getProjectById } from '@/api/portfolio'
+import type { Project } from '@/types/content'
 
 const route = useRoute()
 const router = useRouter()
 const projectId = Number(route.params.id)
+const project = ref<Project | null>(null)
+const isLoading = ref(true)
 
-// 模拟获取作品详情数据
-const allProjects = [
-  {
-    id: 1,
-    title: 'QianShiBlog Space',
-    category: '个人网站',
-    desc: '基于 Vue 3 + Tailwind CSS 的现代极简主义个人博客，具有出色的动画和交互体验。',
-    longDesc: 'QianShiBlog Space 是我个人的博客与作品集平台。在设计上，我采用了极简主义风格，大面积留白配合柔和的暖红色调（Rose），旨在提供极致舒适的阅读体验。技术架构上，全站采用 Vue 3 的 Composition API 编写，结合 Vite 极速构建，以及 Tailwind CSS 实现原子化样式。此外，还使用了 vueuse/motion 处理了复杂的页面转场与组件进入动效。',
-    image: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20clean%20website%20mockup%2C%20light%20theme%2C%20minimalist%2C%20soft%20red%20accents&image_size=landscape_16_9',
-    images: [
-      'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20minimalist%20blog%20article%20page%2C%20clean%20typography%2C%20white%20background%2C%20red%20highlights&image_size=landscape_16_9',
-      'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20portfolio%20grid%20layout%2C%20clean%20design%2C%20soft%20shadows&image_size=landscape_16_9'
-    ],
-    videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4', // 示例视频
-    tags: ['Vue 3', 'Tailwind', 'Vite', 'Motion'],
-    role: '全栈开发 / UI设计',
-    date: '2023.10 - 至今',
-    github: '#',
-    demo: '#'
-  },
-  {
-    id: 2,
-    title: 'Design System Pro',
-    category: '组件库',
-    desc: '一套为企业级应用打造的高质量 UI 组件库，包含 50+ 常用组件，支持深度定制。',
-    longDesc: '这套设计系统旨在解决企业内部多个中后台系统之间 UI 不一致、重复造轮子的问题。它包含了一套完整的 React 组件，涵盖了表单、数据展示、反馈、导航等多个类别。通过 Storybook 提供了详尽的交互式文档，并且完全支持 TypeScript 静态类型检查。',
-    image: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20collection%20of%20UI%20components%20floating%20in%203D%20space%2C%20clean%2C%20white%20background&image_size=landscape_16_9',
-    images: [
-      'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20storybook%20UI%20documentation%20page%2C%20clean%20and%20professional&image_size=landscape_16_9'
-    ],
-    videoUrl: '', // 无视频示例
-    tags: ['React', 'TypeScript', 'Storybook'],
-    role: '前端架构师',
-    date: '2022.05 - 2023.01',
-    github: '#',
-    demo: '#'
-  },
-  {
-    id: 3,
-    title: 'Weather Minimal',
-    category: '移动端应用',
-    desc: '一款极简风格的天气应用，提供精准的实时天气和未来天气预报，界面清新优雅。',
-    longDesc: 'Weather Minimal 是一款跨平台的移动端应用，专注于提供纯粹、无广告的天气预报体验。使用 React Native 构建，保证了 iOS 和 Android 双端的一致性与高性能。UI 采用大卡片设计，配合流畅的微动效，能够根据当前天气自动切换背景色调和动画（如下雨、下雪粒子效果）。',
-    image: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20minimalist%20weather%20app%20UI%20on%20a%20smartphone%20screen%2C%20pastel%20colors&image_size=landscape_16_9',
-    images: [
-      'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Weather%20app%20UI%20showing%20rainy%20weather%20with%20dark%20elegant%20theme&image_size=landscape_16_9'
-    ],
-    videoUrl: 'https://www.w3schools.com/html/mov_bbb.mp4', // 示例视频
-    tags: ['React Native', 'Weather API'],
-    role: '移动端开发',
-    date: '2021.11 - 2022.03',
-    github: '#',
-    demo: '#'
-  },
-  {
-    id: 4,
-    title: 'TaskFlow',
-    category: '效率工具',
-    desc: '面向小团队的敏捷任务管理工具，支持看板、日历和甘特图视图。',
-    longDesc: 'TaskFlow 是为了解决小团队在敏捷开发中沟通成本高、任务状态不透明而开发的。核心功能包括灵活的拖拽看板（Kanban）、多维度的甘特图排期以及实时消息通知。前端采用了 Vue 3 + Pinia 架构，后端则基于 Supabase 实现了快速的实时数据库同步与身份验证。',
-    image: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20kanban%20board%20dashboard%20UI%2C%20clean%2C%20modern%2C%20soft%20shadows&image_size=landscape_16_9',
-    images: [
-      'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20gantt%20chart%20interface%2C%20project%20management%20tool%2C%20clean%20UI&image_size=landscape_16_9'
-    ],
-    videoUrl: '', // 无视频示例
-    tags: ['Vue 3', 'Supabase', 'Pinia'],
-    role: '全栈开发',
-    date: '2021.01 - 2021.08',
-    github: '#',
-    demo: '#'
+onMounted(async () => {
+  isLoading.value = true
+  try {
+    project.value = await getProjectById(projectId)
+  } finally {
+    isLoading.value = false
   }
-]
-
-const project = computed(() => allProjects.find(p => p.id === projectId))
+})
 
 const goBack = () => {
   router.push('/portfolio')
 }
 </script>
 
+
 <template>
-  <div class="pd-container" v-if="project">
+  <div v-if="isLoading" class="pd-container" aria-live="polite" aria-busy="true">
+    <div class="pd-back-wrapper">
+      <div class="pd-loading-back"></div>
+    </div>
+    <header class="pd-hero pd-loading-hero">
+      <span class="pd-loading-chip"></span>
+      <span class="pd-loading-title"></span>
+      <span class="pd-loading-desc"></span>
+      <span class="pd-loading-desc pd-loading-desc-short"></span>
+      <div class="pd-info-grid pd-loading-info-grid">
+        <div v-for="item in 3" :key="item" class="pd-loading-info-item">
+          <span class="pd-loading-info-icon"></span>
+          <span class="pd-loading-info-lines">
+            <span></span>
+            <span></span>
+          </span>
+        </div>
+      </div>
+    </header>
+    <div class="pd-main-media pd-loading-media"></div>
+    <div class="pd-content-section pd-loading-content">
+      <span class="pd-loading-section-title"></span>
+      <span class="pd-loading-line"></span>
+      <span class="pd-loading-line"></span>
+      <span class="pd-loading-line pd-loading-line-short"></span>
+    </div>
+  </div>
+
+  <div class="pd-container" v-else-if="project">
     <!-- Back Button -->
     <div class="pd-back-wrapper">
       <button @click="goBack" class="pd-back-btn group">
@@ -99,52 +66,63 @@ const goBack = () => {
 
     <!-- Hero Section -->
     <header class="pd-hero" v-motion :initial="{ opacity: 0, y: 20 }" :enter="{ opacity: 1, y: 0, transition: { duration: 600 } }">
-      <div class="pd-hero-meta">
-        <span class="pd-category">{{ project.category }}</span>
-      </div>
-      <h1 class="pd-title">{{ project.title }}</h1>
-      <p class="pd-desc">{{ project.desc }}</p>
+      <div class="pd-hero-layout">
+        <div class="pd-hero-copy">
+          <div class="pd-hero-meta">
+            <span class="pd-category">{{ project.category }}</span>
+          </div>
+          <h1 class="pd-title">{{ project.title }}</h1>
+          <p class="pd-desc">{{ project.desc }}</p>
 
-      <div class="pd-info-grid">
-        <div class="pd-info-item">
-          <User class="pd-info-icon" />
-          <div class="pd-info-text">
-            <span class="pd-info-label">我的角色</span>
-            <span class="pd-info-value">{{ project.role }}</span>
+          <div class="pd-actions">
+            <a :href="project.github" target="_blank" class="pd-btn pd-btn-outline">
+              <Github class="w-5 h-5" />
+              查看源码
+            </a>
+            <a :href="project.demo" target="_blank" class="pd-btn pd-btn-primary">
+              <ExternalLink class="w-5 h-5" />
+              访问演示
+            </a>
           </div>
         </div>
-        <div class="pd-info-item">
-          <Calendar class="pd-info-icon" />
-          <div class="pd-info-text">
-            <span class="pd-info-label">开发周期</span>
-            <span class="pd-info-value">{{ project.date }}</span>
+
+        <aside class="pd-project-brief" aria-label="项目概览">
+          <div class="pd-brief-head">
+            <span class="pd-brief-kicker">Project Brief</span>
+            <span class="pd-brief-title">项目概览</span>
           </div>
-        </div>
-        <div class="pd-info-item">
-          <LayoutGrid class="pd-info-icon" />
-          <div class="pd-info-text">
-            <span class="pd-info-label">技术栈</span>
-            <div class="flex flex-wrap gap-2 mt-1">
-              <span v-for="tag in project.tags" :key="tag" class="pd-tech-tag">{{ tag }}</span>
+
+          <div class="pd-brief-list">
+            <div class="pd-brief-row">
+              <User class="pd-brief-icon" />
+              <div>
+                <span class="pd-brief-label">我的角色</span>
+                <span class="pd-brief-value">{{ project.role }}</span>
+              </div>
+            </div>
+            <div class="pd-brief-row">
+              <Calendar class="pd-brief-icon" />
+              <div>
+                <span class="pd-brief-label">开发周期</span>
+                <span class="pd-brief-value">{{ project.date }}</span>
+              </div>
+            </div>
+            <div class="pd-brief-row pd-brief-row-tech">
+              <LayoutGrid class="pd-brief-icon" />
+              <div>
+                <span class="pd-brief-label">技术栈</span>
+                <div class="pd-tech-tags">
+                  <span v-for="tag in project.tags" :key="tag" class="pd-tech-tag">{{ tag }}</span>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      <div class="pd-actions">
-        <a :href="project.github" target="_blank" class="pd-btn pd-btn-outline">
-          <Github class="w-5 h-5" />
-          查看源码
-        </a>
-        <a :href="project.demo" target="_blank" class="pd-btn pd-btn-primary">
-          <ExternalLink class="w-5 h-5" />
-          访问演示
-        </a>
+        </aside>
       </div>
     </header>
 
     <!-- Main Cover Image -->
-    <div class="pd-main-media" v-motion :initial="{ opacity: 0, y: 40 }" :enter="{ opacity: 1, y: 0, transition: { duration: 800, delay: 200 } }">
+    <div class="pd-main-media interactive-media" v-motion :initial="{ opacity: 0, y: 40 }" :enter="{ opacity: 1, y: 0, transition: { duration: 800, delay: 200 } }">
       <img :src="project.image" :alt="project.title" class="pd-main-img" />
     </div>
 
@@ -168,7 +146,7 @@ const goBack = () => {
       <div v-if="project.images && project.images.length > 0" class="pd-gallery mt-12">
         <h2 class="pd-section-title">项目截图</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div v-for="(img, index) in project.images" :key="index" class="pd-gallery-item">
+          <div v-for="(img, index) in project.images" :key="index" class="pd-gallery-item interactive-media">
             <img :src="img" alt="Gallery image" class="pd-gallery-img" />
           </div>
         </div>
@@ -202,11 +180,130 @@ const goBack = () => {
 }
 
 .pd-back-btn {
-  @apply flex items-center gap-2 text-slate-500 font-medium hover:text-rose-500 transition-colors bg-white/50 px-4 py-2 rounded-full border border-slate-200/60 backdrop-blur-md shadow-sm;
+  @apply flex items-center gap-2 text-slate-500 font-medium hover:text-rose-500 transition-colors bg-white/70 px-4 py-2 rounded-full border border-slate-200/60 shadow-sm;
+}
+
+.pd-back-btn svg {
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.pd-loading-back,
+.pd-loading-chip,
+.pd-loading-title,
+.pd-loading-desc,
+.pd-loading-info-icon,
+.pd-loading-info-lines span,
+.pd-loading-media,
+.pd-loading-section-title,
+.pd-loading-line {
+  display: block;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0.14), rgba(244, 63, 94, 0.12), rgba(148, 163, 184, 0.14));
+  background-size: 220% 100%;
+  animation: pd-skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+.pd-loading-back {
+  width: 8.75rem;
+  height: 2.5rem;
+}
+
+.pd-loading-chip {
+  width: 6rem;
+  height: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.pd-loading-title {
+  width: min(44rem, 86%);
+  height: 3.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.pd-loading-desc {
+  width: min(42rem, 92%);
+  height: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.pd-loading-desc-short {
+  width: min(28rem, 62%);
+  margin-bottom: 2.5rem;
+}
+
+.pd-loading-info-grid {
+  pointer-events: none;
+}
+
+.pd-loading-info-item {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.pd-loading-info-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.pd-loading-info-lines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pd-loading-info-lines span {
+  width: 70%;
+  height: 0.875rem;
+}
+
+.pd-loading-info-lines span:first-child {
+  width: 42%;
+}
+
+.pd-loading-media {
+  border-radius: 2rem;
+}
+
+.pd-loading-content {
+  pointer-events: none;
+}
+
+.pd-loading-section-title {
+  width: 9rem;
+  height: 1.75rem;
+  margin-bottom: 2rem;
+}
+
+.pd-loading-line {
+  width: 100%;
+  height: 1rem;
+  margin-bottom: 1rem;
+}
+
+.pd-loading-line-short {
+  width: 64%;
 }
 
 .pd-hero {
   @apply mb-16;
+
+  .pd-hero-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2rem;
+    align-items: end;
+
+    @media (min-width: 960px) {
+      grid-template-columns: minmax(0, 1fr) minmax(21rem, 25rem);
+      gap: 4rem;
+    }
+  }
+
+  .pd-hero-copy {
+    min-width: 0;
+  }
 
   .pd-hero-meta {
     @apply flex items-center gap-3 mb-6;
@@ -221,31 +318,89 @@ const goBack = () => {
   }
 
   .pd-desc {
-    @apply text-xl text-slate-500 leading-relaxed mb-10 max-w-3xl;
+    @apply text-xl text-slate-500 leading-relaxed mb-8 max-w-3xl;
   }
 
-  .pd-info-grid {
-    @apply grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10 p-6 bg-white/60 backdrop-blur-xl border border-slate-100 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.03)];
+  .pd-project-brief {
+    min-width: 0;
+    border-radius: 1.5rem;
+    border: 1px solid rgba(226, 232, 240, 0.46);
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.58), rgba(255, 247, 250, 0.24)),
+      var(--color-card);
+    box-shadow: 0 12px 34px rgba(15, 23, 42, 0.024);
+    padding: 1.5rem;
+    transition:
+      border-color 0.3s ease,
+      box-shadow 0.3s ease;
+
+    &:hover {
+      border-color: rgba(244, 63, 94, 0.1);
+      box-shadow: 0 14px 36px rgba(244, 63, 94, 0.034);
+    }
   }
 
-  .pd-info-item {
-    @apply flex items-center gap-4;
+  .pd-brief-head {
+    @apply mb-3;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
 
-    .pd-info-icon {
-      @apply w-10 h-10 p-2.5 rounded-full bg-rose-50 text-rose-500;
+  .pd-brief-kicker {
+    @apply text-xs font-semibold uppercase tracking-wider text-rose-500;
+  }
+
+  .pd-brief-title {
+    @apply text-sm font-semibold text-slate-600;
+  }
+
+  .pd-brief-list {
+    display: grid;
+  }
+
+  .pd-brief-row {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    min-height: 4.5rem;
+    padding: 0.875rem 0;
+    border-top: 1px solid rgba(226, 232, 240, 0.42);
+    transition:
+      background-color 0.3s ease,
+      padding-left 0.3s ease;
+
+    &:hover {
+      padding-left: 0.375rem;
+      background: linear-gradient(90deg, rgba(244, 63, 94, 0.055), rgba(244, 63, 94, 0));
     }
 
-    .pd-info-text {
-      @apply flex flex-col;
-
-      .pd-info-label {
-        @apply text-xs font-semibold text-slate-400 uppercase tracking-wider mb-0.5;
-      }
-
-      .pd-info-value {
-        @apply text-sm font-medium text-slate-800;
-      }
+    > div {
+      min-width: 0;
+      flex: 1;
     }
+  }
+
+  .pd-brief-row-tech {
+    padding-top: 0.625rem;
+    padding-bottom: 0.625rem;
+  }
+
+  .pd-brief-icon {
+    @apply mt-0.5 w-8 h-8 p-2 rounded-full bg-rose-50 text-rose-500 shrink-0;
+  }
+
+  .pd-brief-label {
+    @apply text-xs font-semibold text-slate-400 uppercase tracking-wider;
+    display: block;
+    margin-bottom: 0.2rem;
+  }
+
+  .pd-brief-value {
+    @apply text-sm font-medium text-slate-800;
+    display: block;
+    overflow-wrap: anywhere;
   }
 
   .pd-actions {
@@ -253,25 +408,35 @@ const goBack = () => {
 
     .pd-btn {
       @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full font-medium transition-all duration-300;
+      transform: none;
+
+      svg {
+        transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      &:hover svg {
+        transform: translateX(0.125rem);
+      }
 
       &-outline {
-        @apply border hover:shadow-md;
+        @apply border;
         background-color: var(--color-secondary);
         color: var(--color-primary);
         border-color: var(--color-border);
 
         &:hover {
           background-color: rgba(244, 63, 94, 0.1);
+          box-shadow: inset 0 0 0 1px rgba(244, 63, 94, 0.08);
         }
       }
 
       &-primary {
-        @apply text-white hover:-translate-y-0.5;
+        @apply text-white;
         background-color: var(--color-primary);
 
         &:hover {
           background-color: #e11d48;
-          box-shadow: 0 10px 15px -3px rgba(244, 63, 94, 0.3);
+          box-shadow: 0 0 0 4px rgba(244, 63, 94, 0.14);
         }
       }
     }
@@ -292,10 +457,16 @@ const goBack = () => {
 .pd-content-section {
   @apply rounded-[2rem] p-8 md:p-12;
   background-color: var(--color-card);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--color-border);
   box-shadow: 0 8px 30px rgba(0,0,0,0.04);
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+
+  &:hover {
+    border-color: rgba(244, 63, 94, 0.14);
+    box-shadow: 0 12px 34px rgba(244, 63, 94, 0.06);
+  }
 
   .pd-section-title {
     @apply text-2xl font-bold mb-6 flex items-center gap-3;
@@ -326,21 +497,57 @@ const goBack = () => {
 
 .pd-gallery-item {
   @apply rounded-2xl overflow-hidden shadow-md border border-slate-100;
-  
-  /* Use nested CSS instead of Tailwind group utility */
-  .pd-gallery-img {
-    @apply w-full h-full object-cover aspect-video transition-transform duration-500;
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+
+  &:hover {
+    border-color: rgba(244, 63, 94, 0.16);
+    box-shadow: 0 12px 28px rgba(244, 63, 94, 0.08);
   }
 
-  &:hover .pd-gallery-img {
-    @apply scale-105;
+  /* Use nested CSS instead of Tailwind group utility */
+  .pd-gallery-img {
+    @apply w-full h-full object-cover aspect-video;
   }
 }
 
 .pd-tech-tag {
   @apply px-3 py-1 rounded-full text-sm font-medium;
-  background-color: var(--color-background);
+  flex: 0 0 auto;
+  background-color: rgba(255, 255, 255, 0.62);
   color: var(--color-text);
-  border: 1px solid var(--color-border);
+  border: 1px solid rgba(226, 232, 240, 0.76);
+}
+
+.pd-tech-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  align-items: center;
+}
+
+@keyframes pd-skeleton-shimmer {
+  0% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -120% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pd-loading-back,
+  .pd-loading-chip,
+  .pd-loading-title,
+  .pd-loading-desc,
+  .pd-loading-info-icon,
+  .pd-loading-info-lines span,
+  .pd-loading-media,
+  .pd-loading-section-title,
+  .pd-loading-line {
+    animation: none;
+  }
 }
 </style>

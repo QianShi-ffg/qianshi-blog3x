@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { computed } from 'vue'
 import {
   ArrowLeft,
   MapPin,
@@ -13,89 +13,23 @@ import {
   MessageCircle,
 } from 'lucide-vue-next'
 import Comments from '../components/Comments.vue'
+import { getMomentById } from '@/api/diary'
+import type { DiaryMoment } from '@/types/content'
 
 const route = useRoute()
 const router = useRouter()
 const momentId = Number(route.params.id)
+const moment = ref<DiaryMoment | null>(null)
+const isLoading = ref(true)
 
-// 模拟获取日记详情数据 (合并了列表页数据和详情内容)
-const allMoments = [
-  {
-    id: 1,
-    type: 'image',
-    media:
-      'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20minimalist%20coffee%20cup%20on%20a%20wooden%20table%2C%20morning%20sunlight%2C%20soft%20colors&image_size=landscape_16_9',
-    content: '清晨的一杯咖啡，开启新一天的代码之旅。最近在研究 Vue 3 的源码，收获颇多。',
-    longContent:
-      '每天早晨的这杯咖啡似乎已经成了一种仪式。今天阳光特别好，照在桌面上暖洋洋的。\n\n最近这段时间一直在死磕 Vue 3 的源码，从响应式系统到编译器的实现，越看越觉得精妙。虽然过程有些痛苦，特别是看 `reactivity` 包里关于各种依赖收集和触发的边界处理时，但当真正理解它的设计哲学后，那种豁然开朗的感觉是无与伦比的。\n\n希望今天能把组件挂载的流程彻底理清楚。',
-    location: '上海 · 某咖啡馆',
-    date: '2024-04-12 09:30',
-    weather: '☀️ 晴',
-    likes: 24,
-    comments: 5,
-  },
-  {
-    id: 2,
-    type: 'text',
-    media: null,
-    content:
-      '今天完成了一个拖拽很久的需求，看着流畅的动画效果，感觉所有的加班都是值得的。前端开发的魅力就在于这种即时的视觉反馈。',
-    longContent:
-      '历时将近两周，那个让整个团队头疼的复杂拖拽交互需求终于上线了。\n\n中间经历了无数次的方案推翻和重构。最开始尝试使用现成的第三方库，发现很难满足产品极度变态的定制化要求（比如跨层级的DOM拖拽和实时的磁吸对齐）。最后咬咬牙决定用原生的 Pointer Events 自己写。\n\n在处理滚动边界和性能优化（RequestAnimationFrame 是永远的神）上掉了很多头发。但就在刚刚，看着它在生产环境里如丝般顺滑地跑起来，之前所有的烦躁都烟消云散了。这就是我为什么喜欢做前端的原因吧，你写的每一行代码，最终都会以最直观的方式呈现在屏幕上。',
-    location: '工作室',
-    date: '2024-04-05 22:15',
-    weather: '☁️ 多云',
-    likes: 42,
-    comments: 12,
-  },
-  {
-    id: 3,
-    type: 'video',
-    media: 'https://www.w3schools.com/html/mov_bbb.mp4',
-    poster:
-      'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20beautiful%20sunset%20over%20a%20city%20skyline%2C%20pastel%20colors%2C%20minimalist%20photography&image_size=landscape_16_9',
-    content:
-      '下班路上的晚霞。城市虽然拥挤，但偶尔抬起头，总能发现不期而遇的浪漫。用视频记录下这转瞬即逝的美好。',
-    longContent:
-      '连续加了三天班，今天难得准时下班。\n\n走出写字楼的时候，不经意间抬头，被眼前的晚霞震撼到了。大片的粉色和橘色交织在天空，给钢筋水泥的城市蒙上了一层极其温柔的滤镜。路上的行人都行色匆匆，低着头看着手机，不知道有多少人错过了这样的风景。\n\n停下来录了一段视频，风吹过树叶的声音和远处的车流声混在一起。深吸一口气，感觉最近的压力都随着这阵晚风飘散了。生活不只有显示器里的代码，偶尔也要抬头看看天。',
-    location: '杭州 · 滨江',
-    date: '2024-03-28 18:45',
-    weather: '🌤️ 晴转多云',
-    likes: 56,
-    comments: 8,
-  },
-  {
-    id: 4,
-    type: 'image',
-    media:
-      'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20clean%20desk%20setup%20with%20a%20macbook%20and%20a%20plant%2C%20soft%20natural%20light&image_size=landscape_16_9',
-    content:
-      '整理了一下桌面，把陪伴了三年的机械键盘清理得干干净净。极简的环境确实能带来内心的平静。',
-    longContent:
-      '周末的大扫除。\n\n花了整整一个下午的时间整理工作台。把那把快被盘出包浆的机械键盘一个键帽一个键帽地拆下来清洗，又把错综复杂的理线重新梳理了一遍。扔掉了桌面上不需要的杂物，只留下电脑、台灯和一盆绿植。\n\n看着干净整洁的桌面，感觉思绪也跟着清晰了起来。有时候外部环境的极简，真的能促进内心的专注。准备在这个焕然一新的桌面上，开始写我的新开源项目了。',
-    location: '家里',
-    date: '2024-03-15 14:20',
-    weather: '🌧️ 小雨',
-    likes: 89,
-    comments: 15,
-  },
-  {
-    id: 5,
-    type: 'text',
-    media: null,
-    content:
-      '读完了一本关于设计的书，开始理解"设计不仅仅是外观，更是它是如何运作的"这句话的深刻含义。准备在下个项目中实践一下。',
-    longContent:
-      '刚刚合上《设计心理学》。\n\n作为一名开发人员，以前总觉得设计就是把东西画得好看。但书中提到的可用性、可见性、隐喻和反馈等概念，让我有了全新的认知。乔布斯说的那句“设计不仅仅是外观和感觉，设计是它是如何运作的”，现在终于能体会到了。\n\n比如我们常常为了视觉上的极简，而隐藏掉重要的操作按钮，这其实是违背了可见性原则的。下一个迭代，我要试着用这些理论去重新审视一下我们现有的组件交互逻辑，不仅仅要实现功能，更要让用户用得“理所当然”。',
-    location: '市图书馆',
-    date: '2024-03-02 16:00',
-    weather: '☀️ 晴',
-    likes: 34,
-    comments: 6,
-  },
-]
-
-const moment = computed(() => allMoments.find((m) => m.id === momentId))
+onMounted(async () => {
+  isLoading.value = true
+  try {
+    moment.value = await getMomentById(momentId)
+  } finally {
+    isLoading.value = false
+  }
+})
 
 const getTypeIcon = (type: string) => {
   if (type === 'image') return ImageIcon
@@ -108,8 +42,33 @@ const goBack = () => {
 }
 </script>
 
+
 <template>
-  <div class="dd-page-container" v-if="moment">
+  <div v-if="isLoading" class="dd-page-container" aria-live="polite" aria-busy="true">
+    <div class="dd-top-bar">
+      <div class="dd-loading-back"></div>
+      <div class="dd-loading-type"></div>
+    </div>
+    <article class="dd-article-card dd-loading-card">
+      <header class="dd-meta-header">
+        <span class="dd-loading-meta"></span>
+        <span class="dd-loading-meta dd-loading-meta-short"></span>
+      </header>
+      <div class="dd-loading-media"></div>
+      <div class="dd-content-section pt-8">
+        <span class="dd-loading-quote"></span>
+        <span class="dd-loading-line"></span>
+        <span class="dd-loading-line"></span>
+        <span class="dd-loading-line dd-loading-line-short"></span>
+      </div>
+      <footer class="dd-interaction-footer">
+        <span class="dd-loading-action"></span>
+        <span class="dd-loading-action dd-loading-action-small"></span>
+      </footer>
+    </article>
+  </div>
+
+  <div class="dd-page-container" v-else-if="moment">
     <!-- Top Action Bar -->
     <div
       class="dd-top-bar"
@@ -119,7 +78,7 @@ const goBack = () => {
     >
       <button @click="goBack" class="dd-back-btn group">
         <span class="dd-back-icon-wrap">
-          <ArrowLeft class="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+          <ArrowLeft class="dd-back-icon" />
         </span>
         <span class="text-sm font-medium">返回碎片</span>
       </button>
@@ -155,7 +114,7 @@ const goBack = () => {
       </header>
 
       <!-- Media Section -->
-      <div v-if="moment.type === 'image' && moment.media" class="dd-media-section">
+      <div v-if="moment.type === 'image' && moment.media" class="dd-media-section interactive-media">
         <img :src="moment.media" alt="Diary cover" class="dd-media-img" />
       </div>
 
@@ -221,12 +180,81 @@ const goBack = () => {
 
 <style scoped lang="scss">
 .dd-page-container {
-  @apply mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32;
-  max-width: 1200px;
+  @apply mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28;
+  max-width: 1120px;
 }
 
 .dd-top-bar {
   @apply flex justify-between items-center mb-8;
+  padding-inline: 0.125rem;
+}
+
+.dd-loading-back,
+.dd-loading-type,
+.dd-loading-meta,
+.dd-loading-media,
+.dd-loading-quote,
+.dd-loading-line,
+.dd-loading-action {
+  display: block;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0.14), rgba(244, 63, 94, 0.12), rgba(148, 163, 184, 0.14));
+  background-size: 220% 100%;
+  animation: dd-skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+.dd-loading-back {
+  width: 8rem;
+  height: 2.5rem;
+}
+
+.dd-loading-type {
+  width: 5.75rem;
+  height: 2rem;
+}
+
+.dd-loading-card {
+  pointer-events: none;
+}
+
+.dd-loading-meta {
+  width: 9rem;
+  height: 1rem;
+}
+
+.dd-loading-meta-short {
+  width: 13rem;
+}
+
+.dd-loading-media {
+  width: 100%;
+  height: clamp(14rem, 34vw, 26rem);
+  border-radius: 0;
+}
+
+.dd-loading-quote {
+  width: min(38rem, 82%);
+  height: 2rem;
+  margin-bottom: 2rem;
+}
+
+.dd-loading-line {
+  width: 100%;
+  height: 1rem;
+  margin-bottom: 1rem;
+}
+
+.dd-loading-line-short {
+  width: 68%;
+}
+
+.dd-loading-action {
+  width: 7rem;
+  height: 2.25rem;
+}
+
+.dd-loading-action-small {
+  width: 2.25rem;
 }
 
 .dd-back-btn {
@@ -238,10 +266,29 @@ const goBack = () => {
 .dd-back-icon-wrap {
   @apply w-6 h-6 rounded-full flex items-center justify-center;
   background-color: var(--color-border);
+  transition:
+    background-color 220ms ease,
+    box-shadow 220ms ease;
+}
+.dd-back-icon {
+  width: 1rem;
+  height: 1rem;
+  transform: translateX(0);
+  transition:
+    transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    color 220ms ease;
+  will-change: transform;
 }
 .dd-back-btn:hover {
   color: var(--color-primary);
   border-color: var(--color-secondary);
+}
+.dd-back-btn:hover .dd-back-icon-wrap {
+  background-color: rgba(244, 63, 94, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(244, 63, 94, 0.1);
+}
+.dd-back-btn:hover .dd-back-icon {
+  transform: translateX(-0.1875rem);
 }
 :global(html.dark) .dd-back-btn {
   background-color: rgba(255, 255, 255, 0.05);
@@ -254,6 +301,10 @@ const goBack = () => {
 :global(html.dark) .dd-back-btn:hover {
   color: var(--color-primary);
   background-color: rgba(255, 255, 255, 0.08);
+}
+:global(html.dark) .dd-back-btn:hover .dd-back-icon-wrap {
+  background-color: rgba(244, 63, 94, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(244, 63, 94, 0.16);
 }
 
 .dd-type-badge {
@@ -278,16 +329,26 @@ const goBack = () => {
 }
 
 .dd-article-card {
-  @apply rounded-[2rem] overflow-hidden relative;
+  @apply rounded-[1.5rem] overflow-hidden relative;
   background-color: var(--color-card);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid var(--color-border);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(226, 232, 240, 0.78);
+  box-shadow:
+    0 18px 48px rgba(15, 23, 42, 0.06),
+    0 1px 0 rgba(255, 255, 255, 0.72) inset;
 
   &::before {
     content: '';
-    @apply absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-rose-400 to-rose-300;
+    position: absolute;
+    top: 0;
+    left: 1.75rem;
+    right: 1.75rem;
+    z-index: 2;
+    height: 2px;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, transparent, rgba(244, 63, 94, 0.52), transparent);
+    opacity: 0.78;
   }
 }
 :global(html.dark) .dd-article-card {
@@ -297,11 +358,13 @@ const goBack = () => {
 }
 
 .dd-meta-header {
-  @apply flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 md:p-8 border-b;
-  border-color: var(--color-border);
+  @apply flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-6 py-5 md:px-8 border-b;
+  background: rgba(255, 255, 255, 0.36);
+  border-color: rgba(226, 232, 240, 0.72);
 }
 :global(html.dark) .dd-meta-header {
   border-bottom-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.025);
 }
 
 .dd-meta-item {
@@ -327,28 +390,65 @@ const goBack = () => {
 .dd-media-section {
   @apply w-full relative;
   background-color: var(--color-background);
+  overflow: hidden;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.62);
 }
 
 .dd-media-img {
-  @apply w-full h-auto max-h-[60vh] object-cover object-center;
+  @apply w-full h-auto object-cover object-center;
+  max-height: min(52vh, 560px);
+  transition: transform 0.7s ease;
+  will-change: transform;
 }
 
 .dd-media-video {
-  @apply w-full h-auto max-h-[60vh] bg-black object-contain;
+  @apply w-full bg-black object-cover;
+  display: block;
+  height: min(52vh, 560px);
+}
+
+.dd-article-card:hover .dd-media-img {
+  transform: none;
+}
+
+.dd-media-section:hover .dd-media-img {
+  transform: scale(1.045);
 }
 
 .dd-content-section {
   @apply px-6 md:px-10 pb-8;
+  background:
+    radial-gradient(circle at 0 0, rgba(244, 63, 94, 0.055), transparent 16rem),
+    linear-gradient(180deg, rgba(255, 241, 242, 0.48), rgba(255, 255, 255, 0.22) 14rem, transparent);
 }
 
 .dd-quote {
-  @apply text-xl md:text-2xl font-bold leading-snug mb-10 pl-6 border-l-4 relative italic;
+  @apply text-lg md:text-xl font-semibold leading-relaxed mb-8 pl-5 relative;
   color: var(--color-heading);
-  border-color: var(--color-primary);
+  max-width: 56rem;
+  border-left: 2px solid rgba(244, 63, 94, 0.52);
 
   &::before {
+    content: '';
+    position: absolute;
+    left: -0.125rem;
+    top: 0.35rem;
+    width: 0.375rem;
+    height: 0.375rem;
+    border-radius: 9999px;
+    box-shadow: 0 0 0 0.375rem rgba(244, 63, 94, 0.1);
+    background-color: var(--color-primary);
+  }
+
+  &::after {
     content: '"';
-    @apply absolute -left-2 -top-4 text-5xl font-serif opacity-50;
+    position: absolute;
+    left: 0.875rem;
+    top: -0.8rem;
+    font-family: Georgia, serif;
+    font-size: 2.75rem;
+    line-height: 1;
+    opacity: 0.12;
     color: var(--color-primary);
   }
 }
@@ -357,8 +457,9 @@ const goBack = () => {
 }
 
 .dd-long-content {
-  @apply space-y-6 text-base md:text-lg leading-relaxed;
+  @apply space-y-5 text-base leading-relaxed;
   color: var(--color-text);
+  max-width: 58rem;
 }
 :global(html.dark) .dd-long-content {
   color: #94a3b8;
@@ -366,7 +467,12 @@ const goBack = () => {
 
 .dd-interaction-footer {
   @apply flex items-center justify-between px-6 md:px-10 py-5 border-t;
-  border-color: var(--color-border);
+  background: rgba(255, 255, 255, 0.24);
+  border-color: rgba(226, 232, 240, 0.72);
+}
+:global(html.dark) .dd-interaction-footer {
+  background: rgba(255, 255, 255, 0.025);
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 .dd-action-btn {
@@ -387,6 +493,27 @@ const goBack = () => {
     background-color: var(--color-secondary);
     color: var(--color-primary);
     border-color: var(--color-secondary);
+  }
+}
+
+@keyframes dd-skeleton-shimmer {
+  0% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -120% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dd-loading-back,
+  .dd-loading-type,
+  .dd-loading-meta,
+  .dd-loading-media,
+  .dd-loading-quote,
+  .dd-loading-line,
+  .dd-loading-action {
+    animation: none;
   }
 }
 </style>

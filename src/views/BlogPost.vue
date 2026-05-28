@@ -1,117 +1,105 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, onMounted, ref, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Calendar, Clock, ChevronLeft, ArrowLeft } from 'lucide-vue-next'
+import { useBlogStore } from '@/stores/blog'
+import { Calendar, Clock, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-vue-next'
+import { getArticleDetail, getClassifyIdList } from '@/api/blog'
+import type { ArticleDetail } from '@/types/content'
+import thumb from '@/assets/img/thumb.png'
+import { MdPreview, config } from 'md-editor-v3';
+ import 'md-editor-v3/lib/style.css';
 
 const route = useRoute()
 const router = useRouter()
+const blogStore = useBlogStore()
 const articleId = route.params.id
+const article = ref<ArticleDetail | null>(null)
+const isLoading = ref(true)
+const isCoverRevealed = ref(false)
+const filters = reactive({
+  rows: [{ id: '全部', name: '全部' }], // 默认添加一个“全部”分类
+  total: 0,
+});
 
-// Simulated article data fetching based on ID
-const article = ref({
-  title: 'Vue 3 组合式 API 最佳实践与性能优化',
-  date: '2024-03-15',
-  readTime: '8 min',
-  category: '前端',
-  coverImage:
-    'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20minimalist%20workspace%20with%20code%20on%20a%20screen%2C%20soft%20morning%20light%2C%20clean%20aesthetic&image_size=landscape_16_9',
-  content: `
-## 引言
+const id = "preview-only";
 
-在现代前端开发中，保持代码的简洁与可维护性至关重要。Vue 3 的组合式 API（Composition API）为我们提供了一种全新的代码组织方式，它不仅打破了 Vue 2 选项式 API（Options API）在逻辑复用上的局限，还在 TypeScript 支持和性能优化上带来了显著的提升。
+const coverSrc = computed(() => article.value?.coverUrl || blogStore.coverUrl || thumb)
 
-本文将分享在实际项目中总结的一些经验和技巧，帮助你写出更优雅、更高性能的 Vue 3 代码。
+const preloadImage = (src: string) => {
+  return new Promise<void>((resolve) => {
+    const image = new Image()
 
----
+    const finish = () => resolve()
 
-## 1. 逻辑复用：自定义 Hook 的艺术
-
-组合式 API 最大的魅力在于提取和复用逻辑。通过编写自定义 Hook（或称为 Composables），我们可以将复杂的业务逻辑从组件中剥离出来。
-
-### 为什么需要自定义 Hook？
-
-在 Vue 2 中，我们通常使用 Mixins 来复用逻辑，但 Mixins 存在命名冲突、来源不清晰等问题。自定义 Hook 通过闭包和函数调用的方式，完美解决了这些痛点。
-
-\`\`\`typescript
-// useWindowSize.ts
-import { ref, onMounted, onUnmounted } from 'vue'
-
-export function useWindowSize() {
-  const width = ref(window.innerWidth)
-  const height = ref(window.innerHeight)
-
-  const update = () => {
-    width.value = window.innerWidth
-    height.value = window.innerHeight
-  }
-
-  onMounted(() => window.addEventListener('resize', update))
-  onUnmounted(() => window.removeEventListener('resize', update))
-
-  return { width, height }
+    image.onload = async () => {
+      try {
+        await image.decode?.()
+      } catch {
+        // Keep rendering even when the browser cannot decode ahead of paint.
+      }
+      finish()
+    }
+    image.onerror = finish
+    image.src = src
+  })
 }
-\`\`\`
 
----
 
-## 2. 响应式系统：ref vs reactive
-
-在 Vue 3 中，\`ref\` 和 \`reactive\` 是创建响应式状态的两个核心 API。初学者经常会纠结在什么时候该用哪一个。
-
-### 最佳实践建议
-
-1. **基础类型**（如 \`string\`, \`number\`, \`boolean\`）必须使用 \`ref\`。
-2. **引用类型**（如 \`object\`, \`array\`）建议统一使用 \`ref\`，通过 \`.value\` 重新赋值不会丢失响应式。
-3. 只有当你非常明确需要一个深层响应式的对象，且不需要重新赋值整个对象时，才使用 \`reactive\`。
-
-> **提示**：在 Vue 3.2 引入 \`<script setup>\` 之后，\`ref\` 的 \`.value\` 拆包已经变得非常智能和便捷，统一使用 \`ref\` 可以降低心智负担。
-
----
-
-## 3. 性能优化：避免不必要的计算
-
-### 巧用 computed
-
-\`computed\` 具有缓存特性，只有当其依赖的响应式源发生变化时才会重新求值。
-
-\`\`\`typescript
-const filteredList = computed(() => {
-  // 这里的高开销计算只会在 list 或 filterText 变化时执行
-  return list.value.filter(item => item.name.includes(filterText.value))
+onMounted(async () => {
+  isLoading.value = true
+  isCoverRevealed.value = false
+  try {
+    await classify();
+    const articleDetail = (await getArticleDetail({ id: articleId })) as ArticleDetail | null
+    article.value = articleDetail
+    if (articleDetail) {
+      void preloadImage(articleDetail.coverUrl || thumb)
+    }
+  } finally {
+    isLoading.value = false
+  }
 })
-\`\`\`
 
-### 谨慎使用 watch
-
-\`watch\` 应该主要用于处理**副作用**（如 API 请求、DOM 操作等）。如果是基于现有状态派生出新的状态，应该优先考虑 \`computed\`。
-
----
-
-## 结语
-
-Vue 3 的组合式 API 为我们打开了前端架构的新世界大门。"少即是多"（Less is More），掌握这些核心 API 的最佳实践，能够让我们的代码更加健壮、易读和高效。
-
-希望这篇文章能对你的日常开发有所启发。持续学习，持续重构，代码不止！
-  `,
-})
+const classify = async () => {
+  const res: any = await getClassifyIdList({});
+  filters.rows.push(...res.rows);
+  filters.total = res.total;
+  // 文章总数
+  // total.value = res.total;
+  // 当前分类文章总数
+  // conditionTotal.value = filters.total;
+};
 
 const goBack = () => {
-  router.push('/blog')
+  router.push({ path: '/blog' })
 }
 </script>
 
 <template>
-  <div class="blog-post-page">
+  <div class="blog-post-page" aria-live="polite" :aria-busy="isLoading">
     <!-- Hero Header - Full Width, Partial Height -->
     <header class="post-hero-header">
       <!-- Cover Image -->
-      <img :src="article.coverImage" alt="Cover" class="post-cover-image" />
+      <div
+        class="post-cover-stage"
+        :class="{ 'post-cover-stage-ready': isCoverRevealed }"
+        :style="{ '--post-cover-image-url': `url(${coverSrc})` }"
+      >
+        <div class="post-cover-soft" aria-hidden="true"></div>
+        <img
+          :src="coverSrc"
+          alt="Cover"
+          class="post-cover-image"
+          @load="isCoverRevealed = true"
+          @error="isCoverRevealed = true"
+        />
+      </div>
       <!-- Gradient Overlay (Darker at bottom for text readability) -->
       <div class="post-gradient-overlay"></div>
 
       <!-- Back Button -->
       <div class="post-back-btn-wrap">
-        <button @click="goBack" class="post-back-btn">
+        <button @click="goBack" class="post-back-btn interactive-lift">
           <ArrowLeft class="post-icon-sm" />
           返回文章列表
         </button>
@@ -119,38 +107,32 @@ const goBack = () => {
 
       <!-- Title & Meta -->
       <div class="post-header-content">
-        <div class="post-header-inner">
-          <span
-            v-motion
-            :initial="{ opacity: 0, y: 20 }"
-            :enter="{ opacity: 1, y: 0, transition: { duration: 800 } }"
-            class="post-category-badge"
-          >
-            {{ article.category }}
+        <div v-if="article" class="post-header-inner">
+          <span class="post-category-badge">
+             {{ (filters.rows.find((ii: any) => ii.id === article?.classifyId)?.name) ?? '' }}
           </span>
-          <h1
-            v-motion
-            :initial="{ opacity: 0, y: 20 }"
-            :enter="{ opacity: 1, y: 0, transition: { duration: 800, delay: 100 } }"
-            class="post-main-title"
-          >
+          <h1 class="post-main-title">
             {{ article.title }}
           </h1>
 
-          <div
-            v-motion
-            :initial="{ opacity: 0 }"
-            :enter="{ opacity: 1, transition: { duration: 800, delay: 300 } }"
-            class="post-meta-info"
-          >
+          <div class="post-meta-info">
             <span class="post-meta-item">
               <Calendar class="post-meta-icon" />
-              {{ article.date }}
+              {{ article.createTime }}
             </span>
             <span class="post-meta-item">
               <Clock class="post-meta-icon" />
               {{ article.readTime }}
             </span>
+          </div>
+        </div>
+        <div v-else class="post-header-inner post-header-skeleton">
+          <span class="post-loading-chip"></span>
+          <span class="post-loading-title post-loading-line"></span>
+          <span class="post-loading-title-sm post-loading-line"></span>
+          <div class="post-loading-meta">
+            <span class="post-loading-meta-item post-loading-line"></span>
+            <span class="post-loading-meta-item post-loading-line"></span>
           </div>
         </div>
       </div>
@@ -160,142 +142,239 @@ const goBack = () => {
     <main class="post-main-area">
       <!-- Main content container -->
       <article
-        v-motion
-        :initial="{ opacity: 0, y: 40 }"
-        :enter="{ opacity: 1, y: 0, transition: { duration: 800, delay: 400 } }"
-        class="post-article-container"
+        v-if="article"
+        class="post-article-container interactive-card"
       >
         <!-- Markdown Content (Simulated with raw HTML for now, would normally use a markdown parser) -->
-        <div class="prose">
-          <h2 id="introduction">引言</h2>
-          <p>
-            在现代前端开发中，保持代码的简洁与可维护性至关重要。Vue 3 的组合式 API（Composition
-            API）为我们提供了一种全新的代码组织方式，它不仅打破了 Vue 2 选项式 API（Options
-            API）在逻辑复用上的局限，还在 TypeScript 支持和性能优化上带来了显著的提升。
-          </p>
-          <p>
-            本文将分享在实际项目中总结的一些经验和技巧，帮助你写出更优雅、更高性能的 Vue 3 代码。
-          </p>
-          <hr />
-
-          <h2 id="section-1">1. 逻辑复用：自定义 Hook 的艺术</h2>
-          <p>
-            组合式 API 最大的魅力在于提取和复用逻辑。通过编写自定义 Hook（或称为
-            Composables），我们可以将复杂的业务逻辑从组件中剥离出来。
-          </p>
-
-          <h3>为什么需要自定义 Hook？</h3>
-          <p>
-            在 Vue 2 中，我们通常使用 Mixins 来复用逻辑，但 Mixins
-            存在命名冲突、来源不清晰等问题。自定义 Hook
-            通过闭包和函数调用的方式，完美解决了这些痛点。
-          </p>
-
-          <pre><code class="language-typescript">// useWindowSize.ts
-import { ref, onMounted, onUnmounted } from 'vue'
-
-export function useWindowSize() {
-  const width = ref(window.innerWidth)
-  const height = ref(window.innerHeight)
-
-  const update = () => {
-    width.value = window.innerWidth
-    height.value = window.innerHeight
-  }
-
-  onMounted(() => window.addEventListener('resize', update))
-  onUnmounted(() => window.removeEventListener('resize', update))
-
-  return { width, height }
-}
-</code></pre>
-
-          <hr />
-          <h2 id="section-2">2. 响应式系统：ref vs reactive</h2>
-          <p>
-            在 Vue 3 中，<code>ref</code> 和 <code>reactive</code> 是创建响应式状态的两个核心
-            API。初学者经常会纠结在什么时候该用哪一个。
-          </p>
-
-          <h3>最佳实践建议</h3>
-          <ol>
-            <li>
-              <strong>基础类型</strong>（如 <code>string</code>, <code>number</code>,
-              <code>boolean</code>）必须使用 <code>ref</code>。
-            </li>
-            <li>
-              <strong>引用类型</strong>（如 <code>object</code>, <code>array</code>）建议统一使用
-              <code>ref</code>，通过 <code>.value</code> 重新赋值不会丢失响应式。
-            </li>
-            <li>
-              只有当你非常明确需要一个深层响应式的对象，且不需要重新赋值整个对象时，才使用
-              <code>reactive</code>。
-            </li>
-          </ol>
-
-          <blockquote>
-            <p>
-              <strong>提示</strong>：在 Vue 3.2 引入 <code>&lt;script setup&gt;</code> 之后，<code
-                >ref</code
-              >
-              的 <code>.value</code> 拆包已经变得非常智能和便捷，统一使用
-              <code>ref</code> 可以降低心智负担。
-            </p>
-          </blockquote>
-
-          <hr />
-          <h2 id="section-3">3. 性能优化：避免不必要的计算</h2>
-
-          <h3>巧用 computed</h3>
-          <p><code>computed</code> 具有缓存特性，只有当其依赖的响应式源发生变化时才会重新求值。</p>
-          <pre><code class="language-typescript">const filteredList = computed(() => {
-  // 这里的高开销计算只会在 list 或 filterText 变化时执行
-  return list.value.filter(item => item.name.includes(filterText.value))
-})
-</code></pre>
-
-          <h3>谨慎使用 watch</h3>
-          <p>
-            <code>watch</code> 应该主要用于处理<strong>副作用</strong>（如 API 请求、DOM
-            操作等）。如果是基于现有状态派生出新的状态，应该优先考虑 <code>computed</code>。
-          </p>
-
-          <hr />
-          <h2 id="conclusion">结语</h2>
-          <p>
-            Vue 3 的组合式 API 为我们打开了前端架构的新世界大门。"少即是多"（Less is
-            More），掌握这些核心 API 的最佳实践，能够让我们的代码更加健壮、易读和高效。
-          </p>
-          <p>希望这篇文章能对你的日常开发有所启发。持续学习，持续重构，代码不止！</p>
-        </div>
+        <!-- <div class="prose" v-html="article.articleContent"></div> -->
+        <MdPreview
+          :editorId="id"
+          :modelValue="article.articleContent"
+        />
       </article>
+
+      <div v-else class="post-loading-card interactive-card">
+        <span class="post-loading-paragraph post-loading-line"></span>
+        <span class="post-loading-paragraph post-loading-line"></span>
+        <span class="post-loading-paragraph-short post-loading-line"></span>
+        <div class="post-loading-divider"></div>
+        <span class="post-loading-paragraph post-loading-line"></span>
+        <span class="post-loading-paragraph post-loading-line"></span>
+        <span class="post-loading-paragraph-mid post-loading-line"></span>
+      </div>
 
       <!-- Bottom Navigation / Share (Optional) -->
       <div class="post-nav-bottom">
-        <button class="post-nav-btn">
+        <button class="post-nav-btn interactive-lift">
           <ChevronLeft class="post-icon-sm" />
           上一篇
         </button>
-        <button class="post-nav-btn">
+        <button class="post-nav-btn interactive-lift">
           下一篇
           <ChevronRight class="post-icon-sm" />
         </button>
       </div>
     </main>
+
+    <div v-if="!article && !isLoading" class="post-not-found">
+      <h2>找不到该文章</h2>
+      <button @click="goBack" class="post-nav-btn interactive-lift">返回文章列表</button>
+    </div>
   </div>
 </template>
 
 <style scoped>
 .blog-post-page {
   @apply min-h-screen bg-transparent pb-20;
+  position: relative;
+}
+
+.post-not-found {
+  @apply min-h-screen flex flex-col items-center justify-center gap-4 py-32;
+  color: var(--color-heading);
+}
+
+.post-loading-chip {
+  display: block;
+  width: 5.75rem;
+  height: 2rem;
+  margin-bottom: 1.5rem;
+  border-radius: 9999px;
+  background: rgba(244, 63, 94, 0.72);
+  box-shadow: 0 12px 28px -18px rgba(244, 63, 94, 0.8);
+}
+
+.post-loading-line {
+  display: block;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.48), rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.48));
+  background-size: 220% 100%;
+  animation: post-loading-shimmer 1.6s ease-in-out infinite;
+}
+
+.post-loading-title {
+  width: min(52rem, 86%);
+  height: 3.25rem;
+  margin-bottom: 1rem;
+}
+
+.post-loading-title-sm {
+  width: min(34rem, 62%);
+  height: 2rem;
+  margin-bottom: 2rem;
+}
+
+.post-loading-meta {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.post-loading-meta-item {
+  width: 8rem;
+  height: 1.25rem;
+  opacity: 0.68;
+}
+
+.post-loading-main {
+  width: 100%;
+  max-width: 1200px;
+  margin: -4rem auto 0;
+  position: relative;
+  z-index: 2;
+  padding: 0 1rem;
+}
+@media (min-width: 640px) {
+  .post-loading-main {
+    padding: 0 1.5rem;
+  }
+}
+@media (min-width: 768px) {
+  .post-loading-main {
+    padding: 0 2rem;
+  }
+}
+@media (min-width: 1280px) {
+  .post-loading-main {
+    padding: 0;
+  }
+}
+
+.post-loading-card {
+  width: 100%;
+  min-height: 28rem;
+  padding: 2rem;
+  border-radius: 1.5rem;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+@media (min-width: 768px) {
+  .post-loading-card {
+    padding: 4rem;
+    border-radius: 2.5rem;
+  }
+}
+
+.post-loading-card .post-loading-line {
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0.14), rgba(244, 63, 94, 0.12), rgba(148, 163, 184, 0.14));
+  background-size: 220% 100%;
+}
+
+.post-loading-paragraph,
+.post-loading-paragraph-short,
+.post-loading-paragraph-mid {
+  height: 1rem;
+  margin-bottom: 1rem;
+}
+
+.post-loading-paragraph {
+  width: 100%;
+}
+
+.post-loading-paragraph-short {
+  width: 54%;
+}
+
+.post-loading-paragraph-mid {
+  width: 76%;
+}
+
+.post-loading-divider {
+  width: 100%;
+  height: 1px;
+  margin: 2.5rem 0;
+  background: var(--color-border);
+}
+
+:global(html.dark) .post-loading-card {
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.6) 0%, var(--color-card) 200px);
+  border-color: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+}
+
+@keyframes post-loading-shimmer {
+  0% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -120% 0;
+  }
 }
 
 .post-hero-header {
   @apply relative w-full h-[50vh] md:h-[60vh] min-h-[400px] overflow-hidden;
 }
 
+.post-cover-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.post-cover-soft {
+  position: absolute;
+  inset: -1.25rem;
+  background:
+    linear-gradient(to top, rgba(15, 23, 42, 0.42), rgba(15, 23, 42, 0.1)),
+    var(--post-cover-image-url, none);
+  background-position: center;
+  background-size: cover;
+  filter: blur(18px) saturate(0.9);
+  transform: scale(1.04);
+  transform-origin: center;
+}
+
 .post-cover-image {
   @apply absolute inset-0 w-full h-full object-cover object-center;
+  opacity: 0.98;
+  clip-path: inset(0 0 0 0 round 0);
+  mask-image: radial-gradient(circle at 50% 48%, #000 0%, #000 32%, transparent 34%);
+  mask-size: 0% 0%;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-image: radial-gradient(circle at 50% 48%, #000 0%, #000 32%, transparent 34%);
+  -webkit-mask-size: 0% 0%;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  filter: saturate(0.94);
+  transform: scale(1.012);
+  transition:
+    mask-size 920ms cubic-bezier(0.22, 1, 0.36, 1),
+    -webkit-mask-size 920ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 720ms ease,
+    transform 920ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: mask-size, -webkit-mask-size, filter, transform;
+  animation: post-cover-drift 18s ease-in-out infinite alternate;
+}
+
+.post-cover-stage-ready .post-cover-image {
+  mask-size: 320% 320%;
+  -webkit-mask-size: 320% 320%;
+  filter: saturate(1);
+  transform: scale(1);
 }
 
 .post-gradient-overlay {
@@ -374,6 +453,31 @@ export function useWindowSize() {
   background-color: var(--color-secondary);
   color: var(--color-primary);
   border-color: var(--color-secondary);
+}
+
+@keyframes post-cover-drift {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.045) translateY(-0.5rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .post-cover-image {
+    mask-image: none;
+    -webkit-mask-image: none;
+    filter: none;
+    transform: none;
+    transition: none;
+    animation: none;
+  }
+
+  .post-loading-cover,
+  .post-loading-line {
+    animation: none;
+  }
 }
 
 /*
@@ -474,5 +578,9 @@ export function useWindowSize() {
   color: inherit;
   padding: 0;
   border-radius: 0;
+}
+
+#preview-only {
+  background: unset;
 }
 </style>

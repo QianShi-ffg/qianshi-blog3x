@@ -118,7 +118,7 @@ const getBadgeText = (type: string) => {
 
           <!-- Content Card -->
           <div class="cl-log-content-col">
-            <div class="cl-glass-card">
+            <div class="cl-glass-card interactive-card">
               <div class="cl-log-card-header">
                 <div>
                   <div class="cl-log-version-wrap">
@@ -136,7 +136,7 @@ const getBadgeText = (type: string) => {
                 <li
                   v-for="(change, cIndex) in log.changes"
                   :key="cIndex"
-                  class="cl-change-item"
+                  class="cl-change-item interactive-lift"
                 >
                   <span
                     class="cl-change-badge"

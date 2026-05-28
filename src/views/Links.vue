@@ -1,62 +1,25 @@
 <script setup lang="ts">
 import { ExternalLink, Github, Twitter, Globe, Link as LinkIcon } from 'lucide-vue-next'
+import { getFriendShipList } from '@/api/friendShip';
+import { onMounted, ref } from 'vue';
 
-const links = [
-  {
-    id: 1,
-    name: 'Vue.js',
-    desc: 'The Progressive JavaScript Framework',
-    url: 'https://vuejs.org',
-    icon: Globe,
-    color: 'cl-text-emerald',
-    tags: ['Framework', 'Frontend'],
-  },
-  {
-    id: 2,
-    name: 'Tailwind CSS',
-    desc: 'A utility-first CSS framework for rapid UI development.',
-    url: 'https://tailwindcss.com',
-    icon: Globe,
-    color: 'cl-text-sky',
-    tags: ['CSS', 'Design'],
-  },
-  {
-    id: 3,
-    name: 'Evan You',
-    desc: 'Creator of Vue & Vite',
-    url: 'https://twitter.com/youyuxi',
-    icon: Twitter,
-    color: 'cl-text-blue',
-    tags: [],
-  },
-  {
-    id: 4,
-    name: 'Anthony Fu',
-    desc: 'Vue/Vite core team member',
-    url: 'https://github.com/antfu',
-    icon: Github,
-    color: 'cl-text-slate',
-    tags: [],
-  },
-  {
-    id: 5,
-    name: 'Vite',
-    desc: 'Next Generation Frontend Tooling',
-    url: 'https://vitejs.dev',
-    icon: Globe,
-    color: 'cl-text-purple',
-    tags: ['Tooling', 'Build'],
-  },
-  {
-    id: 6,
-    name: 'Lucide',
-    desc: 'Beautiful & consistent icon toolkit made by the community.',
-    url: 'https://lucide.dev',
-    icon: Globe,
-    color: 'cl-text-rose',
-    tags: ['Icons', 'Design'],
-  },
-]
+
+const links = ref<any[]>([]);
+const isLinksLoading = ref(true)
+
+onMounted(async() => {
+  isLinksLoading.value = true
+  try {
+    const res = await getFriendShipList({page: 1, pageSize: 1000, sort: 'ASC'})
+    links.value = (res as any).map((item: any) => {
+      item.screenShot = `${import.meta.env.VITE_API_BASE_URL}${item.screenShot}`
+      return item
+    })
+  } finally {
+    isLinksLoading.value = false
+  }
+})
+
 </script>
 
 <template>
@@ -94,7 +57,21 @@ const links = [
     </div>
 
     <!-- Links Grid -->
-    <div class="lk-grid">
+    <div v-if="isLinksLoading" class="lk-grid" aria-live="polite" aria-busy="true">
+      <div v-for="item in 6" :key="item" class="lk-card lk-card-skeleton">
+        <div class="lk-card-inner relative z-10">
+          <div class="lk-card-content">
+            <div class="lk-skeleton-icon"></div>
+            <div class="lk-skeleton-info">
+              <span class="lk-skeleton-title"></span>
+              <span class="lk-skeleton-text"></span>
+              <span class="lk-skeleton-text lk-skeleton-text-short"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div v-else class="lk-grid">
       <a
         v-for="(link, index) in links"
         :key="link.id"
@@ -104,15 +81,14 @@ const links = [
         v-motion
         :initial="{ opacity: 0, y: 20 }"
         :visible-once="{ opacity: 1, y: 0, transition: { duration: 500, delay: index * 100 } }"
-        class="lk-card group"
+        class="lk-card interactive-card group"
       >
         <!-- 网站缩略图 (Hover显示) -->
         <div
-          class="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none rounded-3xl overflow-hidden"
+          class="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none rounded-3xl overflow-hidden interactive-media"
         >
           <img
-            :src="`https://image.thum.io/get/width/1200/crop/800/${link.url}`"
-            :alt="link.name + ' preview'"
+            :src="`${link.screenShot}`"
             class="w-full h-full object-cover object-top scale-100 group-hover:scale-110 transition-transform duration-[4s] ease-out opacity-90 blur-[2px] group-hover:blur-0"
             loading="lazy"
           />
@@ -122,7 +98,7 @@ const links = [
         <div class="lk-card-inner relative z-10">
           <div class="lk-card-content">
             <div class="lk-icon-wrap">
-              <component :is="link.icon" class="lk-icon" :class="link.color" />
+              <!-- <component :is="link.icon" class="lk-icon" :class="link.color" /> -->
             </div>
             <div class="lk-info-wrap">
               <h2 class="lk-link-name">
@@ -188,7 +164,7 @@ const links = [
 }
 
 .lk-btn-apply {
-  @apply inline-flex items-center gap-2 px-5 py-1.5 rounded-full bg-rose-50 text-rose-500 font-medium hover:bg-rose-100 hover:-translate-y-0.5 transition-all duration-300 shadow-sm hover:shadow-rose-500/20 self-start sm:self-auto shrink-0;
+  @apply inline-flex items-center gap-2 px-5 py-1.5 rounded-full bg-rose-50 text-rose-500 font-medium hover:bg-rose-100 transition-all duration-300 shadow-sm hover:shadow-rose-500/20 self-start sm:self-auto shrink-0;
 }
 
 .lk-btn-apply-icon {
@@ -213,7 +189,7 @@ const links = [
 }
 
 .lk-card {
-  @apply rounded-3xl transition-all duration-500 p-6 hover:-translate-y-1 hover:shadow-2xl hover:shadow-rose-500/10 h-full flex flex-col justify-center relative overflow-hidden;
+  @apply rounded-3xl p-6 h-full flex flex-col justify-center relative overflow-hidden;
   background-color: var(--color-card);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -224,6 +200,16 @@ const links = [
 .lk-card:hover {
   background-color: var(--color-background);
   border-color: rgba(244, 63, 94, 0.2); /* rose-200 equivalent */
+}
+
+.lk-card-skeleton {
+  min-height: 8.75rem;
+  pointer-events: none;
+}
+
+.lk-card-skeleton:hover {
+  background-color: var(--color-card);
+  border-color: var(--color-border);
 }
 
 :global(html.dark) .lk-card {
@@ -238,6 +224,45 @@ const links = [
 .lk-card-content {
   @apply flex items-center gap-4 w-full;
   align-items: flex-start;
+}
+
+.lk-skeleton-icon,
+.lk-skeleton-title,
+.lk-skeleton-text {
+  display: block;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0.14), rgba(244, 63, 94, 0.12), rgba(148, 163, 184, 0.14));
+  background-size: 220% 100%;
+  animation: lk-skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+.lk-skeleton-icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 1rem;
+  flex-shrink: 0;
+}
+
+.lk-skeleton-info {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 0.25rem;
+}
+
+.lk-skeleton-title {
+  width: 48%;
+  height: 1.125rem;
+}
+
+.lk-skeleton-text {
+  width: 100%;
+  height: 0.875rem;
+}
+
+.lk-skeleton-text-short {
+  width: 68%;
 }
 
 .lk-icon-wrap {
@@ -340,5 +365,22 @@ const links = [
 }
 .cl-text-rose {
   @apply text-rose-500;
+}
+
+@keyframes lk-skeleton-shimmer {
+  0% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -120% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lk-skeleton-icon,
+  .lk-skeleton-title,
+  .lk-skeleton-text {
+    animation: none;
+  }
 }
 </style>

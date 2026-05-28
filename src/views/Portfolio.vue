@@ -1,52 +1,21 @@
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
 import { ArrowUpRight, Github, ExternalLink } from 'lucide-vue-next'
+import { listProjects } from '@/api/portfolio'
+import type { Project } from '@/types/content'
 
-const projects = [
-  {
-    id: 1,
-    title: 'QianShiBlog Space',
-    category: '个人网站',
-    desc: '基于 Vue 3 + Tailwind CSS 的现代极简主义个人博客，具有出色的动画和交互体验。',
-    image:
-      'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20clean%20website%20mockup%2C%20light%20theme%2C%20minimalist%2C%20soft%20red%20accents&image_size=landscape_16_9',
-    tags: ['Vue 3', 'Tailwind', 'Vite', 'Motion'],
-    github: '#',
-    demo: '#',
-  },
-  {
-    id: 2,
-    title: 'Design System Pro',
-    category: '组件库',
-    desc: '一套为企业级应用打造的高质量 UI 组件库，包含 50+ 常用组件，支持深度定制。',
-    image:
-      'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20collection%20of%20UI%20components%20floating%20in%203D%20space%2C%20clean%2C%20white%20background&image_size=landscape_16_9',
-    tags: ['React', 'TypeScript', 'Storybook'],
-    github: '#',
-    demo: '#',
-  },
-  {
-    id: 3,
-    title: 'Weather Minimal',
-    category: '移动端应用',
-    desc: '一款极简风格的天气应用，提供精准的实时天气和未来天气预报，界面清新优雅。',
-    image:
-      'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20minimalist%20weather%20app%20UI%20on%20a%20smartphone%20screen%2C%20pastel%20colors&image_size=landscape_16_9',
-    tags: ['React Native', 'Weather API'],
-    github: '#',
-    demo: '#',
-  },
-  {
-    id: 4,
-    title: 'TaskFlow',
-    category: '效率工具',
-    desc: '面向小团队的敏捷任务管理工具，支持看板、日历和甘特图视图。',
-    image:
-      'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20kanban%20board%20dashboard%20UI%2C%20clean%2C%20modern%2C%20soft%20shadows&image_size=landscape_16_9',
-    tags: ['Vue 3', 'Supabase', 'Pinia'],
-    github: '#',
-    demo: '#',
-  },
-]
+const projects = ref<Project[]>([])
+const isProjectsLoading = ref(true)
+
+onMounted(async () => {
+  isProjectsLoading.value = true
+  try {
+    projects.value = await listProjects()
+  } finally {
+    isProjectsLoading.value = false
+  }
+})
+
 </script>
 
 <template>
@@ -72,7 +41,21 @@ const projects = [
     </div>
 
     <!-- Projects Grid -->
-    <div class="portfolio-grid">
+    <div v-if="isProjectsLoading" class="portfolio-grid" aria-live="polite" aria-busy="true">
+      <div v-for="item in 4" :key="item" class="portfolio-card portfolio-card-skeleton">
+        <div class="portfolio-image-wrapper portfolio-skeleton-image"></div>
+        <div class="portfolio-skeleton-chip"></div>
+        <div class="portfolio-skeleton-title"></div>
+        <div class="portfolio-skeleton-text"></div>
+        <div class="portfolio-skeleton-text portfolio-skeleton-text-short"></div>
+        <div class="portfolio-skeleton-tags">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    </div>
+    <div v-else class="portfolio-grid">
       <div
         v-for="(project, index) in projects"
         :key="project.id"
@@ -82,20 +65,20 @@ const projects = [
         class="portfolio-card"
       >
         <!-- Project Image -->
-        <div class="portfolio-image-wrapper">
+        <div class="portfolio-image-wrapper interactive-media">
           <img :src="project.image" :alt="project.title" class="portfolio-image" />
           <div class="portfolio-overlay">
-            <a :href="project.github" target="_blank" class="portfolio-action-btn">
+            <a :href="project.github" target="_blank" class="portfolio-action-btn interactive-lift">
               <Github class="portfolio-icon" />
             </a>
-            <a :href="project.demo" target="_blank" class="portfolio-action-btn delayed">
+            <a :href="project.demo" target="_blank" class="portfolio-action-btn delayed interactive-lift">
               <ExternalLink class="portfolio-icon" />
             </a>
           </div>
         </div>
 
         <!-- Project Info -->
-        <router-link :to="`/portfolio/${project.id}`" class="block cursor-pointer">
+        <router-link :to="`/portfolio/${project.id}`" class="portfolio-content-link block cursor-pointer">
           <div class="portfolio-category-wrapper">
             <span class="portfolio-category-badge">
               {{ project.category }}
@@ -104,7 +87,7 @@ const projects = [
 
           <h2 class="portfolio-project-title">
             {{ project.title }}
-            <ArrowUpRight class="portfolio-arrow-icon" />
+            <ArrowUpRight class="portfolio-arrow-icon interactive-arrow" />
           </h2>
 
           <p class="portfolio-project-desc">
@@ -179,26 +162,86 @@ const projects = [
 }
 
 .portfolio-card {
+  border-radius: 1.5rem;
+  padding-bottom: 0.25rem;
+  transition: filter 0.3s ease;
+}
+
+.portfolio-card:hover {
+  filter: drop-shadow(0 18px 30px rgba(244, 63, 94, 0.09));
+}
+
+:global(html.dark) .portfolio-card:hover {
+  filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.28));
+}
+
+.portfolio-card-skeleton {
+  pointer-events: none;
+}
+
+.portfolio-skeleton-image,
+.portfolio-skeleton-chip,
+.portfolio-skeleton-title,
+.portfolio-skeleton-text,
+.portfolio-skeleton-tags span {
+  display: block;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0.14), rgba(244, 63, 94, 0.12), rgba(148, 163, 184, 0.14));
+  background-size: 220% 100%;
+  animation: portfolio-skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+.portfolio-skeleton-image {
+  border-radius: 1.5rem;
+}
+
+.portfolio-skeleton-chip {
+  width: 5.5rem;
+  height: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.portfolio-skeleton-title {
+  width: 72%;
+  height: 1.75rem;
+  margin-bottom: 0.875rem;
+}
+
+.portfolio-skeleton-text {
+  width: 100%;
+  height: 0.875rem;
+  margin-bottom: 0.625rem;
+}
+
+.portfolio-skeleton-text-short {
+  width: 64%;
+  margin-bottom: 1.25rem;
+}
+
+.portfolio-skeleton-tags {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.portfolio-skeleton-tags span {
+  width: 4rem;
+  height: 1.625rem;
 }
 
 .portfolio-image-wrapper {
-  @apply relative overflow-hidden rounded-3xl aspect-[16/10] mb-8 transition-all duration-300;
+  @apply relative overflow-hidden rounded-3xl aspect-[16/10] transition-all duration-300;
+  margin-bottom: 1rem;
   background-color: var(--color-card);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--color-border);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
 }
-:global(html.dark) .portfolio-image-wrapper {
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+
+.portfolio-content-link {
+  padding: 0 20px;
 }
 
 .portfolio-image {
-  @apply w-full h-full object-cover transition-transform duration-700;
-}
-
-.portfolio-card:hover .portfolio-image {
-  @apply scale-105;
+  @apply w-full h-full object-cover;
 }
 
 .portfolio-overlay {
@@ -218,7 +261,6 @@ const projects = [
 }
 .portfolio-action-btn:hover {
   color: var(--color-primary);
-  transform: scale(1.1);
 }
 
 .portfolio-card:hover .portfolio-action-btn {
@@ -283,5 +325,24 @@ const projects = [
   background-color: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.1);
   color: #cbd5e1;
+}
+
+@keyframes portfolio-skeleton-shimmer {
+  0% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -120% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portfolio-skeleton-image,
+  .portfolio-skeleton-chip,
+  .portfolio-skeleton-title,
+  .portfolio-skeleton-text,
+  .portfolio-skeleton-tags span {
+    animation: none;
+  }
 }
 </style>

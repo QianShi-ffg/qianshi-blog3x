@@ -1,54 +1,20 @@
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
 import { MapPin, Calendar, ImageIcon, Video, FileText } from 'lucide-vue-next'
+import { listMoments } from '@/api/diary'
+import type { DiaryMomentSummary } from '@/types/content'
 
-const moments = [
-  {
-    id: 1,
-    type: 'image', // text, image, video
-    media: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20minimalist%20coffee%20cup%20on%20a%20wooden%20table%2C%20morning%20sunlight%2C%20soft%20colors&image_size=portrait_3_4',
-    content: '清晨的一杯咖啡，开启新一天的代码之旅。最近在研究 Vue 3 的源码，收获颇多。',
-    location: '上海 · 咖啡馆',
-    date: '2024-04-12',
-    weather: '☀️ 晴'
-  },
-  {
-    id: 2,
-    type: 'text',
-    media: null,
-    content: '今天完成了一个拖拽很久的需求，看着流畅的动画效果，感觉所有的加班都是值得的。前端开发的魅力就在于这种即时的视觉反馈。',
-    location: '工作室',
-    date: '2024-04-05',
-    weather: '☁️ 多云'
-  },
-  {
-    id: 3,
-    type: 'video',
-    media: 'https://www.w3schools.com/html/mov_bbb.mp4', // Example placeholder video
-    poster: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20beautiful%20sunset%20over%20a%20city%20skyline%2C%20pastel%20colors%2C%20minimalist%20photography&image_size=landscape_4_3',
-    content: '下班路上的晚霞。城市虽然拥挤，但偶尔抬起头，总能发现不期而遇的浪漫。用视频记录下这转瞬即逝的美好。',
-    location: '杭州',
-    date: '2024-03-28',
-    weather: '🌤️ 晴转多云'
-  },
-  {
-    id: 4,
-    type: 'image',
-    media: 'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20clean%20desk%20setup%20with%20a%20macbook%20and%20a%20plant%2C%20soft%20natural%20light&image_size=square',
-    content: '整理了一下桌面，把陪伴了三年的机械键盘清理得干干净净。极简的环境确实能带来内心的平静。',
-    location: '家里',
-    date: '2024-03-15',
-    weather: '🌧️ 小雨'
-  },
-  {
-    id: 5,
-    type: 'text',
-    media: null,
-    content: '读完了一本关于设计的书，开始理解"设计不仅仅是外观，更是它是如何运作的"这句话的深刻含义。准备在下个项目中实践一下。',
-    location: '图书馆',
-    date: '2024-03-02',
-    weather: '☀️ 晴'
+const moments = ref<DiaryMomentSummary[]>([])
+const isMomentsLoading = ref(true)
+
+onMounted(async () => {
+  isMomentsLoading.value = true
+  try {
+    moments.value = await listMoments()
+  } finally {
+    isMomentsLoading.value = false
   }
-]
+})
 
 const getTypeIcon = (type: string) => {
   if (type === 'image') return ImageIcon
@@ -87,13 +53,30 @@ const getTypeIcon = (type: string) => {
       >
         <div class="diary-badge-inner">
           <ImageIcon class="diary-icon-sm" />
-          <span>{{ moments.length }} 个瞬间</span>
+          <span>{{ isMomentsLoading ? '--' : moments.length }} 个瞬间</span>
         </div>
       </div>
     </div>
 
     <!-- Masonry Layout -->
-    <div class="diary-masonry-grid">
+    <div v-if="isMomentsLoading" class="diary-masonry-grid" aria-live="polite" aria-busy="true">
+      <div v-for="item in 6" :key="item" class="diary-masonry-item">
+        <div class="diary-card diary-card-skeleton">
+          <span class="diary-skeleton-badge"></span>
+          <div class="diary-skeleton-media" :class="{ 'diary-skeleton-media-tall': item % 3 === 0 }"></div>
+          <div class="diary-content-wrap">
+            <span class="diary-skeleton-line"></span>
+            <span class="diary-skeleton-line"></span>
+            <span class="diary-skeleton-line diary-skeleton-line-short"></span>
+            <div class="diary-skeleton-meta">
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div v-else class="diary-masonry-grid">
       <div
         v-for="(moment, index) in moments"
         :key="moment.id"
@@ -103,7 +86,7 @@ const getTypeIcon = (type: string) => {
         class="diary-masonry-item"
       >
         <router-link :to="`/diary/${moment.id}`" class="block cursor-pointer">
-          <div class="diary-card group">
+          <div class="diary-card interactive-card group">
 
               <!-- Type Badge -->
             <div class="diary-type-badge">
@@ -111,7 +94,7 @@ const getTypeIcon = (type: string) => {
             </div>
 
             <!-- Media Section -->
-            <div v-if="moment.type === 'image' && moment.media" class="diary-media-wrap">
+            <div v-if="moment.type === 'image' && moment.media" class="diary-media-wrap interactive-media">
               <img
                 :src="moment.media"
                 alt="Moment"
@@ -120,7 +103,7 @@ const getTypeIcon = (type: string) => {
               <div class="diary-media-overlay"></div>
             </div>
 
-            <div v-else-if="moment.type === 'video' && moment.media" class="diary-video-wrap group">
+            <div v-else-if="moment.type === 'video' && moment.media" class="diary-video-wrap interactive-media group">
               <video
                 :src="moment.media"
                 :poster="moment.poster"
@@ -209,20 +192,72 @@ const getTypeIcon = (type: string) => {
 }
 
 .diary-card {
-  @apply rounded-3xl transition-all duration-500 overflow-hidden hover:-translate-y-1 relative;
+  @apply rounded-3xl overflow-hidden relative;
   background-color: var(--color-card);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--color-border);
   box-shadow: 0 8px 30px rgba(0,0,0,0.04);
 }
-.diary-card:hover {
-  box-shadow: 0 20px 25px -5px rgba(244, 63, 94, 0.1), 0 8px 10px -6px rgba(244, 63, 94, 0.1);
-}
 :global(html.dark) .diary-card {
   background-color: rgba(218, 223, 230, 0.05); /* Match the visual of the second image card background slightly */
   box-shadow: 0 8px 30px rgba(0,0,0,0.3);
   border-color: rgba(255, 255, 255, 0.08);
+}
+
+.diary-card-skeleton {
+  pointer-events: none;
+}
+
+.diary-skeleton-badge,
+.diary-skeleton-media,
+.diary-skeleton-line,
+.diary-skeleton-meta span {
+  display: block;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0.14), rgba(244, 63, 94, 0.12), rgba(148, 163, 184, 0.14));
+  background-size: 220% 100%;
+  animation: diary-skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+.diary-skeleton-badge {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 2;
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.diary-skeleton-media {
+  height: 13.5rem;
+  border-radius: 0;
+}
+
+.diary-skeleton-media-tall {
+  height: 18rem;
+}
+
+.diary-skeleton-line {
+  width: 100%;
+  height: 0.875rem;
+  margin-bottom: 0.75rem;
+}
+
+.diary-skeleton-line-short {
+  width: 62%;
+  margin-bottom: 1.25rem;
+}
+
+.diary-skeleton-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.diary-skeleton-meta span {
+  width: 6rem;
+  height: 0.75rem;
 }
 
 .diary-type-badge {
@@ -243,7 +278,7 @@ const getTypeIcon = (type: string) => {
 }
 
 .diary-media-img {
-  @apply w-full h-auto object-cover group-hover:scale-105 transition-transform duration-700 ease-out;
+  @apply w-full h-auto object-cover;
 }
 
 .diary-media-overlay {
@@ -323,5 +358,23 @@ const getTypeIcon = (type: string) => {
 
 .diary-icon-xxs {
   @apply w-3 h-3;
+}
+
+@keyframes diary-skeleton-shimmer {
+  0% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -120% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .diary-skeleton-badge,
+  .diary-skeleton-media,
+  .diary-skeleton-line,
+  .diary-skeleton-meta span {
+    animation: none;
+  }
 }
 </style>

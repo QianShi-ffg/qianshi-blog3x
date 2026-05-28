@@ -27,6 +27,7 @@ const toggleTheme = () => {
 
 <style scoped>
 .theme-toggle-btn {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -37,13 +38,34 @@ const toggleTheme = () => {
   border: none;
   cursor: pointer;
   color: #64748b; /* slate-500 */
-  transition-property: all;
-  transition-duration: 200ms;
+  isolation: isolate;
+  transition:
+    color 0.3s ease,
+    transform 0.3s ease;
+}
+
+.theme-toggle-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0.2rem;
+  border-radius: 9999px;
+  background: rgba(244, 63, 94, 0.12);
+  opacity: 0;
+  filter: blur(10px);
+  transform: scale(0.7);
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+  z-index: -1;
 }
 
 .theme-toggle-btn:hover {
-  background-color: #f1f5f9; /* slate-100 */
-  color: #0f172a; /* slate-900 */
+  color: #f43f5e;
+}
+
+.theme-toggle-btn:hover::before {
+  opacity: 1;
+  transform: scale(1);
 }
 
 /* Dark mode styles for the button itself */
@@ -52,18 +74,19 @@ const toggleTheme = () => {
 }
 
 :global(html.dark) .theme-toggle-btn:hover {
-  background-color: #1e293b; /* slate-800 */
-  color: #f8fafc; /* slate-50 */
+  color: #fb7185;
 }
 
 .theme-icon {
   width: 1.25rem;
   height: 1.25rem;
-  transition-property: transform;
-  transition-duration: 300ms;
+  transition:
+    transform 0.3s ease,
+    filter 0.3s ease;
 }
 
 .theme-toggle-btn:hover .theme-icon {
-  transform: rotate(15deg);
+  transform: scale(1.08);
+  filter: drop-shadow(0 4px 10px rgba(244, 63, 94, 0.2));
 }
 </style>

@@ -163,7 +163,7 @@ const submitReply = (commentId: number) => {
           rows="3"
         ></textarea>
         <div class="input-actions">
-          <button @click="submitComment" class="submit-btn" :disabled="!newComment.trim()">
+          <button @click="submitComment" class="submit-btn interactive-lift" :disabled="!newComment.trim()">
             发布评论
           </button>
         </div>
@@ -253,12 +253,12 @@ const submitReply = (commentId: number) => {
                 ref="replyInputRef"
               ></textarea>
               <div class="input-actions flex justify-end items-center mt-2 gap-4">
-                <button @click="activeReplyId = null" class="cancel-btn text-xs transition-colors">
+                <button @click="activeReplyId = null" class="cancel-btn interactive-lift text-xs transition-colors">
                   取消
                 </button>
                 <button
                   @click="submitReply(comment.id)"
-                  class="submit-btn"
+                  class="submit-btn interactive-lift"
                   :disabled="!replyContent.trim()"
                 >
                   回复
@@ -363,7 +363,33 @@ const submitReply = (commentId: number) => {
 }
 
 .comment-item {
-  @apply flex flex-col gap-4;
+  @apply flex flex-col gap-4 rounded-2xl p-3;
+  position: relative;
+  overflow: hidden;
+}
+
+.comment-item::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background-color: rgba(244, 63, 94, 0.035);
+  transition: opacity 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.comment-item > * {
+  position: relative;
+  z-index: 1;
+}
+
+.comment-item:hover::before {
+  opacity: 1;
+}
+
+:global(html.dark) .comment-item::before {
+  background-color: rgba(244, 63, 94, 0.08);
 }
 
 .comment-main,
