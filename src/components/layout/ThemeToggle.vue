@@ -69,11 +69,11 @@ const toggleTheme = () => {
 }
 
 /* Dark mode styles for the button itself */
-:global(html.dark) .theme-toggle-btn {
+:global(html.dark .theme-toggle-btn){
   color: #94a3b8; /* slate-400 */
 }
 
-:global(html.dark) .theme-toggle-btn:hover {
+:global(html.dark .theme-toggle-btn:hover){
   color: #fb7185;
 }
 

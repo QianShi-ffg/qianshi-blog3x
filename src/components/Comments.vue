@@ -388,7 +388,7 @@ const submitReply = (commentId: number) => {
   opacity: 1;
 }
 
-:global(html.dark) .comment-item::before {
+:global(html.dark .comment-item::before){
   background-color: rgba(244, 63, 94, 0.08);
 }
 

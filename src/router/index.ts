@@ -54,19 +54,8 @@ const router = createRouter({
       component: () => import('../views/Changelog.vue')
     }
   ],
-  scrollBehavior(to, from, savedPosition) {
-    if (savedPosition) {
-      return savedPosition
-    }
-
-    const isArticleRouteChange =
-      (from.name === 'blog' && to.name === 'blog-post') ||
-      (from.name === 'blog-post' && to.name === 'blog')
-
-    return {
-      top: 0,
-      behavior: isArticleRouteChange ? 'auto' : 'smooth',
-    }
+  scrollBehavior() {
+    return false
   }
 })
 

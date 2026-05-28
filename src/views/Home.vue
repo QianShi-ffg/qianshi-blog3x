@@ -15,47 +15,43 @@ onMounted(() => {
   const reduceMotion = prefersReducedMotion()
 
   ctx = gsap.context(() => {
-    const introItems = gsap.utils.toArray<HTMLElement>('.hero-animate')
-
     if (reduceMotion) {
-      gsap.set(introItems, { autoAlpha: 1, y: 0, scaleX: 1, scaleY: 1 })
       return
     }
 
     gsap
-      .timeline({ defaults: { duration: 0.72, ease: 'power3.out' } })
-      .from(introItems, {
+      .timeline({ delay: 0.18, defaults: { ease: 'power3.out' } })
+      .from('.hero-badge, .hero-title, .hero-desc, .hero-actions', {
         autoAlpha: 0,
-        y: 24,
-        scaleX: 0.98,
-        scaleY: 0.98,
+        y: 28,
+        duration: 0.68,
         stagger: 0.08,
       })
       .from(
         '.hero-image-wrapper',
         {
           autoAlpha: 0,
-          y: 28,
-          rotation: 5,
-          scaleX: 0.96,
-          scaleY: 0.96,
+          y: 42,
+          rotation: 7,
+          scaleX: 0.94,
+          scaleY: 0.94,
           duration: 0.9,
           ease: 'power3.out',
         },
-        '-=0.42',
+        '<0.18',
       )
       .from(
         '.floating-badge',
         {
           autoAlpha: 0,
-          y: 18,
-          scaleX: 0.92,
-          scaleY: 0.92,
+          y: 24,
+          scaleX: 0.9,
+          scaleY: 0.9,
           stagger: 0.12,
-          duration: 0.55,
-          ease: 'back.out(1.7)',
+          duration: 0.62,
+          ease: 'back.out(1.45)',
         },
-        '-=0.35',
+        '<0.24',
       )
 
     gsap.to('.badge-1', {
@@ -84,6 +80,89 @@ onMounted(() => {
       ease: 'power2.out',
       delay: 0.45,
     })
+
+    gsap.to('.hero-image-wrapper', {
+      y: 110,
+      rotation: -4,
+      scaleX: 1.04,
+      scaleY: 1.04,
+      ease: 'none',
+      scrollTrigger: {
+        trigger: '.hero-section',
+        start: 'top top',
+        end: 'bottom top',
+        scrub: 1.1,
+      },
+    })
+
+    gsap.to('.badge-1', {
+      y: -82,
+      x: -28,
+      rotation: -8,
+      ease: 'none',
+      scrollTrigger: {
+        trigger: '.hero-section',
+        start: 'top top',
+        end: 'bottom top',
+        scrub: 0.8,
+      },
+    })
+
+    gsap.to('.badge-2', {
+      y: 76,
+      x: 34,
+      rotation: 9,
+      ease: 'none',
+      scrollTrigger: {
+        trigger: '.hero-section',
+        start: 'top top',
+        end: 'bottom top',
+        scrub: 0.85,
+      },
+    })
+
+    gsap.to('.blob-1', {
+      y: 150,
+      x: -70,
+      scaleX: 1.18,
+      scaleY: 1.18,
+      ease: 'none',
+      scrollTrigger: {
+        trigger: '.hero-section',
+        start: 'top top',
+        end: 'bottom top',
+        scrub: 1.4,
+      },
+    })
+
+    gsap.to('.blob-2', {
+      y: -120,
+      x: 90,
+      scaleX: 0.9,
+      scaleY: 0.9,
+      ease: 'none',
+      scrollTrigger: {
+        trigger: '.hero-section',
+        start: 'top top',
+        end: 'bottom top',
+        scrub: 1.2,
+      },
+    })
+
+    gsap.fromTo(
+      '.recent-posts-section',
+      { y: 24 },
+      {
+        y: -40,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: '.recent-posts-section',
+          start: 'top bottom',
+          end: 'top 35%',
+          scrub: 1,
+        },
+      },
+    )
   }, homeRoot.value)
 
   if (reduceMotion || !homeRoot.value) return
@@ -144,22 +223,22 @@ onUnmounted(() => {
       <div class="hero-grid">
         <!-- Text Content -->
         <div class="hero-text-content">
-          <div class="hero-badge hero-animate">
+          <div class="hero-badge">
             <Sparkles class="hero-badge-icon" />
             <span>欢迎来到我的数字花园</span>
           </div>
 
-          <h1 class="hero-title hero-animate">
+          <h1 class="hero-title">
             用代码 <br />
             <span class="hero-title-highlight">构建世界</span>，<br />
             用文字记录生活。
           </h1>
 
-          <p class="hero-desc hero-animate">
+          <p class="hero-desc">
             一位热衷于创建简洁、易用且交互丰富的界面的前端开发人员。
           </p>
 
-          <div class="hero-actions hero-animate">
+          <div class="hero-actions">
             <RouterLink to="/blog" class="btn-primary group">
               阅读文章
               <ArrowRight class="btn-primary-icon" />
@@ -289,7 +368,7 @@ onUnmounted(() => {
 @media (min-width: 1024px) {
   .hero-section {
     padding-top: 10rem; /* lg:pt-40 lg:pb-32 */
-    padding-bottom: 8rem;
+    padding-bottom: 5.5rem;
   }
 }
 
@@ -306,6 +385,12 @@ onUnmounted(() => {
   transform: translateX(33.333333%) translateY(-25%);
 }
 
+:global(html.dark .blob-1) {
+  background-color: rgba(255, 228, 230, 0.14);
+  filter: blur(120px);
+  opacity: 0.46;
+}
+
 .blob-2 {
   position: absolute;
   bottom: 0;
@@ -317,6 +402,12 @@ onUnmounted(() => {
   filter: blur(80px);
   z-index: -10;
   transform: translateX(-33.333333%) translateY(25%);
+}
+
+:global(html.dark .blob-2) {
+  background-color: rgba(219, 234, 254, 0.1);
+  filter: blur(100px);
+  opacity: 0.38;
 }
 
 .hero-grid {
@@ -337,6 +428,13 @@ onUnmounted(() => {
   gap: 2rem; /* space-y-8 */
 }
 
+.hero-badge,
+.hero-title,
+.hero-desc,
+.hero-actions {
+  will-change: transform, opacity;
+}
+
 .hero-badge {
   display: inline-flex;
   align-items: center;
@@ -352,7 +450,7 @@ onUnmounted(() => {
   font-weight: 500; /* font-medium */
   align-self: flex-start;
 }
-:global(html.dark) .hero-badge {
+:global(html.dark .hero-badge){
   background-color: rgba(244, 63, 94, 0.15);
 }
 
@@ -463,7 +561,7 @@ onUnmounted(() => {
     0 2px 6px -1px rgba(0, 0, 0, 0.03); /* shadow-md */
   will-change: transform;
 }
-:global(html.dark) .floating-badge {
+:global(html.dark .floating-badge){
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
 }
 
@@ -490,7 +588,7 @@ onUnmounted(() => {
   background-color: var(--color-secondary); /* bg-rose-100 */
   color: var(--color-primary); /* text-rose-500 */
 }
-:global(html.dark) .icon-rose {
+:global(html.dark .icon-rose){
   background-color: rgba(244, 63, 94, 0.15);
 }
 
@@ -498,7 +596,7 @@ onUnmounted(() => {
   background-color: #dbeafe; /* bg-blue-100 */
   color: #3b82f6; /* text-blue-500 */
 }
-:global(html.dark) .icon-blue {
+:global(html.dark .icon-blue){
   background-color: rgba(59, 130, 246, 0.15);
 }
 
@@ -522,7 +620,7 @@ onUnmounted(() => {
 
 .recent-posts-section {
   padding-top: 5rem; /* py-20 */
-  padding-bottom: 5rem;
+  padding-bottom: 0.625rem;
 }
 
 .recent-header {
@@ -613,12 +711,12 @@ onUnmounted(() => {
     0 8px 10px -6px rgb(244, 63, 94, 0.1); /* hover:shadow-xl hover:shadow-rose-500/10 */
 }
 
-:global(html.dark) .post-card {
+:global(html.dark .post-card){
   background-color: #162032;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
   border-color: rgba(255, 255, 255, 0.05);
 }
-:global(html.dark) .post-card:hover {
+:global(html.dark .post-card:hover){
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
   border-color: rgba(255, 255, 255, 0.1);
 }
@@ -641,7 +739,7 @@ onUnmounted(() => {
   font-size: 0.75rem; /* text-xs */
   font-weight: 500; /* font-medium */
 }
-:global(html.dark) .post-tag {
+:global(html.dark .post-tag){
   background-color: rgba(244, 63, 94, 0.15);
   color: var(--color-primary);
 }
@@ -664,7 +762,7 @@ onUnmounted(() => {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-:global(html.dark) .post-title {
+:global(html.dark .post-title){
   color: #e2e8f0;
 }
 .post-card:hover .post-title {
@@ -681,7 +779,7 @@ onUnmounted(() => {
   overflow: hidden;
   margin: 0;
 }
-:global(html.dark) .post-desc {
+:global(html.dark .post-desc){
   color: #64748b;
 }
 

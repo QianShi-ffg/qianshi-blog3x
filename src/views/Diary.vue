@@ -1,11 +1,50 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { MapPin, Calendar, ImageIcon, Video, FileText } from 'lucide-vue-next'
+import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { listMoments } from '@/api/diary'
 import type { DiaryMomentSummary } from '@/types/content'
+import { registerRouteTransitionCleanup } from '@/utils/route-transition-cleanup'
 
 const moments = ref<DiaryMomentSummary[]>([])
 const isMomentsLoading = ref(true)
+const diaryRoot = ref<HTMLElement | null>(null)
+let headerParallaxCtx: gsap.Context | undefined
+let unregisterTransitionCleanup: (() => void) | undefined
+
+const prefersReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+
+const setupHeaderParallax = () => {
+  unregisterTransitionCleanup?.()
+  headerParallaxCtx?.revert()
+
+  if (!diaryRoot.value || prefersReducedMotion()) return
+
+  headerParallaxCtx = gsap.context(() => {
+    const header = diaryRoot.value?.querySelector<HTMLElement>('.diary-header-wrapper')
+    if (!header) return
+
+    gsap.to(header, {
+      y: -15,
+      ease: 'none',
+      scrollTrigger: {
+        trigger: header,
+        start: 'top 10%',
+        end: 'bottom 18%',
+        scrub: 0.75,
+      },
+    })
+  }, diaryRoot.value)
+
+  unregisterTransitionCleanup = registerRouteTransitionCleanup(() => {
+    headerParallaxCtx?.revert()
+    headerParallaxCtx = undefined
+    unregisterTransitionCleanup = undefined
+  })
+
+  ScrollTrigger.refresh()
+}
 
 onMounted(async () => {
   isMomentsLoading.value = true
@@ -13,7 +52,13 @@ onMounted(async () => {
     moments.value = await listMoments()
   } finally {
     isMomentsLoading.value = false
+    setupHeaderParallax()
   }
+})
+
+onUnmounted(() => {
+  unregisterTransitionCleanup?.()
+  headerParallaxCtx?.revert()
 })
 
 const getTypeIcon = (type: string) => {
@@ -24,7 +69,7 @@ const getTypeIcon = (type: string) => {
 </script>
 
 <template>
-  <div class="diary-page-container">
+  <div ref="diaryRoot" class="diary-page-container">
     <!-- Header -->
     <div class="diary-header-wrapper">
       <div>
@@ -150,13 +195,14 @@ const getTypeIcon = (type: string) => {
 
 .diary-header-wrapper {
   @apply mb-16 flex flex-col md:flex-row justify-between items-start md:items-end gap-8;
+  will-change: transform;
 }
 
 .diary-title {
   @apply text-4xl md:text-5xl font-bold tracking-tight mb-4;
   color: var(--color-heading);
 }
-:global(html.dark) .diary-title {
+:global(html.dark .diary-title){
   color: #e2e8f0;
 }
 
@@ -174,7 +220,7 @@ const getTypeIcon = (type: string) => {
   background-color: var(--color-secondary);
   color: var(--color-primary);
 }
-:global(html.dark) .diary-badge-inner {
+:global(html.dark .diary-badge-inner){
   background-color: rgba(244, 63, 94, 0.15);
   color: var(--color-primary);
 }
@@ -199,7 +245,7 @@ const getTypeIcon = (type: string) => {
   border: 1px solid var(--color-border);
   box-shadow: 0 8px 30px rgba(0,0,0,0.04);
 }
-:global(html.dark) .diary-card {
+:global(html.dark .diary-card){
   background-color: rgba(218, 223, 230, 0.05); /* Match the visual of the second image card background slightly */
   box-shadow: 0 8px 30px rgba(0,0,0,0.3);
   border-color: rgba(255, 255, 255, 0.08);
@@ -267,7 +313,7 @@ const getTypeIcon = (type: string) => {
   opacity: 0.8;
   backdrop-filter: blur(8px);
 }
-:global(html.dark) .diary-type-badge {
+:global(html.dark .diary-type-badge){
   background-color: rgba(255, 255, 255, 0.9);
   color: #1e293b;
   opacity: 1;
@@ -347,12 +393,12 @@ const getTypeIcon = (type: string) => {
   color: var(--color-text);
   border: 1px solid var(--color-border);
 }
-:global(html.dark) .diary-meta-location {
+:global(html.dark .diary-meta-location){
   background-color: rgba(255, 255, 255, 0.9);
   color: #1e293b;
   border: none;
 }
-:global(html.dark) .diary-meta-footer {
+:global(html.dark .diary-meta-footer){
   border-top-color: rgba(255, 255, 255, 0.1);
 }
 

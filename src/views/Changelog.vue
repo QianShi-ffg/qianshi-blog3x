@@ -1,5 +1,46 @@
 <script setup lang="ts">
+import { onMounted, onUnmounted, ref } from 'vue'
 import { GitCommit, Star, Bug, Rocket } from 'lucide-vue-next'
+import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { registerRouteTransitionCleanup } from '@/utils/route-transition-cleanup'
+
+const changelogRoot = ref<HTMLElement | null>(null)
+let headerParallaxCtx: gsap.Context | undefined
+let unregisterTransitionCleanup: (() => void) | undefined
+
+const prefersReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+
+const setupHeaderParallax = () => {
+  unregisterTransitionCleanup?.()
+  headerParallaxCtx?.revert()
+
+  if (!changelogRoot.value || prefersReducedMotion()) return
+
+  headerParallaxCtx = gsap.context(() => {
+    const header = changelogRoot.value?.querySelector<HTMLElement>('.cl-header-wrapper')
+    if (!header) return
+
+    gsap.to(header, {
+      y: -15,
+      ease: 'none',
+      scrollTrigger: {
+        trigger: header,
+        start: 'top 10%',
+        end: 'bottom 18%',
+        scrub: 0.75,
+      },
+    })
+  }, changelogRoot.value)
+
+  unregisterTransitionCleanup = registerRouteTransitionCleanup(() => {
+    headerParallaxCtx?.revert()
+    headerParallaxCtx = undefined
+    unregisterTransitionCleanup = undefined
+  })
+
+  ScrollTrigger.refresh()
+}
 
 const logs = [
   {
@@ -64,10 +105,19 @@ const getBadgeText = (type: string) => {
     default: return type.toUpperCase()
   }
 }
+
+onMounted(() => {
+  setupHeaderParallax()
+})
+
+onUnmounted(() => {
+  unregisterTransitionCleanup?.()
+  headerParallaxCtx?.revert()
+})
 </script>
 
 <template>
-  <div class="cl-page-container">
+  <div ref="changelogRoot" class="cl-page-container">
     <!-- Header -->
     <div class="cl-header-wrapper">
       <h1
@@ -162,13 +212,14 @@ const getBadgeText = (type: string) => {
 
 .cl-header-wrapper {
   @apply mb-16;
+  will-change: transform;
 }
 
 .cl-title {
   @apply text-4xl md:text-5xl font-bold tracking-tight mb-4;
   color: var(--color-heading);
 }
-:global(html.dark) .cl-title {
+:global(html.dark .cl-title){
   color: #e2e8f0;
 }
 
@@ -182,7 +233,7 @@ const getBadgeText = (type: string) => {
 }
 
 .cl-timeline-line {
-  @apply absolute left-[27px] md:left-[120px] top-0 bottom-0 w-px;
+  @apply absolute left-[27px] md:left-[156px] top-0 bottom-0 w-px;
   background-color: var(--color-border);
 }
 
@@ -232,7 +283,7 @@ const getBadgeText = (type: string) => {
   border: 1px solid var(--color-border);
   box-shadow: 0 8px 30px rgba(0,0,0,0.04);
 }
-:global(html.dark) .cl-glass-card {
+:global(html.dark .cl-glass-card){
   box-shadow: 0 8px 30px rgba(0,0,0,0.2);
 }
 
@@ -256,7 +307,7 @@ const getBadgeText = (type: string) => {
   color: var(--color-text);
   border: 1px solid var(--color-border);
 }
-:global(html.dark) .cl-log-tag {
+:global(html.dark .cl-log-tag){
   background-color: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.1);
   color: #cbd5e1;
@@ -294,22 +345,22 @@ const getBadgeText = (type: string) => {
 
 .cl-icon-amber { @apply text-amber-500; }
 .cl-bg-amber { @apply bg-amber-100; }
-:global(html.dark) .cl-bg-amber { background-color: rgba(245, 158, 11, 0.15); }
+:global(html.dark .cl-bg-amber){ background-color: rgba(245, 158, 11, 0.15); }
 
 .cl-icon-blue { @apply text-blue-500; }
 .cl-bg-blue { @apply bg-blue-100; }
-:global(html.dark) .cl-bg-blue { background-color: rgba(59, 130, 246, 0.15); }
+:global(html.dark .cl-bg-blue){ background-color: rgba(59, 130, 246, 0.15); }
 
 /* Badge Colors */
 .cl-badge-emerald { @apply bg-emerald-50 text-emerald-600; }
-:global(html.dark) .cl-badge-emerald { background-color: rgba(16, 185, 129, 0.15); color: #10b981; }
+:global(html.dark .cl-badge-emerald){ background-color: rgba(16, 185, 129, 0.15); color: #10b981; }
 
 .cl-badge-rose { @apply bg-rose-50 text-rose-600; }
-:global(html.dark) .cl-badge-rose { background-color: rgba(244, 63, 94, 0.15); color: var(--color-primary); }
+:global(html.dark .cl-badge-rose){ background-color: rgba(244, 63, 94, 0.15); color: var(--color-primary); }
 
 .cl-badge-blue { @apply bg-blue-50 text-blue-600; }
-:global(html.dark) .cl-badge-blue { background-color: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+:global(html.dark .cl-badge-blue){ background-color: rgba(59, 130, 246, 0.15); color: #3b82f6; }
 
 .cl-badge-slate { @apply bg-slate-50 text-slate-600; }
-:global(html.dark) .cl-badge-slate { background-color: rgba(255, 255, 255, 0.05); color: #cbd5e1; }
+:global(html.dark .cl-badge-slate){ background-color: rgba(255, 255, 255, 0.05); color: #cbd5e1; }
 </style>

@@ -1,11 +1,124 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, onUnmounted, ref } from 'vue'
 import { ArrowUpRight, Github, ExternalLink } from 'lucide-vue-next'
+import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { listProjects } from '@/api/portfolio'
 import type { Project } from '@/types/content'
+import { registerRouteTransitionCleanup } from '@/utils/route-transition-cleanup'
 
 const projects = ref<Project[]>([])
 const isProjectsLoading = ref(true)
+const portfolioRoot = ref<HTMLElement | null>(null)
+let hoverCtx: gsap.Context | undefined
+let headerParallaxCtx: gsap.Context | undefined
+let unregisterTransitionCleanup: (() => void) | undefined
+let hoverCleanups: Array<() => void> = []
+
+const prefersReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+
+const setupPortfolioHover = () => {
+  hoverCleanups.forEach((cleanup) => cleanup())
+  hoverCleanups = []
+  hoverCtx?.revert()
+
+  if (!portfolioRoot.value || prefersReducedMotion()) return
+
+  hoverCtx = gsap.context(() => {
+    const cards = gsap.utils.toArray<HTMLElement>('.portfolio-card:not(.portfolio-card-skeleton)')
+
+    cards.forEach((card) => {
+      const image = card.querySelector<HTMLElement>('.portfolio-image')
+      const overlay = card.querySelector<HTMLElement>('.portfolio-overlay')
+      const actions = card.querySelectorAll<HTMLElement>('.portfolio-action-btn')
+      const title = card.querySelector<HTMLElement>('.portfolio-project-title')
+      const arrow = card.querySelector<HTMLElement>('.portfolio-arrow-icon')
+
+      const enter = () => {
+        gsap.to(card, {
+          filter: 'drop-shadow(0 18px 30px rgba(244, 63, 94, 0.12))',
+          duration: 0.32,
+          ease: 'power2.out',
+          overwrite: true,
+        })
+        gsap.to(image, { scale: 1.045, duration: 0.8, ease: 'power3.out', overwrite: true })
+        gsap.to(overlay, { autoAlpha: 1, duration: 0.36, ease: 'power2.out', overwrite: true })
+        gsap.to(actions, {
+          autoAlpha: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.36,
+          stagger: 0.05,
+          ease: 'back.out(1.4)',
+          overwrite: true,
+        })
+        gsap.to(title, { color: 'var(--color-primary)', duration: 0.22, overwrite: true })
+        gsap.to(arrow, { autoAlpha: 1, x: 0, duration: 0.28, ease: 'power3.out', overwrite: true })
+      }
+
+      const leave = () => {
+        gsap.to(card, {
+          filter: 'drop-shadow(0 0 0 rgba(244, 63, 94, 0))',
+          duration: 0.3,
+          ease: 'power2.out',
+          overwrite: true,
+        })
+        gsap.to(image, { scale: 1, duration: 0.7, ease: 'power3.out', overwrite: true })
+        gsap.to(overlay, { autoAlpha: 0, duration: 0.28, ease: 'power2.out', overwrite: true })
+        gsap.to(actions, {
+          autoAlpha: 0,
+          y: 10,
+          scale: 0.96,
+          duration: 0.24,
+          stagger: 0.03,
+          ease: 'power2.out',
+          overwrite: true,
+        })
+        gsap.to(title, { color: 'var(--color-heading)', duration: 0.22, overwrite: true })
+        gsap.to(arrow, { autoAlpha: 0, x: -8, duration: 0.22, ease: 'power2.out', overwrite: true })
+      }
+
+      card.addEventListener('pointerenter', enter)
+      card.addEventListener('pointerleave', leave)
+
+      hoverCleanups.push(() => {
+        card.removeEventListener('pointerenter', enter)
+        card.removeEventListener('pointerleave', leave)
+      })
+    })
+  }, portfolioRoot.value)
+}
+
+const setupHeaderParallax = () => {
+  unregisterTransitionCleanup?.()
+  headerParallaxCtx?.revert()
+
+  if (!portfolioRoot.value || prefersReducedMotion()) return
+
+  headerParallaxCtx = gsap.context(() => {
+    const header = portfolioRoot.value?.querySelector<HTMLElement>('.portfolio-header-container')
+    if (!header) return
+
+    gsap.to(header, {
+      y: -15,
+      ease: 'none',
+      scrollTrigger: {
+        trigger: header,
+        start: 'top 10%',
+        end: 'bottom 18%',
+        scrub: 0.75,
+      },
+    })
+  }, portfolioRoot.value)
+
+  unregisterTransitionCleanup = registerRouteTransitionCleanup(() => {
+    headerParallaxCtx?.revert()
+    headerParallaxCtx = undefined
+    unregisterTransitionCleanup = undefined
+  })
+
+  ScrollTrigger.refresh()
+}
 
 onMounted(async () => {
   isProjectsLoading.value = true
@@ -13,13 +126,27 @@ onMounted(async () => {
     projects.value = await listProjects()
   } finally {
     isProjectsLoading.value = false
+    await nextTick()
+    setupPortfolioHover()
+    setupHeaderParallax()
   }
+})
+
+onBeforeUnmount(() => {
+  hoverCleanups.forEach((cleanup) => cleanup())
+  hoverCleanups = []
+  hoverCtx?.revert()
+})
+
+onUnmounted(() => {
+  unregisterTransitionCleanup?.()
+  headerParallaxCtx?.revert()
 })
 
 </script>
 
 <template>
-  <div class="portfolio-page-container">
+  <div ref="portfolioRoot" class="portfolio-page-container">
     <!-- Header -->
     <div class="portfolio-header-container">
       <h1
@@ -68,10 +195,10 @@ onMounted(async () => {
         <div class="portfolio-image-wrapper interactive-media">
           <img :src="project.image" :alt="project.title" class="portfolio-image" />
           <div class="portfolio-overlay">
-            <a :href="project.github" target="_blank" class="portfolio-action-btn interactive-lift">
+            <a :href="project.github" target="_blank" class="portfolio-action-btn">
               <Github class="portfolio-icon" />
             </a>
-            <a :href="project.demo" target="_blank" class="portfolio-action-btn delayed interactive-lift">
+            <a :href="project.demo" target="_blank" class="portfolio-action-btn">
               <ExternalLink class="portfolio-icon" />
             </a>
           </div>
@@ -132,13 +259,14 @@ onMounted(async () => {
 
 .portfolio-header-container {
   @apply mb-16;
+  will-change: transform;
 }
 
 .portfolio-title {
   @apply text-4xl font-bold tracking-tight mb-4;
   color: var(--color-heading);
 }
-:global(html.dark) .portfolio-title {
+:global(html.dark .portfolio-title){
   color: #e2e8f0;
 }
 @media (min-width: 768px) {
@@ -164,14 +292,14 @@ onMounted(async () => {
 .portfolio-card {
   border-radius: 1.5rem;
   padding-bottom: 0.25rem;
-  transition: filter 0.3s ease;
+  will-change: filter;
 }
 
 .portfolio-card:hover {
-  filter: drop-shadow(0 18px 30px rgba(244, 63, 94, 0.09));
+  filter: drop-shadow(0 18px 30px rgba(244, 63, 94, 0.12));
 }
 
-:global(html.dark) .portfolio-card:hover {
+:global(html.dark .portfolio-card:hover){
   filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.28));
 }
 
@@ -229,7 +357,7 @@ onMounted(async () => {
 }
 
 .portfolio-image-wrapper {
-  @apply relative overflow-hidden rounded-3xl aspect-[16/10] transition-all duration-300;
+  @apply relative overflow-hidden rounded-3xl aspect-[16/10];
   margin-bottom: 1rem;
   background-color: var(--color-card);
   backdrop-filter: blur(12px);
@@ -242,33 +370,52 @@ onMounted(async () => {
 
 .portfolio-image {
   @apply w-full h-full object-cover;
+  transition: transform 0.7s ease;
+  will-change: transform;
+}
+
+.portfolio-card:hover .portfolio-image {
+  transform: scale(1.045);
 }
 
 .portfolio-overlay {
-  @apply absolute inset-0 bg-black/5 opacity-0 transition-opacity duration-500 flex items-center justify-center gap-4;
+  @apply absolute inset-0 bg-black/5 opacity-0 flex items-center justify-center gap-4;
+  visibility: hidden;
+  transition:
+    opacity 0.36s ease,
+    visibility 0.36s ease;
 }
 
 .portfolio-card:hover .portfolio-overlay {
-  @apply opacity-100;
+  opacity: 1;
+  visibility: visible;
 }
 
 .portfolio-action-btn {
-  @apply w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 translate-y-4;
+  @apply w-12 h-12 rounded-full flex items-center justify-center;
   background-color: var(--color-card);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   color: var(--color-heading);
+  opacity: 0;
+  transform: translateY(10px) scale(0.96);
+  transition:
+    opacity 0.28s ease,
+    transform 0.32s ease,
+    color 0.2s ease;
+  will-change: transform, opacity;
 }
 .portfolio-action-btn:hover {
   color: var(--color-primary);
 }
 
 .portfolio-card:hover .portfolio-action-btn {
-  @apply translate-y-0;
+  opacity: 1;
+  transform: translateY(0) scale(1);
 }
 
-.portfolio-action-btn.delayed {
-  @apply delay-75;
+.portfolio-card:hover .portfolio-action-btn:nth-child(2) {
+  transition-delay: 0.05s;
 }
 
 .portfolio-icon {
@@ -284,14 +431,15 @@ onMounted(async () => {
   background-color: var(--color-secondary);
   color: var(--color-primary);
 }
-:global(html.dark) .portfolio-category-badge {
+:global(html.dark .portfolio-category-badge){
   background-color: rgba(244, 63, 94, 0.15);
   color: var(--color-primary);
 }
 
 .portfolio-project-title {
-  @apply text-2xl font-bold mb-3 flex items-center gap-2 transition-colors;
+  @apply text-2xl font-bold mb-3 flex items-center gap-2;
   color: var(--color-heading);
+  transition: color 0.22s ease;
 }
 
 .portfolio-card:hover .portfolio-project-title {
@@ -299,11 +447,16 @@ onMounted(async () => {
 }
 
 .portfolio-arrow-icon {
-  @apply w-5 h-5 opacity-0 -translate-x-2 transition-all duration-300;
+  @apply w-5 h-5 opacity-0 -translate-x-2;
+  transition:
+    opacity 0.28s ease,
+    transform 0.28s ease;
+  will-change: transform, opacity;
 }
 
 .portfolio-card:hover .portfolio-arrow-icon {
-  @apply opacity-100 translate-x-0;
+  opacity: 1;
+  transform: translateX(0);
 }
 
 .portfolio-project-desc {
@@ -321,7 +474,7 @@ onMounted(async () => {
   color: var(--color-text);
   border: 1px solid var(--color-border);
 }
-:global(html.dark) .portfolio-tag-badge {
+:global(html.dark .portfolio-tag-badge){
   background-color: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.1);
   color: #cbd5e1;

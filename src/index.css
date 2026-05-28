@@ -38,6 +38,16 @@
       color 0.3s ease;
   }
 
+  html {
+    background-color: var(--color-background);
+    opacity: 1;
+  }
+
+  html.dark {
+    background-color: var(--color-background);
+    opacity: 1;
+  }
+
   h1,
   h2,
   h3,
@@ -132,8 +142,12 @@
     border-radius: inherit;
     pointer-events: none;
     opacity: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.38), transparent 42%);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.16), transparent 42%);
     transition: opacity 0.28s ease;
+  }
+
+  html.dark .interactive-card::after {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 44%);
   }
 
   .interactive-card:hover {

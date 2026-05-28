@@ -1,11 +1,50 @@
 <script setup lang="ts">
 import { ExternalLink, Github, Twitter, Globe, Link as LinkIcon } from 'lucide-vue-next'
 import { getFriendShipList } from '@/api/friendShip';
-import { onMounted, ref } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
+import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { registerRouteTransitionCleanup } from '@/utils/route-transition-cleanup'
 
 
 const links = ref<any[]>([]);
 const isLinksLoading = ref(true)
+const linksRoot = ref<HTMLElement | null>(null)
+let headerParallaxCtx: gsap.Context | undefined
+let unregisterTransitionCleanup: (() => void) | undefined
+
+const prefersReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+
+const setupHeaderParallax = () => {
+  unregisterTransitionCleanup?.()
+  headerParallaxCtx?.revert()
+
+  if (!linksRoot.value || prefersReducedMotion()) return
+
+  headerParallaxCtx = gsap.context(() => {
+    const header = linksRoot.value?.querySelector<HTMLElement>('.lk-header-wrapper')
+    if (!header) return
+
+    gsap.to(header, {
+      y: -15,
+      ease: 'none',
+      scrollTrigger: {
+        trigger: header,
+        start: 'top 10%',
+        end: 'bottom 18%',
+        scrub: 0.75,
+      },
+    })
+  }, linksRoot.value)
+
+  unregisterTransitionCleanup = registerRouteTransitionCleanup(() => {
+    headerParallaxCtx?.revert()
+    headerParallaxCtx = undefined
+    unregisterTransitionCleanup = undefined
+  })
+
+  ScrollTrigger.refresh()
+}
 
 onMounted(async() => {
   isLinksLoading.value = true
@@ -17,13 +56,19 @@ onMounted(async() => {
     })
   } finally {
     isLinksLoading.value = false
+    setupHeaderParallax()
   }
+})
+
+onUnmounted(() => {
+  unregisterTransitionCleanup?.()
+  headerParallaxCtx?.revert()
 })
 
 </script>
 
 <template>
-  <div class="lk-page-container">
+  <div ref="linksRoot" class="lk-page-container">
     <!-- Header -->
     <div class="lk-header-wrapper">
       <div class="lk-header-text">
@@ -85,14 +130,14 @@ onMounted(async() => {
       >
         <!-- 网站缩略图 (Hover显示) -->
         <div
-          class="absolute inset-0 z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none rounded-3xl overflow-hidden interactive-media"
+          class="lk-card-preview interactive-media"
         >
           <img
             :src="`${link.screenShot}`"
-            class="w-full h-full object-cover object-top scale-100 group-hover:scale-110 transition-transform duration-[4s] ease-out opacity-90 blur-[2px] group-hover:blur-0"
+            class="lk-card-preview-img"
             loading="lazy"
           />
-          <div class="absolute inset-0 bg-gradient-to-t from-white via-white/85 to-white/20"></div>
+          <div class="lk-card-preview-mask"></div>
         </div>
 
         <div class="lk-card-inner relative z-10">
@@ -157,6 +202,7 @@ onMounted(async() => {
 .lk-header-wrapper {
   @apply mb-16 flex flex-col sm:flex-row sm:items-center justify-between gap-6;
   align-items: flex-end;
+  will-change: transform;
 }
 
 .lk-header-text {
@@ -175,7 +221,7 @@ onMounted(async() => {
   @apply text-4xl md:text-5xl font-bold tracking-tight mb-4;
   color: var(--color-heading);
 }
-:global(html.dark) .lk-title {
+:global(html.dark .lk-title){
   color: #e2e8f0;
 }
 
@@ -202,6 +248,11 @@ onMounted(async() => {
   border-color: rgba(244, 63, 94, 0.2); /* rose-200 equivalent */
 }
 
+:global(html.dark .lk-card:hover) {
+  background-color: rgba(15, 23, 42, 0.86);
+  border-color: rgba(244, 63, 94, 0.18);
+}
+
 .lk-card-skeleton {
   min-height: 8.75rem;
   pointer-events: none;
@@ -212,8 +263,29 @@ onMounted(async() => {
   border-color: var(--color-border);
 }
 
-:global(html.dark) .lk-card {
+:global(html.dark .lk-card){
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+}
+
+.lk-card-preview {
+  @apply absolute inset-0 z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none rounded-3xl overflow-hidden;
+}
+
+.lk-card-preview-img {
+  @apply w-full h-full object-cover object-top scale-100 group-hover:scale-110 transition-transform duration-[4s] ease-out opacity-90 blur-[2px] group-hover:blur-0;
+}
+
+.lk-card-preview-mask {
+  @apply absolute inset-0;
+  background: linear-gradient(to top, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.24));
+}
+
+:global(html.dark .lk-card-preview-img) {
+  opacity: 0.38;
+}
+
+:global(html.dark .lk-card-preview-mask) {
+  background: linear-gradient(to top, rgba(15, 23, 42, 0.92), rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.28));
 }
 
 .lk-card-inner {
@@ -269,6 +341,14 @@ onMounted(async() => {
   @apply w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center shrink-0 group-hover:bg-rose-50 transition-colors;
 }
 
+:global(html.dark .lk-icon-wrap) {
+  background-color: rgba(15, 23, 42, 0.58);
+}
+
+:global(html.dark .group:hover .lk-icon-wrap) {
+  background-color: rgba(244, 63, 94, 0.14);
+}
+
 .lk-icon {
   @apply w-6 h-6 transition-transform duration-300 group-hover:scale-110;
 }
@@ -304,7 +384,7 @@ onMounted(async() => {
   color: var(--color-text);
   border: 1px solid var(--color-border);
 }
-:global(html.dark) .lk-tag {
+:global(html.dark .lk-tag){
   background-color: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.1);
   color: #cbd5e1;
@@ -319,7 +399,7 @@ onMounted(async() => {
   border: 1px solid var(--color-border);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
 }
-:global(html.dark) .lk-apply-section {
+:global(html.dark .lk-apply-section){
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
 }
 

@@ -1,14 +1,18 @@
 <script setup lang="ts">
-import { ref, reactive, computed, nextTick, onBeforeUnmount, onMounted } from 'vue'
+import { ref, reactive, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Calendar, Clock, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { listArticles, getClassifyIdList } from '@/api/blog'
 import type { ArticleSummary } from '@/types/content'
 import { date } from "@/util/date";
 import { useBlogStore } from '@/stores/blog'
+import { registerRouteTransitionCleanup } from '@/utils/route-transition-cleanup'
 
 const router = useRouter()
 const blogStore = useBlogStore()
+const blogRoot = ref<HTMLElement | null>(null)
 const activeFilter = ref('全部')
 const filters = reactive({
   rows: [{ id: '全部', name: '全部', value: '0' }], // 默认添加一个“全部”分类
@@ -17,9 +21,11 @@ const filters = reactive({
 
 const articles = ref<ArticleSummary[]>([])
 const isArticlesLoading = ref(true)
+const hasLoadedArticles = ref(false)
 const articleTotal = ref(0)
 const pageSize = 6
 const filterScroller = ref<HTMLElement | null>(null)
+const filterGlow = ref<HTMLElement | null>(null)
 const canScrollFilterRight = ref(false)
 const filterDrag = reactive({
   isDown: false,
@@ -28,17 +34,24 @@ const filterDrag = reactive({
   hasMoved: false,
 })
 let filterPreventClickUntil = 0
+let scrollCtx: gsap.Context | undefined
+let unregisterTransitionCleanup: (() => void) | undefined
+const prefersReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 
 onMounted(async () => {
   await classify();
   await nextTick()
   updateFilterOverflow()
+  updateFilterGlow(true)
   await loadArticles(blogStore.currentPage)
   window.addEventListener('resize', updateFilterOverflow)
+  window.addEventListener('resize', updateFilterGlowOnResize)
 })
 
-onBeforeUnmount(() => {
+onUnmounted(() => {
   window.removeEventListener('resize', updateFilterOverflow)
+  window.removeEventListener('resize', updateFilterGlowOnResize)
+  unregisterTransitionCleanup?.()
 })
 
 
@@ -121,7 +134,7 @@ const getArticleRequestParams = (page: number) => {
   return {
     page,
     pageSize,
-    ...(activeFilter.value === '全部' ? {} : { classifyId: activeFilter.value }),
+    ...(activeFilter.value === '全部' ? {} : { id: activeFilter.value }),
   }
 }
 
@@ -141,7 +154,108 @@ const loadArticles = async (page = blogStore.currentPage) => {
     }
   } finally {
     isArticlesLoading.value = false
+    hasLoadedArticles.value = true
+    await nextTick()
+    setupBlogParallax()
   }
+}
+
+const setupBlogParallax = () => {
+  unregisterTransitionCleanup?.()
+  scrollCtx?.revert()
+
+  if (!blogRoot.value || prefersReducedMotion()) return
+
+  scrollCtx = gsap.context(() => {
+    const header = blogRoot.value?.querySelector('.blog-header-wrapper')
+    const filters = blogRoot.value?.querySelector('.blog-filters-wrap')
+    const grid = blogRoot.value?.querySelector('.blog-grid-wrapper')
+    const depthGlowTop = blogRoot.value?.querySelector('.blog-depth-glow-top')
+    const depthGlowBottom = blogRoot.value?.querySelector('.blog-depth-glow-bottom')
+
+    if (header) {
+      gsap.to(header, {
+        y: -15,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: header,
+          start: 'top 10%',
+          end: 'bottom 18%',
+          scrub: 0.75,
+        },
+      })
+    }
+
+    if (filters) {
+      gsap.to(filters, {
+        y: -20,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: filters,
+          start: 'top 75%',
+          end: 'bottom 8%',
+          scrub: 0.7,
+        },
+      })
+    }
+
+    if (grid) {
+      gsap.fromTo(
+        grid,
+        { y: 58 },
+        {
+          y: -44,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: grid,
+            start: 'top 92%',
+            end: 'top 24%',
+            scrub: 0.72,
+          },
+        },
+      )
+    }
+
+    if (depthGlowTop) {
+      gsap.to(depthGlowTop, {
+        y: 150,
+        x: -36,
+        scaleX: 1.18,
+        scaleY: 1.18,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: blogRoot.value,
+          start: 'top top',
+          end: 'bottom top',
+          scrub: 1.4,
+        },
+      })
+    }
+
+    if (depthGlowBottom) {
+      gsap.to(depthGlowBottom, {
+        y: -180,
+        x: 48,
+        scaleX: 0.86,
+        scaleY: 0.86,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: blogRoot.value,
+          start: 'top top',
+          end: 'bottom top',
+          scrub: 1.15,
+        },
+      })
+    }
+  }, blogRoot.value)
+
+  unregisterTransitionCleanup = registerRouteTransitionCleanup(() => {
+    scrollCtx?.revert()
+    scrollCtx = undefined
+    unregisterTransitionCleanup = undefined
+  })
+
+  ScrollTrigger.refresh()
 }
 
 const changePage = async (page: number) => {
@@ -160,6 +274,37 @@ const updateFilterOverflow = () => {
 
   canScrollFilterRight.value =
     scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 2
+  updateFilterGlow()
+}
+
+const updateFilterGlow = (immediate = false) => {
+  const scroller = filterScroller.value
+  const glow = filterGlow.value
+  if (!scroller || !glow) return
+
+  const activeButton = scroller.querySelector<HTMLElement>('.blog-filter-active')
+  if (!activeButton) return
+
+  const x = activeButton.offsetLeft
+  const width = activeButton.offsetWidth
+  const height = activeButton.offsetHeight
+  const y = activeButton.offsetTop
+
+  gsap.to(glow, {
+    x,
+    y,
+    width,
+    height,
+    autoAlpha: 1,
+    duration: immediate || prefersReducedMotion() ? 0 : 0.36,
+    ease: 'power3.out',
+    overwrite: true,
+  })
+}
+
+const updateFilterGlowOnResize = () => {
+  updateFilterOverflow()
+  updateFilterGlow(true)
 }
 
 const scrollFilterForward = () => {
@@ -223,6 +368,8 @@ const selectFilter = async (id: string) => {
   if (activeFilter.value === id) return
 
   activeFilter.value = id
+  await nextTick()
+  updateFilterGlow()
   await loadArticles(1)
 }
 
@@ -233,7 +380,10 @@ const openArticle = (article: ArticleSummary) => {
 </script>
 
 <template>
-  <div class="blog-page-container">
+  <div ref="blogRoot" class="blog-page-container">
+    <div class="blog-depth-glow blog-depth-glow-top" aria-hidden="true"></div>
+    <div class="blog-depth-glow blog-depth-glow-bottom" aria-hidden="true"></div>
+
     <!-- Header -->
     <div class="blog-header-wrapper">
       <h1
@@ -272,6 +422,7 @@ const openArticle = (article: ArticleSummary) => {
         @pointercancel="stopFilterDrag"
         @pointerleave="stopFilterDrag"
       >
+        <span ref="filterGlow" class="blog-filter-glow" aria-hidden="true"></span>
         <button
           v-for="item in filters.rows"
           :key="item.id"
@@ -299,7 +450,7 @@ const openArticle = (article: ArticleSummary) => {
 
     <!-- Articles Grid -->
     <div class="blog-grid-wrapper">
-      <div v-if="isArticlesLoading" class="blog-grid-container" aria-live="polite" aria-busy="true">
+      <div v-if="isArticlesLoading && !hasLoadedArticles" class="blog-grid-container" aria-live="polite" aria-busy="true">
         <article v-for="item in pageSize" :key="item" class="blog-article-card blog-article-skeleton">
           <div class="blog-article-inner">
             <div class="blog-skeleton-meta">
@@ -314,7 +465,14 @@ const openArticle = (article: ArticleSummary) => {
           </div>
         </article>
       </div>
-      <TransitionGroup v-else name="list" tag="div" class="blog-grid-container">
+      <TransitionGroup
+        v-else
+        name="list"
+        tag="div"
+        class="blog-grid-container"
+        :class="{ 'blog-grid-container-updating': isArticlesLoading }"
+        :aria-busy="isArticlesLoading"
+      >
         <article
           v-for="article in filteredArticles"
           :key="article.id"
@@ -359,14 +517,19 @@ const openArticle = (article: ArticleSummary) => {
           </div>
         </article>
       </TransitionGroup>
+      <div v-if="isArticlesLoading && hasLoadedArticles" class="blog-grid-loading" aria-live="polite">
+        <span class="blog-grid-loading-dot"></span>
+        <span>正在更新</span>
+      </div>
     </div>
 
     <nav
-      v-if="!isArticlesLoading && articleTotal > pageSize"
+      v-if="hasLoadedArticles && articleTotal > pageSize"
       v-motion
       :initial="{ opacity: 0, y: 16 }"
       :enter="{ opacity: 1, y: 0, transition: { duration: 520, delay: 120 } }"
       class="blog-pagination"
+      :class="{ 'blog-pagination-updating': isArticlesLoading }"
       aria-label="文章分页"
     >
       <button
@@ -411,6 +574,8 @@ const openArticle = (article: ArticleSummary) => {
 <style scoped>
 .blog-page-container {
   min-height: 80vh;
+  position: relative;
+  overflow: hidden;
   padding-top: 3rem; /* py-12 */
   padding-bottom: 3rem;
   padding-left: 1.5rem; /* px-6 */
@@ -419,6 +584,49 @@ const openArticle = (article: ArticleSummary) => {
   margin-right: auto;
   max-width: 1536px; /* max-w-screen-2xl */
 }
+
+.blog-header-wrapper,
+.blog-filters-wrap,
+.blog-grid-wrapper,
+.blog-depth-glow {
+  will-change: transform;
+}
+
+.blog-depth-glow {
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 9999px;
+  filter: blur(90px);
+  opacity: 0.48;
+}
+
+.blog-depth-glow-top {
+  top: 2rem;
+  right: 8%;
+  width: min(36vw, 28rem);
+  height: min(36vw, 28rem);
+  background: rgba(244, 63, 94, 0.14);
+}
+
+.blog-depth-glow-bottom {
+  top: 26rem;
+  left: 5%;
+  width: min(30vw, 23rem);
+  height: min(30vw, 23rem);
+  background: rgba(147, 197, 253, 0.22);
+}
+
+:global(html.dark .blog-depth-glow-top) {
+  opacity: 0.2;
+  background: rgba(244, 63, 94, 0.2);
+}
+
+:global(html.dark .blog-depth-glow-bottom) {
+  opacity: 0.16;
+  background: rgba(59, 130, 246, 0.2);
+}
+
 @media (min-width: 640px) {
   .blog-page-container {
     padding-left: 3rem; /* sm:px-12 */
@@ -490,102 +698,128 @@ const openArticle = (article: ArticleSummary) => {
   position: absolute;
   top: 0;
   right: 0;
-  width: 8rem;
+  width: 3.5rem;
   height: 2.75rem;
   pointer-events: none;
-  background: linear-gradient(90deg, rgba(252, 252, 252, 0), var(--color-background) 64%);
+  background: linear-gradient(90deg, rgba(252, 252, 252, 0), var(--color-background) 82%);
 }
 
 .blog-filters-container {
+  position: relative;
   display: flex;
   flex-wrap: nowrap;
   gap: 0.75rem; /* gap-3 */
   max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 0.125rem 7rem 0.625rem 0;
+  padding: 0.125rem 3.75rem 0.625rem 0;
   overscroll-behavior-inline: contain;
   scrollbar-width: none;
   cursor: grab;
   user-select: none;
   touch-action: pan-x;
   -webkit-overflow-scrolling: touch;
-  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 7rem), transparent calc(100% - 2rem));
-  mask-image: linear-gradient(to right, #000 calc(100% - 7rem), transparent calc(100% - 2rem));
+  -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 3.75rem), transparent 100%);
+  mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 3.75rem), transparent 100%);
+}
+
+.blog-filter-glow {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 0;
+  border-radius: 9999px;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(135deg, #f43f5e, #fb3d66);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.22) inset;
+  will-change: transform, width, height;
 }
 
 .blog-filter-more {
   position: absolute;
-  top: 0.3125rem;
-  right: 0.25rem;
+  top: 0.375rem;
+  right: 0.5rem;
   z-index: 2;
-  width: 2.25rem;
-  height: 1.875rem;
+  width: 1.625rem;
+  height: 1.625rem;
   border: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--color-primary);
+  color: #64748b;
   background: transparent;
   box-shadow: none;
   cursor: pointer;
-  opacity: 0.72;
+  opacity: 0.52;
   transition:
     transform 220ms ease,
     opacity 180ms ease;
 }
 
 .blog-filter-more:hover {
-  transform: translateX(0.125rem);
-  opacity: 1;
+  transform: translateX(0.1rem);
+  opacity: 0.82;
 }
 
 .blog-filter-more-stack {
-  position: relative;
-  width: 1.35rem;
-  height: 1.05rem;
-  display: block;
+  width: 1.125rem;
+  height: 0.875rem;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.1875rem;
 }
 
 .blog-filter-more-stack span {
-  position: absolute;
-  width: 0.9rem;
-  height: 0.9rem;
-  border: 1.5px solid rgba(244, 63, 94, 0.72);
-  border-radius: 0.2rem;
-  background: rgba(255, 255, 255, 0.5);
-  transform: rotate(45deg);
+  display: block;
+  width: 100%;
+  height: 0.125rem;
+  border: 0;
+  border-radius: 9999px;
+  background: rgba(100, 116, 139, 0.58);
+  transform-origin: center;
+  transition:
+    background-color 200ms ease,
+    transform 220ms ease,
+    opacity 200ms ease;
 }
 
 .blog-filter-more-stack span:nth-child(1) {
-  left: 0;
-  top: 0.15rem;
-  opacity: 0.35;
+  opacity: 0.46;
 }
 
 .blog-filter-more-stack span:nth-child(2) {
-  left: 0.3rem;
-  top: 0.08rem;
-  opacity: 0.58;
+  opacity: 0.72;
 }
 
 .blog-filter-more-stack span:nth-child(3) {
-  left: 0.6rem;
-  top: 0;
   opacity: 0.92;
 }
 
-:global(html.dark) .blog-filters-wrap::after {
-  background: linear-gradient(90deg, rgba(11, 19, 32, 0), var(--color-background) 64%);
+.blog-filter-more:hover .blog-filter-more-stack span {
+  background: rgba(244, 63, 94, 0.68);
 }
 
-:global(html.dark) .blog-filter-more {
-  opacity: 0.8;
+.blog-filter-more:hover .blog-filter-more-stack span:nth-child(2) {
+  transform: translateX(0.125rem);
 }
 
-:global(html.dark) .blog-filter-more-stack span {
-  background: rgba(22, 32, 50, 0.55);
-  border-color: rgba(244, 63, 94, 0.82);
+:global(html.dark .blog-filters-wrap::after){
+  background: linear-gradient(90deg, rgba(11, 19, 32, 0), var(--color-background) 82%);
+}
+
+:global(html.dark .blog-filter-more){
+  color: #94a3b8;
+  opacity: 0.58;
+}
+
+:global(html.dark .blog-filter-more-stack span){
+  background: rgba(148, 163, 184, 0.62);
+}
+
+:global(html.dark .blog-filter-more:hover .blog-filter-more-stack span){
+  background: rgba(244, 63, 94, 0.72);
 }
 
 .blog-filters-dragging {
@@ -611,6 +845,8 @@ const openArticle = (article: ArticleSummary) => {
 }
 
 .blog-filter-btn {
+  position: relative;
+  z-index: 1;
   flex: 0 0 auto;
   padding-left: 1.25rem; /* px-5 */
   padding-right: 1.25rem;
@@ -622,19 +858,27 @@ const openArticle = (article: ArticleSummary) => {
   white-space: nowrap;
   transition:
     color 220ms ease,
-    background-color 220ms ease,
+    background-color 180ms ease,
     border-color 220ms ease,
     box-shadow 220ms ease;
   border: none;
   cursor: pointer;
 }
 
+.blog-filter-btn:focus {
+  outline: none;
+}
+
+.blog-filter-btn:focus-visible {
+  outline: 1px solid rgba(244, 63, 94, 0.36);
+  outline-offset: 2px;
+}
+
 .blog-filter-active {
-  background-color: var(--color-primary); /* bg-rose-500 */
-  color: #ffffff; /* text-white */
-  box-shadow:
-    0 4px 6px -1px rgba(244, 63, 94, 0.2),
-    0 2px 4px -2px rgba(244, 63, 94, 0.2); /* shadow-md shadow-rose-500/20 */
+  background-color: transparent; /* active background follows .blog-filter-glow */
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: none;
 }
 
 .blog-filter-inactive {
@@ -648,27 +892,76 @@ const openArticle = (article: ArticleSummary) => {
   border-color: rgba(244, 63, 94, 0.18);
   box-shadow: 0 8px 18px -12px rgba(244, 63, 94, 0.35);
 }
-:global(html.dark) .blog-filter-inactive {
-  background-color: transparent;
-  border-color: rgba(255, 255, 255, 0.1);
+:global(html.dark .blog-filter-inactive){
+  background-color: rgba(255, 255, 255, 0.018);
+  border-color: transparent;
   color: #cbd5e1;
 }
-:global(html.dark) .blog-filter-inactive:hover {
-  background-color: rgba(255, 255, 255, 0.05);
+:global(html.dark .blog-filter-inactive:hover){
+  background-color: rgba(244, 63, 94, 0.055);
+  border-color: rgba(244, 63, 94, 0.16);
+}
+:global(html.dark .blog-filter-btn:focus-visible){
+  outline-color: rgba(244, 63, 94, 0.42);
 }
 
 .blog-grid-wrapper {
   position: relative;
   width: 100%;
+  margin-top: 5.625rem;
+}
+
+.blog-grid-loading {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid rgba(244, 63, 94, 0.12);
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--color-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  box-shadow: 0 12px 24px -18px rgba(244, 63, 94, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  pointer-events: none;
+}
+
+.blog-grid-loading-dot {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background: var(--color-primary);
+  animation: blog-loading-pulse 0.9s ease-in-out infinite alternate;
+}
+
+:global(html.dark .blog-grid-loading){
+  background: rgba(22, 32, 50, 0.74);
+  border-color: rgba(244, 63, 94, 0.18);
+  box-shadow: 0 16px 28px -20px rgba(0, 0, 0, 0.7);
 }
 
 .blog-grid-container {
   display: grid;
   grid-template-columns: repeat(1, minmax(0, 1fr));
   gap: 2rem; /* gap-8 */
-  align-items: flex-start;
+  align-items: stretch;
   justify-content: flex-start;
   width: 100%;
+}
+
+.blog-grid-container-updating {
+  opacity: 0.72;
+  filter: saturate(0.92);
+  transition:
+    opacity 180ms ease,
+    filter 180ms ease;
+  pointer-events: none;
 }
 @media (min-width: 768px) {
   .blog-grid-container {
@@ -682,7 +975,7 @@ const openArticle = (article: ArticleSummary) => {
 }
 
 .blog-article-card {
-  background: var(--color-card); /* glass-card base */
+  background: rgba(255, 255, 255, 0.5);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--color-border);
@@ -690,6 +983,7 @@ const openArticle = (article: ArticleSummary) => {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 17.75rem;
   cursor: pointer;
   transition:
     transform 280ms ease,
@@ -703,10 +997,10 @@ const openArticle = (article: ArticleSummary) => {
     0 0 rgb(0, 0, 0, 0.02),
     0 8px 30px rgb(0, 0, 0, 0.04);
 }
-:global(html.dark) .blog-article-card {
-  background-color: #162032; /* matching the image dark navy slate */
-  border-color: rgba(255, 255, 255, 0.05);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+:global(html.dark .blog-article-card) {
+  background: rgba(218, 223, 230, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
 }
 .blog-article-card:hover {
   transform: translateY(-0.375rem);
@@ -716,9 +1010,10 @@ const openArticle = (article: ArticleSummary) => {
     0 20px 25px -5px rgba(244, 63, 94, 0.1),
     0 8px 10px -6px rgba(244, 63, 94, 0.1);
 }
-:global(html.dark) .blog-article-card:hover {
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-  border-color: rgba(255, 255, 255, 0.1);
+:global(html.dark .blog-article-card:hover) {
+  background: rgba(218, 223, 230, 0.07);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.36);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .blog-article-inner {
@@ -746,14 +1041,19 @@ const openArticle = (article: ArticleSummary) => {
   padding-top: 0.25rem; /* py-1 */
   padding-bottom: 0.25rem;
   border-radius: 9999px; /* rounded-full */
-  background-color: var(--color-secondary); /* bg-rose-50 */
-  color: var(--color-primary); /* text-rose-600 */
+  background-color: rgba(255, 255, 255, 0.66);
+  color: var(--color-text);
   font-size: 0.75rem; /* text-xs */
   font-weight: 500; /* font-medium */
+  border: 1px solid var(--color-border);
+  box-shadow: 0 8px 18px -16px rgba(15, 23, 42, 0.22);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
-:global(html.dark) .blog-article-category {
-  background-color: rgba(244, 63, 94, 0.15);
-  color: var(--color-primary);
+:global(html.dark .blog-article-category){
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
 }
 
 .blog-article-info {
@@ -792,7 +1092,7 @@ const openArticle = (article: ArticleSummary) => {
   overflow: hidden;
   line-height: 1.375; /* leading-snug */
 }
-:global(html.dark) .blog-article-title {
+:global(html.dark .blog-article-title){
   color: #e2e8f0; /* Brighter white for titles in dark mode */
 }
 .blog-article-card:hover .blog-article-title {
@@ -809,7 +1109,7 @@ const openArticle = (article: ArticleSummary) => {
   overflow: hidden;
   margin: 0;
 }
-:global(html.dark) .blog-article-desc {
+:global(html.dark .blog-article-desc){
   color: #64748b; /* slate-500 for less contrast in dark mode excerpts */
 }
 
@@ -821,7 +1121,7 @@ const openArticle = (article: ArticleSummary) => {
   align-items: center;
   justify-content: space-between;
 }
-:global(html.dark) .blog-article-action {
+:global(html.dark .blog-article-action){
   border-top-color: rgba(255, 255, 255, 0.1);
 }
 
@@ -852,10 +1152,10 @@ const openArticle = (article: ArticleSummary) => {
   background-color: var(--color-secondary); /* group-hover:bg-rose-50 */
   box-shadow: 0 8px 18px -12px rgba(244, 63, 94, 0.45);
 }
-:global(html.dark) .blog-action-icon-wrap {
+:global(html.dark .blog-action-icon-wrap){
   background-color: var(--color-heading);
 }
-:global(html.dark) .blog-article-card:hover .blog-action-icon-wrap {
+:global(html.dark .blog-article-card:hover .blog-action-icon-wrap){
   background-color: var(--color-primary);
 }
 
@@ -871,10 +1171,10 @@ const openArticle = (article: ArticleSummary) => {
   color: var(--color-primary); /* group-hover:text-rose-500 */
   scale: 1.08;
 }
-:global(html.dark) .blog-action-icon {
+:global(html.dark .blog-action-icon){
   color: var(--color-background);
 }
-:global(html.dark) .blog-article-card:hover .blog-action-icon {
+:global(html.dark .blog-article-card:hover .blog-action-icon){
   color: #ffffff;
 }
 
@@ -951,6 +1251,12 @@ const openArticle = (article: ArticleSummary) => {
   gap: 0.75rem;
   margin-top: 3rem;
   padding: 0.5rem;
+}
+
+.blog-pagination-updating {
+  opacity: 0.58;
+  pointer-events: none;
+  transition: opacity 180ms ease;
 }
 
 .blog-pagination-pages {
@@ -1032,33 +1338,46 @@ const openArticle = (article: ArticleSummary) => {
   opacity: 0.55;
 }
 
-:global(html.dark) .blog-pagination-pages {
-  background: rgba(22, 32, 50, 0.62);
+:global(html.dark .blog-pagination-pages) {
+  background: rgba(218, 223, 230, 0.045);
   border-color: rgba(255, 255, 255, 0.08);
   box-shadow:
-    0 16px 38px -30px rgba(0, 0, 0, 0.8),
+    0 16px 38px -30px rgba(0, 0, 0, 0.72),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
-:global(html.dark) .blog-pagination-arrow,
-:global(html.dark) .blog-pagination-page {
-  background: rgba(22, 32, 50, 0.7);
+:global(html.dark .blog-pagination-arrow),
+:global(html.dark .blog-pagination-page) {
+  background: rgba(218, 223, 230, 0.05);
   border-color: rgba(255, 255, 255, 0.08);
   color: #cbd5e1;
 }
 
-:global(html.dark) .blog-pagination-arrow:hover:not(:disabled),
-:global(html.dark) .blog-pagination-page:hover {
+:global(html.dark .blog-pagination-arrow:hover:not(:disabled)),
+:global(html.dark .blog-pagination-page:hover) {
   background: rgba(244, 63, 94, 0.14);
   border-color: rgba(244, 63, 94, 0.24);
   color: var(--color-primary);
+  box-shadow: 0 14px 24px -18px rgba(244, 63, 94, 0.45);
 }
 
-:global(html.dark) .blog-pagination-page-active,
-:global(html.dark) .blog-pagination-page-active:hover {
+:global(html.dark .blog-pagination-page-active),
+:global(html.dark .blog-pagination-page-active:hover) {
   color: #ffffff;
   background: var(--color-primary);
   border-color: transparent;
+  box-shadow:
+    0 14px 26px -18px rgba(244, 63, 94, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+:global(html.dark .blog-pagination-arrow:disabled) {
+  color: rgba(203, 213, 225, 0.42);
+  background: rgba(218, 223, 230, 0.035);
+}
+
+:global(html.dark .blog-pagination-ellipsis) {
+  color: rgba(203, 213, 225, 0.62);
 }
 
 @media (max-width: 640px) {
@@ -1105,12 +1424,24 @@ const openArticle = (article: ArticleSummary) => {
   }
 }
 
+@keyframes blog-loading-pulse {
+  0% {
+    opacity: 0.42;
+    transform: scale(0.78);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .blog-skeleton-pill,
   .blog-skeleton-date,
   .blog-skeleton-title,
   .blog-skeleton-text,
-  .blog-skeleton-link {
+  .blog-skeleton-link,
+  .blog-grid-loading-dot {
     animation: none;
   }
 }

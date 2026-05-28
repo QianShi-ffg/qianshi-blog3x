@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, ref, onMounted, onUnmounted, watch } from 'vue'
+import { computed, nextTick, ref, onMounted, onUnmounted, watch } from 'vue'
 import { Menu, X } from 'lucide-vue-next'
 import { RouterLink, useRoute } from 'vue-router'
 import { gsap } from 'gsap'
@@ -13,6 +13,7 @@ const hoverPill = ref<HTMLElement | null>(null)
 const route = useRoute()
 let ctx: gsap.Context | undefined
 const prefersReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+const isArticleDetailRoute = computed(() => route.name === 'blog-post')
 
 const navLinks = [
   { name: '首页', path: '/' },
@@ -161,7 +162,14 @@ const onMobileMenuLeave = (el: Element, done: () => void) => {
 </script>
 
 <template>
-  <header ref="navRoot" class="navbar-header" :class="{ 'navbar-scrolled': isScrolled }">
+  <header
+    ref="navRoot"
+    class="navbar-header"
+    :class="{
+      'navbar-scrolled': isScrolled,
+      'navbar-cover': isArticleDetailRoute && !isScrolled,
+    }"
+  >
     <div class="navbar-container">
       <div class="navbar-inner" :class="{ 'navbar-inner-scrolled': isScrolled }">
         <!-- Logo -->
@@ -250,6 +258,10 @@ const onMobileMenuLeave = (el: Element, done: () => void) => {
   padding-bottom: 1rem;
 }
 
+.navbar-cover {
+  color: rgba(255, 255, 255, 0.86);
+}
+
 @media (min-width: 640px) {
   .navbar-header {
     padding-left: 1.5rem; /* sm:px-6 */
@@ -282,6 +294,14 @@ const onMobileMenuLeave = (el: Element, done: () => void) => {
   padding-top: 0.75rem; /* py-3 */
   padding-bottom: 0.75rem; /* py-3 */
   background-color: transparent;
+}
+
+.navbar-cover .navbar-inner {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .navbar-inner-scrolled {
@@ -326,6 +346,11 @@ const onMobileMenuLeave = (el: Element, done: () => void) => {
   transition-duration: 150ms;
 }
 
+.navbar-cover .navbar-logo-text {
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 1px 8px rgba(15, 23, 42, 0.32);
+}
+
 .group:hover .navbar-logo-text {
   color: #f43f5e; /* group-hover:text-rose-500 */
 }
@@ -368,7 +393,12 @@ const onMobileMenuLeave = (el: Element, done: () => void) => {
   will-change: transform, opacity, width;
 }
 
-:global(html.dark) .navbar-hover-pill {
+.navbar-cover .navbar-hover-pill {
+  background: rgba(244, 63, 94, 0.34);
+  filter: blur(14px);
+}
+
+:global(html.dark .navbar-hover-pill){
   background: rgba(244, 63, 94, 0.24);
 }
 
@@ -379,7 +409,27 @@ const onMobileMenuLeave = (el: Element, done: () => void) => {
   border-left: 1px solid #e2e8f0; /* slate-200 */
 }
 
-:global(html.dark) .navbar-theme-desktop {
+.navbar-cover .navbar-theme-desktop {
+  border-left-color: rgba(255, 255, 255, 0.34);
+}
+
+:global(.navbar-cover .theme-toggle-btn){
+  color: rgba(255, 255, 255, 0.7);
+}
+
+:global(html.dark .navbar-cover .theme-toggle-btn){
+  color: rgba(255, 255, 255, 0.7);
+}
+
+:global(.navbar-cover .theme-toggle-btn:hover){
+  color: #ffffff;
+}
+
+:global(html.dark .navbar-cover .theme-toggle-btn:hover){
+  color: #ffffff;
+}
+
+:global(html.dark .navbar-theme-desktop){
   border-left-color: #334155; /* slate-700 */
 }
 
@@ -408,12 +458,25 @@ const onMobileMenuLeave = (el: Element, done: () => void) => {
   will-change: color;
 }
 
+.navbar-cover .navbar-link {
+  color: rgba(255, 255, 255, 0.7);
+  text-shadow: 0 1px 8px rgba(15, 23, 42, 0.36);
+}
+
 .navbar-link:hover {
   color: var(--color-primary);
 }
 
+.navbar-cover .navbar-link:hover {
+  color: #ffffff;
+}
+
 .navbar-link-active {
   color: #f43f5e; /* text-rose-500 */
+}
+
+.navbar-cover .navbar-link-active {
+  color: #fb7185;
 }
 
 .navbar-link-indicator {
@@ -450,6 +513,10 @@ const onMobileMenuLeave = (el: Element, done: () => void) => {
   transition-duration: 200ms;
 }
 
+.navbar-cover .navbar-mobile-toggle {
+  color: rgba(255, 255, 255, 0.78);
+}
+
 .navbar-mobile-toggle:hover {
   background-color: var(--color-border);
   color: var(--color-heading);
@@ -483,7 +550,7 @@ const onMobileMenuLeave = (el: Element, done: () => void) => {
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--color-border);
 }
-:global(html.dark) .navbar-mobile-dropdown {
+:global(html.dark .navbar-mobile-dropdown){
   box-shadow:
     0 10px 15px -3px rgba(0, 0, 0, 0.3),
     0 4px 6px -2px rgba(0, 0, 0, 0.2);

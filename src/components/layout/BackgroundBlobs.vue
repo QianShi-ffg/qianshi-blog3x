@@ -94,7 +94,7 @@ onUnmounted(() => {
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-  z-index: -50;
+  z-index: 0;
   background-color: rgba(248, 250, 252, 0.2); /* slate-50/20 */
 }
 
@@ -110,6 +110,15 @@ onUnmounted(() => {
   mix-blend-mode: multiply;
   filter: blur(80px);
   animation: breathe 8s infinite alternate ease-in-out;
+}
+
+:global(html.dark .blob-container) {
+  background-color: transparent;
+}
+
+:global(html.dark .blob-inner) {
+  opacity: 0;
+  animation: none;
 }
 
 /* Colors */

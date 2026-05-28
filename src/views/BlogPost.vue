@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useColorMode } from '@vueuse/core'
 import { useBlogStore } from '@/stores/blog'
 import { Calendar, Clock, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-vue-next'
 import { getArticleDetail, getClassifyIdList } from '@/api/blog'
@@ -12,6 +13,7 @@ import { MdPreview, config } from 'md-editor-v3';
 const route = useRoute()
 const router = useRouter()
 const blogStore = useBlogStore()
+const colorMode = useColorMode()
 const articleId = route.params.id
 const article = ref<ArticleDetail | null>(null)
 const isLoading = ref(true)
@@ -43,7 +45,6 @@ const preloadImage = (src: string) => {
     image.src = src
   })
 }
-
 
 onMounted(async () => {
   isLoading.value = true
@@ -143,17 +144,18 @@ const goBack = () => {
       <!-- Main content container -->
       <article
         v-if="article"
-        class="post-article-container interactive-card"
+        class="post-article-container"
       >
         <!-- Markdown Content (Simulated with raw HTML for now, would normally use a markdown parser) -->
         <!-- <div class="prose" v-html="article.articleContent"></div> -->
         <MdPreview
           :editorId="id"
           :modelValue="article.articleContent"
+          :theme="colorMode === 'dark' ? 'dark' : 'light'"
         />
       </article>
 
-      <div v-else class="post-loading-card interactive-card">
+      <div v-else class="post-loading-card">
         <span class="post-loading-paragraph post-loading-line"></span>
         <span class="post-loading-paragraph post-loading-line"></span>
         <span class="post-loading-paragraph-short post-loading-line"></span>
@@ -309,7 +311,7 @@ const goBack = () => {
   background: var(--color-border);
 }
 
-:global(html.dark) .post-loading-card {
+:global(html.dark .post-loading-card){
   background: linear-gradient(180deg, rgba(30, 41, 59, 0.6) 0%, var(--color-card) 200px);
   border-color: rgba(255, 255, 255, 0.05);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
@@ -433,7 +435,7 @@ const goBack = () => {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
-:global(html.dark) .post-article-container {
+:global(html.dark .post-article-container){
   background: linear-gradient(180deg, rgba(30, 41, 59, 0.6) 0%, var(--color-card) 200px);
   border-color: rgba(255, 255, 255, 0.05);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
@@ -582,5 +584,48 @@ const goBack = () => {
 
 #preview-only {
   background: unset;
+  color: var(--color-text);
+}
+
+:global(html.dark #preview-only),
+:global(html.dark #preview-only .md-editor-preview),
+:global(html.dark #preview-only .md-editor-preview-wrapper) {
+  background: transparent;
+  color: #cbd5e1;
+}
+
+:global(html.dark #preview-only h1),
+:global(html.dark #preview-only h2),
+:global(html.dark #preview-only h3),
+:global(html.dark #preview-only h4),
+:global(html.dark #preview-only h5),
+:global(html.dark #preview-only h6) {
+  color: #f1f5f9;
+}
+
+:global(html.dark #preview-only p),
+:global(html.dark #preview-only li),
+:global(html.dark #preview-only blockquote),
+:global(html.dark #preview-only table),
+:global(html.dark #preview-only span) {
+  color: #cbd5e1;
+}
+
+:global(html.dark #preview-only a) {
+  color: #fb7185;
+}
+
+:global(html.dark #preview-only code:not(pre code)) {
+  color: #fb7185;
+  background: rgba(244, 63, 94, 0.14);
+}
+
+:global(html.dark #preview-only pre) {
+  background: rgba(2, 6, 23, 0.72);
+  color: #e2e8f0;
+}
+
+:global(html.dark #preview-only img) {
+  opacity: 0.96;
 }
 </style>

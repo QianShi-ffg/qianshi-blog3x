@@ -71,7 +71,7 @@ const scrollToTop = () => {
 .footer-wrapper {
   background-color: var(--color-background);
   border-top: 1px solid var(--color-border);
-  margin-top: 6rem; /* mt-24 */
+  margin-top: 3rem;
 }
 
 .footer-container {

@@ -290,19 +290,19 @@ const goBack = () => {
 .dd-back-btn:hover .dd-back-icon {
   transform: translateX(-0.1875rem);
 }
-:global(html.dark) .dd-back-btn {
+:global(html.dark .dd-back-btn){
   background-color: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.1);
   color: #cbd5e1;
 }
-:global(html.dark) .dd-back-icon-wrap {
+:global(html.dark .dd-back-icon-wrap){
   background-color: rgba(255, 255, 255, 0.1);
 }
-:global(html.dark) .dd-back-btn:hover {
+:global(html.dark .dd-back-btn:hover){
   color: var(--color-primary);
   background-color: rgba(255, 255, 255, 0.08);
 }
-:global(html.dark) .dd-back-btn:hover .dd-back-icon-wrap {
+:global(html.dark .dd-back-btn:hover .dd-back-icon-wrap){
   background-color: rgba(244, 63, 94, 0.16);
   box-shadow: inset 0 0 0 1px rgba(244, 63, 94, 0.16);
 }
@@ -313,7 +313,7 @@ const goBack = () => {
   color: var(--color-text);
   border-color: var(--color-border);
 }
-:global(html.dark) .dd-type-badge {
+:global(html.dark .dd-type-badge){
   background-color: rgba(244, 63, 94, 0.15);
   color: var(--color-primary);
   border: none;
@@ -322,7 +322,7 @@ const goBack = () => {
 .dd-type-badge-top {
   /* Inherits from dd-type-badge but specific to top bar */
 }
-:global(html.dark) .dd-type-badge-top {
+:global(html.dark .dd-type-badge-top){
   background-color: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #cbd5e1;
@@ -351,7 +351,7 @@ const goBack = () => {
     opacity: 0.78;
   }
 }
-:global(html.dark) .dd-article-card {
+:global(html.dark .dd-article-card){
   background-color: #162032;
   border-color: rgba(255, 255, 255, 0.05);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
@@ -362,7 +362,7 @@ const goBack = () => {
   background: rgba(255, 255, 255, 0.36);
   border-color: rgba(226, 232, 240, 0.72);
 }
-:global(html.dark) .dd-meta-header {
+:global(html.dark .dd-meta-header){
   border-bottom-color: rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.025);
 }
@@ -375,7 +375,7 @@ const goBack = () => {
 .dd-meta-text {
   color: var(--color-text);
 }
-:global(html.dark) .dd-meta-text {
+:global(html.dark .dd-meta-text){
   color: #cbd5e1; /* slate-300 */
 }
 
@@ -383,7 +383,7 @@ const goBack = () => {
   @apply px-3 py-1 rounded-full;
   background-color: var(--color-background);
 }
-:global(html.dark) .dd-meta-location {
+:global(html.dark .dd-meta-location){
   background-color: rgba(255, 255, 255, 0.05);
 }
 
@@ -452,7 +452,7 @@ const goBack = () => {
     color: var(--color-primary);
   }
 }
-:global(html.dark) .dd-quote {
+:global(html.dark .dd-quote){
   color: #e2e8f0;
 }
 
@@ -461,7 +461,7 @@ const goBack = () => {
   color: var(--color-text);
   max-width: 58rem;
 }
-:global(html.dark) .dd-long-content {
+:global(html.dark .dd-long-content){
   color: #94a3b8;
 }
 
@@ -470,7 +470,7 @@ const goBack = () => {
   background: rgba(255, 255, 255, 0.24);
   border-color: rgba(226, 232, 240, 0.72);
 }
-:global(html.dark) .dd-interaction-footer {
+:global(html.dark .dd-interaction-footer){
   background: rgba(255, 255, 255, 0.025);
   border-color: rgba(255, 255, 255, 0.08);
 }

@@ -528,6 +528,63 @@ const goBack = () => {
   align-items: center;
 }
 
+:global(html.dark .pd-container .pd-back-btn) {
+  color: #cbd5e1;
+  background: rgba(15, 23, 42, 0.44);
+  border-color: rgba(148, 163, 184, 0.26);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+:global(html.dark .pd-container .pd-back-btn:hover) {
+  color: #fb7185;
+  background: rgba(244, 63, 94, 0.1);
+  border-color: rgba(244, 63, 94, 0.28);
+}
+
+:global(html.dark .pd-container .pd-project-brief) {
+  background:
+    linear-gradient(135deg, rgba(30, 41, 59, 0.58), rgba(15, 23, 42, 0.76)),
+    var(--color-card);
+  border-color: rgba(148, 163, 184, 0.16);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.22);
+}
+
+:global(html.dark .pd-container .pd-project-brief:hover) {
+  border-color: rgba(244, 63, 94, 0.2);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.26);
+}
+
+:global(html.dark .pd-container .pd-brief-title) {
+  color: #cbd5e1;
+}
+
+:global(html.dark .pd-container .pd-brief-row) {
+  border-top-color: rgba(148, 163, 184, 0.18);
+}
+
+:global(html.dark .pd-container .pd-brief-row:hover) {
+  background: linear-gradient(90deg, rgba(244, 63, 94, 0.1), rgba(244, 63, 94, 0));
+}
+
+:global(html.dark .pd-container .pd-brief-icon) {
+  color: #fb7185;
+  background: rgba(244, 63, 94, 0.12);
+}
+
+:global(html.dark .pd-container .pd-brief-label) {
+  color: #94a3b8;
+}
+
+:global(html.dark .pd-container .pd-brief-value) {
+  color: #f1f5f9;
+}
+
+:global(html.dark .pd-container .pd-tech-tag) {
+  color: #cbd5e1;
+  background: rgba(148, 163, 184, 0.12);
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
 @keyframes pd-skeleton-shimmer {
   0% {
     background-position: 120% 0;

@@ -2,11 +2,46 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import { Mail, MapPin, Briefcase, GraduationCap, FolderGit2, Download } from 'lucide-vue-next'
 import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { registerRouteTransitionCleanup } from '@/utils/route-transition-cleanup'
 
 const resumeRoot = ref<HTMLElement | null>(null)
 let ctx: gsap.Context | undefined
+let headerParallaxCtx: gsap.Context | undefined
+let unregisterTransitionCleanup: (() => void) | undefined
 const cleanups: Array<() => void> = []
 const prefersReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+
+const setupHeaderParallax = () => {
+  unregisterTransitionCleanup?.()
+  headerParallaxCtx?.revert()
+
+  if (!resumeRoot.value || prefersReducedMotion()) return
+
+  headerParallaxCtx = gsap.context(() => {
+    const header = resumeRoot.value?.querySelector<HTMLElement>('.resume-header-wrapper')
+    if (!header) return
+
+    gsap.to(header, {
+      y: -15,
+      ease: 'none',
+      scrollTrigger: {
+        trigger: header,
+        start: 'top 10%',
+        end: 'bottom 18%',
+        scrub: 0.75,
+      },
+    })
+  }, resumeRoot.value)
+
+  unregisterTransitionCleanup = registerRouteTransitionCleanup(() => {
+    headerParallaxCtx?.revert()
+    headerParallaxCtx = undefined
+    unregisterTransitionCleanup = undefined
+  })
+
+  ScrollTrigger.refresh()
+}
 
 onMounted(() => {
   if (!resumeRoot.value || prefersReducedMotion()) return
@@ -67,10 +102,14 @@ onMounted(() => {
       profileCard.removeEventListener('pointerleave', handlePointerLeave)
     })
   }
+
+  setupHeaderParallax()
 })
 
 onUnmounted(() => {
   cleanups.splice(0).forEach((cleanup) => cleanup())
+  unregisterTransitionCleanup?.()
+  headerParallaxCtx?.revert()
   ctx?.revert()
 })
 </script>
@@ -345,6 +384,7 @@ onUnmounted(() => {
 
 .resume-header-wrapper {
   @apply mb-16 flex flex-col items-start gap-8;
+  will-change: transform;
 }
 @media (min-width: 768px) {
   .resume-header-wrapper {
@@ -356,7 +396,7 @@ onUnmounted(() => {
   @apply text-4xl font-bold tracking-tight mb-4;
   color: var(--color-heading);
 }
-:global(html.dark) .resume-title {
+:global(html.dark .resume-title){
   color: #e2e8f0;
 }
 @media (min-width: 768px) {
@@ -460,7 +500,7 @@ onUnmounted(() => {
 .resume-profile-card:hover::before {
   opacity: 1;
 }
-:global(html.dark) .resume-profile-card {
+:global(html.dark .resume-profile-card){
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
 }
 
@@ -529,7 +569,7 @@ onUnmounted(() => {
   border: 1px solid var(--color-border);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
 }
-:global(html.dark) .resume-skills-card {
+:global(html.dark .resume-skills-card){
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
 }
 
@@ -592,7 +632,7 @@ onUnmounted(() => {
   border: 1px solid var(--color-border);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
 }
-:global(html.dark) .resume-experience-card {
+:global(html.dark .resume-experience-card){
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
 }
 @media (min-width: 768px) {
@@ -609,7 +649,7 @@ onUnmounted(() => {
   border: 1px solid var(--color-border);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
 }
-:global(html.dark) .resume-education-card {
+:global(html.dark .resume-education-card){
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
 }
 @media (min-width: 768px) {
@@ -692,7 +732,7 @@ onUnmounted(() => {
     @apply mt-0;
   }
 }
-:global(html.dark) .resume-timeline-date-active {
+:global(html.dark .resume-timeline-date-active){
   background-color: rgba(244, 63, 94, 0.15);
   color: var(--color-primary);
 }
@@ -708,7 +748,7 @@ onUnmounted(() => {
     @apply mt-0;
   }
 }
-:global(html.dark) .resume-timeline-date {
+:global(html.dark .resume-timeline-date){
   background-color: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.1);
   color: #cbd5e1;
