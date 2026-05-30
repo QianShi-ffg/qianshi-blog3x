@@ -593,6 +593,42 @@ const onMobileMenuLeave = (el: Element, done: () => void) => {
   background-color: var(--color-border);
 }
 
+@media (max-width: 767px) {
+  .navbar-cover {
+    color: var(--color-text);
+  }
+
+  .navbar-cover .navbar-logo-text {
+    color: var(--color-heading);
+    text-shadow: none;
+  }
+
+  .navbar-cover .navbar-inner {
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .navbar-cover .navbar-mobile-toggle {
+    color: var(--color-text);
+  }
+
+  .navbar-cover .navbar-mobile-toggle:hover {
+    background-color: var(--color-border);
+    color: var(--color-heading);
+  }
+
+  :global(.navbar-cover .theme-toggle-btn),
+  :global(html.dark .navbar-cover .theme-toggle-btn) {
+    color: var(--color-text);
+  }
+
+  :global(.navbar-cover .theme-toggle-btn:hover),
+  :global(html.dark .navbar-cover .theme-toggle-btn:hover) {
+    color: var(--color-primary);
+  }
+}
+
 /* Mobile Menu Transitions */
 .mobile-menu-enter-active {
   transition: all 200ms ease-out;

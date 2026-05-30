@@ -31,10 +31,10 @@ onMounted(() => {
         '.hero-image-wrapper',
         {
           autoAlpha: 0,
-          y: 42,
-          rotation: 7,
-          scaleX: 0.94,
-          scaleY: 0.94,
+          y: 0,
+          rotation: 3,
+          scaleX: 1,
+          scaleY: 1,
           duration: 0.9,
           ease: 'power3.out',
         },
@@ -44,7 +44,6 @@ onMounted(() => {
         '.floating-badge',
         {
           autoAlpha: 0,
-          y: 24,
           scaleX: 0.9,
           scaleY: 0.9,
           stagger: 0.12,
@@ -54,7 +53,7 @@ onMounted(() => {
         '<0.24',
       )
 
-    gsap.to('.badge-1', {
+    gsap.to('.badge-1 .floating-badge', {
       y: -12,
       rotation: -2,
       repeat: -1,
@@ -63,7 +62,7 @@ onMounted(() => {
       ease: 'sine.inOut',
     })
 
-    gsap.to('.badge-2', {
+    gsap.to('.badge-2 .floating-badge', {
       y: 10,
       rotation: 2,
       repeat: -1,
@@ -256,23 +255,27 @@ onUnmounted(() => {
               class="hero-image"
             />
             <!-- Floating badge 1 -->
-            <div class="floating-badge badge-1">
-              <div class="badge-icon-wrap icon-rose">
-                <Code2 class="badge-icon" />
-              </div>
-              <div>
-                <p class="badge-title">HTML & CSS & JS</p>
-                <p class="badge-subtitle">Frontend</p>
+            <div class="floating-badge-shell badge-1">
+              <div class="floating-badge">
+                <div class="badge-icon-wrap icon-rose">
+                  <Code2 class="badge-icon" />
+                </div>
+                <div>
+                  <p class="badge-title">HTML & CSS & JS</p>
+                  <p class="badge-subtitle">Frontend</p>
+                </div>
               </div>
             </div>
             <!-- Floating badge 2 -->
-            <div class="floating-badge badge-2">
-              <div class="badge-icon-wrap icon-blue">
-                <Coffee class="badge-icon" />
-              </div>
-              <div>
-                <p class="badge-title">生活碎片</p>
-                <p class="badge-subtitle">Life Diary</p>
+            <div class="floating-badge-shell badge-2">
+              <div class="floating-badge">
+                <div class="badge-icon-wrap icon-blue">
+                  <Coffee class="badge-icon" />
+                </div>
+                <div>
+                  <p class="badge-title">生活碎片</p>
+                  <p class="badge-subtitle">Life Diary</p>
+                </div>
               </div>
             </div>
           </div>
@@ -534,7 +537,10 @@ onUnmounted(() => {
     0 0 0 #000000,
     0 0px 0px 0px rgba(0, 0, 0, 0.03),
     0 8px 30px rgb(0, 0, 0, 0.04); /* shadow-md */
+    pointer-events: none;
 }
+
+
 
 .hero-image {
   border-radius: 1rem; /* rounded-2xl */
@@ -543,8 +549,12 @@ onUnmounted(() => {
   aspect-ratio: 1 / 1;
 }
 
-.floating-badge {
+.floating-badge-shell {
   position: absolute;
+  will-change: transform;
+}
+
+.floating-badge {
   padding-left: 1rem; /* px-4 */
   padding-right: 1rem;
   padding-top: 0.75rem; /* py-3 */

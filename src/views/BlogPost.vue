@@ -457,6 +457,82 @@ const goBack = () => {
   border-color: var(--color-secondary);
 }
 
+@media (max-width: 767px) {
+  .post-hero-header {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+    padding: 6.5rem 1rem 1.5rem;
+  }
+
+  .post-cover-stage,
+  .post-gradient-overlay {
+    display: none;
+  }
+
+  .post-back-btn-wrap {
+    position: relative;
+    top: auto;
+    left: auto;
+    z-index: 1;
+    margin-bottom: 1.5rem;
+  }
+
+  .post-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 1rem 0.375rem 0.5rem;
+    background-color: var(--color-background);
+    border-color: var(--color-border);
+    color: var(--color-text);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+
+  .post-back-btn .post-icon-sm {
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0.25rem;
+    border-radius: 9999px;
+    background-color: var(--color-border);
+  }
+
+  .post-back-btn:hover {
+    color: var(--color-primary);
+    border-color: var(--color-secondary);
+  }
+
+  .post-header-content {
+    position: relative;
+    inset: auto;
+    padding: 0;
+  }
+
+  .post-category-badge {
+    margin-bottom: 1rem;
+    box-shadow: none;
+  }
+
+  .post-main-title {
+    color: var(--color-heading);
+    font-size: 2.25rem;
+    line-height: 1.2;
+    margin-bottom: 1rem;
+    text-shadow: none;
+  }
+
+  .post-meta-info {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    color: var(--color-text);
+  }
+
+  .post-main-area {
+    margin-top: 0;
+    padding-inline: 1rem;
+  }
+}
+
 @keyframes post-cover-drift {
   from {
     transform: scale(1);
