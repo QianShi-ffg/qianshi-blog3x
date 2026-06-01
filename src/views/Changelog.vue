@@ -1,13 +1,22 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
+import type { Component } from 'vue'
 import { GitCommit, Star, Bug, Rocket } from 'lucide-vue-next'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { listChangelogs } from '@/api/changelog'
+import type { Changelog } from '@/types/content'
 import { registerRouteTransitionCleanup } from '@/utils/route-transition-cleanup'
 
 const changelogRoot = ref<HTMLElement | null>(null)
 let headerParallaxCtx: gsap.Context | undefined
 let unregisterTransitionCleanup: (() => void) | undefined
+
+interface ChangelogView extends Changelog {
+  icon: Component
+  iconColor: string
+  bgColor: string
+}
 
 const prefersReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 
@@ -42,51 +51,50 @@ const setupHeaderParallax = () => {
   ScrollTrigger.refresh()
 }
 
-const logs = [
-  {
-    version: 'v2.0.0',
-    date: '2024-04-17',
-    tag: 'MAJOR',
+const defaultTagMeta: Pick<ChangelogView, 'icon' | 'iconColor' | 'bgColor'> = {
+  icon: Star,
+  iconColor: 'cl-icon-amber',
+  bgColor: 'cl-bg-amber',
+}
+
+const tagMetaMap: Record<string, Pick<ChangelogView, 'icon' | 'iconColor' | 'bgColor'>> = {
+  MAJOR: {
     icon: Rocket,
     iconColor: 'cl-icon-rose',
     bgColor: 'cl-bg-rose',
-    title: '极简清新风格重构',
-    changes: [
-      { type: 'feat', text: '全新设计的极简清新 UI 界面，采用明亮主题与玻璃拟态效果' },
-      { type: 'feat', text: '重构导航栏与页脚，提升空间感与呼吸感' },
-      { type: 'feat', text: '优化所有页面的动画效果，使其更加丝滑自然' },
-      { type: 'refactor', text: '全面移除原有 Brutalism (粗野主义) 设计元素' }
-    ]
   },
-  {
-    version: 'v1.1.0',
-    date: '2024-02-10',
-    tag: 'FEATURE',
-    icon: Star,
-    iconColor: 'cl-icon-amber',
-    bgColor: 'cl-bg-amber',
-    title: '功能完善与体验优化',
-    changes: [
-      { type: 'feat', text: '新增「生活碎片」瀑布流布局视图' },
-      { type: 'feat', text: '文章列表添加分类筛选功能' },
-      { type: 'fix', text: '修复移动端导航菜单点击穿透的问题' }
-    ]
+  FEATURE: {
+    ...defaultTagMeta,
   },
-  {
-    version: 'v1.0.0',
-    date: '2023-10-01',
-    tag: 'RELEASE',
+  RELEASE: {
     icon: GitCommit,
     iconColor: 'cl-icon-blue',
     bgColor: 'cl-bg-blue',
-    title: '项目初始化',
-    changes: [
-      { type: 'feat', text: '基于 Vue 3 + Tailwind CSS 搭建项目基础架构' },
-      { type: 'feat', text: '集成 vue-router 并在全局配置页面切换动画' },
-      { type: 'feat', text: '完成首页、文章、作品、关于等核心页面的开发' }
-    ]
+  },
+  FIX: {
+    icon: Bug,
+    iconColor: 'cl-icon-rose',
+    bgColor: 'cl-bg-rose',
+  },
+}
+
+const logs = ref<ChangelogView[]>([])
+
+const decorateChangelog = (log: Changelog): ChangelogView => {
+  const meta = tagMetaMap[log.tag] ?? defaultTagMeta
+
+  return {
+    ...log,
+    icon: meta.icon,
+    iconColor: meta.iconColor,
+    bgColor: meta.bgColor,
   }
-]
+}
+
+const loadChangelogs = async () => {
+  const changelogs = await listChangelogs()
+  logs.value = changelogs.map(decorateChangelog)
+}
 
 const getBadgeClass = (type: string) => {
   switch (type) {
@@ -106,7 +114,8 @@ const getBadgeText = (type: string) => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await loadChangelogs()
   setupHeaderParallax()
 })
 
@@ -144,7 +153,12 @@ onUnmounted(() => {
       <div class="cl-timeline-line"></div>
 
       <div class="cl-logs-container">
+        <div v-if="logs.length === 0" class="cl-empty-state">
+          <p class="cl-empty-title">暂无更新日志</p>
+          <p class="cl-empty-desc">后台发布后，这里会同步显示。</p>
+        </div>
         <div
+          v-else
           v-for="(log, index) in logs"
           :key="log.version"
           v-motion
@@ -239,6 +253,22 @@ onUnmounted(() => {
 
 .cl-logs-container {
   @apply space-y-16;
+}
+
+.cl-empty-state {
+  @apply rounded-3xl px-6 py-10 text-center border;
+  background-color: var(--color-card);
+  border-color: var(--color-border);
+}
+
+.cl-empty-title {
+  @apply text-lg font-semibold mb-2;
+  color: var(--color-heading);
+}
+
+.cl-empty-desc {
+  @apply text-sm;
+  color: var(--color-text);
 }
 
 .cl-log-item {

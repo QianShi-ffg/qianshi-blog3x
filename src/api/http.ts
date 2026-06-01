@@ -2,6 +2,7 @@ export interface ApiResponse<T> {
   code?: number
   data?: T
   message?: string
+  total?: number
 }
 
 export interface RequestConfig extends RequestInit {
@@ -66,14 +67,9 @@ export class Request {
     this.timeout = config.timeout ?? DEFAULT_TIMEOUT
   }
 
-  // 兼容两类响应：标准 HTTP 响应，以及后端常见的 { code, data, message } 包装格式。
-  private async parseResponse<T>(response: Response): Promise<T> {
-    if (!response.ok) {
-      throw new Error(statusMessages[response.status] ?? `连接出错(${response.status})`)
-    }
-
+  private async readResponsePayload(response: Response): Promise<unknown> {
     if (response.status === 204) {
-      return undefined as T
+      return undefined
     }
 
     const contentType = response.headers.get('content-type') ?? ''
@@ -81,6 +77,26 @@ export class Request {
       ? await response.json()
       : await response.text()
 
+    if (!response.ok) {
+      if (isPlainObject(payload)) {
+        const message = payload.message
+        if (typeof message === 'string' && message.trim()) {
+          throw new Error(message)
+        }
+      }
+
+      if (typeof payload === 'string' && payload.trim()) {
+        throw new Error(payload)
+      }
+
+      throw new Error(statusMessages[response.status] ?? `连接出错(${response.status})`)
+    }
+
+    return payload
+  }
+
+  // 兼容两类响应：标准 HTTP 响应，以及后端常见的 { code, data, message } 包装格式。
+  private parseResponsePayload<T>(payload: unknown): T {
     if (isPlainObject(payload) && 'code' in payload) {
       const apiResponse = payload as ApiResponse<T>
       if (apiResponse.code === 200) {
@@ -91,6 +107,31 @@ export class Request {
     }
 
     return payload as T
+  }
+
+  private parseRawResponsePayload<T>(payload: unknown): ApiResponse<T> {
+    if (isPlainObject(payload) && 'code' in payload) {
+      const apiResponse = payload as ApiResponse<T>
+      if (apiResponse.code === 200) {
+        return apiResponse
+      }
+
+      throw new Error(apiResponse.message || '系统错误，请稍后再试')
+    }
+
+    return {
+      code: 200,
+      data: payload as T,
+      message: 'success',
+    }
+  }
+
+  private async parseResponse<T>(response: Response): Promise<T> {
+    return this.parseResponsePayload<T>(await this.readResponsePayload(response))
+  }
+
+  private async parseRawResponse<T>(response: Response): Promise<ApiResponse<T>> {
+    return this.parseRawResponsePayload<T>(await this.readResponsePayload(response))
   }
 
   // 发起实际请求，并统一处理 query、超时、JSON 请求体和响应解析。
@@ -123,9 +164,41 @@ export class Request {
     }
   }
 
+  public async requestRaw<T>(url: string, config: RequestConfig = {}): Promise<ApiResponse<T>> {
+    const { params, timeout = this.timeout, headers, body, ...requestConfig } = config
+    const controller = new AbortController()
+    const timer = window.setTimeout(() => controller.abort(), timeout)
+    const requestURL = `${joinURL(this.baseURL, url)}${buildQuery(params)}`
+
+    try {
+      const response = await fetch(requestURL, {
+        ...requestConfig,
+        body: body && isPlainObject(body) ? JSON.stringify(body) : body,
+        headers: {
+          ...(body && isPlainObject(body) ? { 'Content-Type': 'application/json' } : {}),
+          ...headers,
+        },
+        signal: controller.signal,
+      })
+
+      return await this.parseRawResponse<T>(response)
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw new Error('请求超时')
+      }
+      throw error
+    } finally {
+      window.clearTimeout(timer)
+    }
+  }
+
   // GET 请求快捷方法，主要用于列表、详情等读取型接口。
   public get<T>(url: string, config: RequestConfig = {}) {
     return this.request<T>(url, { ...config, method: 'GET' })
+  }
+
+  public getRaw<T>(url: string, config: RequestConfig = {}) {
+    return this.requestRaw<T>(url, { ...config, method: 'GET' })
   }
 
   // POST 请求快捷方法，主要用于创建、提交表单等写入型接口。
@@ -136,6 +209,11 @@ export class Request {
   // PUT 请求快捷方法，主要用于整条资源的更新。
   public put<T>(url: string, data?: unknown, config: RequestConfig = {}) {
     return this.request<T>(url, { ...config, method: 'PUT', body: data as BodyInit })
+  }
+
+  // PATCH 请求快捷方法，主要用于局部更新和点赞这类动作接口。
+  public patch<T>(url: string, data?: unknown, config: RequestConfig = {}) {
+    return this.request<T>(url, { ...config, method: 'PATCH', body: data as BodyInit })
   }
 
   // DELETE 请求快捷方法，主要用于删除资源。

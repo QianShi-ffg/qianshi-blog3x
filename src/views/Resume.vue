@@ -1,49 +1,38 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
-import { Mail, MapPin, Briefcase, GraduationCap, FolderGit2, Download } from 'lucide-vue-next'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { Briefcase, Download, FolderGit2, GraduationCap, Mail, MapPin } from 'lucide-vue-next'
 import { gsap } from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { registerRouteTransitionCleanup } from '@/utils/route-transition-cleanup'
+import { defaultResume, getResume } from '@/api/resume'
+import type { ResumeProfile, ResumeSkill, ResumeTimelineItem } from '@/types/content'
 
 const resumeRoot = ref<HTMLElement | null>(null)
+const resume = ref<ResumeProfile>(defaultResume)
 let ctx: gsap.Context | undefined
-let headerParallaxCtx: gsap.Context | undefined
-let unregisterTransitionCleanup: (() => void) | undefined
-const cleanups: Array<() => void> = []
+
+const avatarUrl = computed(() => resume.value.avatar || defaultResume.avatar)
 const prefersReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 
-const setupHeaderParallax = () => {
-  unregisterTransitionCleanup?.()
-  headerParallaxCtx?.revert()
+const skillTagClass = (skill: ResumeSkill) => {
+  if (skill.level.includes('精通')) return 'cl-tag-rose'
+  if (skill.level.includes('掌握')) return 'cl-tag-amber'
+  return 'cl-tag-sky'
+}
 
-  if (!resumeRoot.value || prefersReducedMotion()) return
-
-  headerParallaxCtx = gsap.context(() => {
-    const header = resumeRoot.value?.querySelector<HTMLElement>('.resume-header-wrapper')
-    if (!header) return
-
-    gsap.to(header, {
-      y: -15,
-      ease: 'none',
-      scrollTrigger: {
-        trigger: header,
-        start: 'top 10%',
-        end: 'bottom 18%',
-        scrub: 0.75,
-      },
-    })
-  }, resumeRoot.value)
-
-  unregisterTransitionCleanup = registerRouteTransitionCleanup(() => {
-    headerParallaxCtx?.revert()
-    headerParallaxCtx = undefined
-    unregisterTransitionCleanup = undefined
-  })
-
-  ScrollTrigger.refresh()
+const itemDescList = (item: ResumeTimelineItem) => {
+  if (Array.isArray(item.desc)) return item.desc
+  if (!item.desc) return []
+  return String(item.desc).split('\n').map((value) => value.trim()).filter(Boolean)
 }
 
 onMounted(() => {
+  getResume()
+    .then((data) => {
+      resume.value = data
+    })
+    .catch(() => {
+      resume.value = defaultResume
+    })
+
   if (!resumeRoot.value || prefersReducedMotion()) return
 
   ctx = gsap.context(() => {
@@ -72,286 +61,133 @@ onMounted(() => {
       delay: 0.25,
     })
   }, resumeRoot.value)
-
-  const profileCard = resumeRoot.value.querySelector<HTMLElement>('.resume-profile-card')
-  if (profileCard) {
-    const xTo = gsap.quickTo(profileCard, '--resume-spot-x', {
-      duration: 0.35,
-      ease: 'power3.out',
-    })
-    const yTo = gsap.quickTo(profileCard, '--resume-spot-y', {
-      duration: 0.35,
-      ease: 'power3.out',
-    })
-
-    const handlePointerMove = (event: PointerEvent) => {
-      const rect = profileCard.getBoundingClientRect()
-      xTo(event.clientX - rect.left)
-      yTo(event.clientY - rect.top)
-    }
-
-    const handlePointerLeave = () => {
-      xTo(profileCard.offsetWidth / 2)
-      yTo(profileCard.offsetHeight * 0.2)
-    }
-
-    profileCard.addEventListener('pointermove', handlePointerMove)
-    profileCard.addEventListener('pointerleave', handlePointerLeave)
-    cleanups.push(() => {
-      profileCard.removeEventListener('pointermove', handlePointerMove)
-      profileCard.removeEventListener('pointerleave', handlePointerLeave)
-    })
-  }
-
-  setupHeaderParallax()
 })
 
 onUnmounted(() => {
-  cleanups.splice(0).forEach((cleanup) => cleanup())
-  unregisterTransitionCleanup?.()
-  headerParallaxCtx?.revert()
   ctx?.revert()
 })
 </script>
 
 <template>
   <div ref="resumeRoot" class="resume-page-container">
-    <!-- Header -->
     <div class="resume-header-wrapper">
       <div>
-        <h1
-          v-motion
-          :initial="{ opacity: 0, y: 20 }"
-          :enter="{ opacity: 1, y: 0, transition: { duration: 800 } }"
-          class="resume-title"
-        >
-          关于我
-        </h1>
-        <p
-          v-motion
-          :initial="{ opacity: 0, y: 20 }"
-          :enter="{ opacity: 1, y: 0, transition: { duration: 800, delay: 100 } }"
-          class="resume-subtitle"
-        >
-          热爱开源，追求极致的用户体验与代码质量。
-        </p>
+        <h1 class="resume-title">{{ resume.title }}</h1>
+        <p class="resume-subtitle">{{ resume.subtitle }}</p>
       </div>
-      <button
-        v-motion
-        :initial="{ opacity: 0, scale: 0.9 }"
-        :enter="{ opacity: 1, scale: 1, transition: { duration: 800, delay: 200 } }"
-        class="resume-download-btn interactive-lift"
-      >
+      <button class="resume-download-btn interactive-lift">
         下载简历 PDF
         <Download class="resume-download-icon" />
       </button>
     </div>
 
     <div class="resume-grid">
-      <!-- Left Column (Profile & Skills) -->
       <div class="resume-left-column">
-        <!-- Profile Card -->
-        <div
-          v-motion
-          :initial="{ opacity: 0, x: -30 }"
-          :enter="{ opacity: 1, x: 0, transition: { duration: 800, delay: 100 } }"
-          class="resume-profile-card interactive-card"
-        >
+        <div class="resume-profile-card interactive-card">
           <div class="resume-avatar-wrapper">
             <span class="resume-avatar-orbit" aria-hidden="true"></span>
-            <img
-              src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20minimalist%20avatar%20illustration%2C%20flat%20design%2C%20soft%20colors%2C%20young%20developer&image_size=square"
-              alt="Avatar"
-              class="resume-avatar"
-            />
+            <img :src="avatarUrl" alt="Avatar" class="resume-avatar" />
           </div>
-          <h2 class="resume-name">QianShiBlog</h2>
-          <p class="resume-role">高级前端开发工程师</p>
+          <h2 class="resume-name">{{ resume.name }}</h2>
+          <p class="resume-role">{{ resume.role }}</p>
 
           <div class="resume-contact-list">
             <div class="resume-contact-item">
               <MapPin class="resume-contact-icon" />
-              <span>中国 · 杭州</span>
+              <span>{{ resume.location }}</span>
             </div>
             <div class="resume-contact-item">
               <Mail class="resume-contact-icon" />
-              <a href="mailto:hello@example.com" class="resume-contact-link"
-                >hello@QianShiBlog.dev</a
-              >
+              <a :href="`mailto:${resume.email}`" class="resume-contact-link">{{ resume.email }}</a>
             </div>
           </div>
         </div>
 
-        <!-- Skills -->
-        <div
-          v-motion
-          :initial="{ opacity: 0, x: -30 }"
-          :enter="{ opacity: 1, x: 0, transition: { duration: 800, delay: 200 } }"
-          class="resume-skills-card interactive-card"
-        >
+        <div class="resume-skills-card interactive-card">
           <div class="resume-section-header">
-            <!-- <span class="text-rose-500 font-mono font-bold">{"</>"}</span> -->
             <h3 class="resume-section-title">核心技能</h3>
           </div>
 
           <div class="resume-skills-list">
-            <div class="resume-skill-item interactive-lift">
-              <span class="resume-skill-name">Vue.js / React</span>
-              <span class="resume-skill-tag cl-tag-rose">精通</span>
+            <div
+              v-for="skill in resume.skills"
+              :key="`${skill.name}-${skill.level}`"
+              class="resume-skill-item interactive-lift"
+            >
+              <span class="resume-skill-name">{{ skill.name }}</span>
+              <span class="resume-skill-tag" :class="skillTagClass(skill)">{{ skill.level }}</span>
             </div>
-            <div class="resume-skill-item interactive-lift">
-              <span class="resume-skill-name">TypeScript</span>
-              <span class="resume-skill-tag cl-tag-amber">掌握</span>
-            </div>
-            <div class="resume-skill-item interactive-lift">
-              <span class="resume-skill-name">CSS / Tailwind</span>
-              <span class="resume-skill-tag cl-tag-rose">精通</span>
-            </div>
-            <div class="resume-skill-item interactive-lift">
-              <span class="resume-skill-name">Node.js</span>
-              <span class="resume-skill-tag cl-tag-sky">熟悉</span>
-            </div>
-          </div>
-
-          <div class="mt-6 text-xs text-slate-400 text-center border-t border-slate-100 pt-4">
-            等级说明：了解 &lt; 熟悉 &lt; 掌握 &lt; 精通
           </div>
         </div>
       </div>
 
-      <!-- Right Column (Experience & Education) -->
       <div class="resume-right-column">
-        <!-- Experience -->
-        <div
-          v-motion
-          :initial="{ opacity: 0, x: 30 }"
-          :enter="{ opacity: 1, x: 0, transition: { duration: 800, delay: 100 } }"
-          class="resume-experience-card interactive-card"
-        >
+        <section class="resume-experience-card interactive-card">
           <div class="resume-section-header-large">
             <Briefcase class="resume-section-icon-large" />
             <h3 class="resume-section-title-large">工作经历</h3>
           </div>
 
           <div class="resume-timeline-spaced">
-            <!-- Item 1 -->
-            <div class="resume-timeline-item">
-              <div class="resume-timeline-dot-active"></div>
+            <div
+              v-for="(item, index) in resume.experiences"
+              :key="`experience-${index}`"
+              class="resume-timeline-item"
+            >
+              <div :class="index === 0 ? 'resume-timeline-dot-active' : 'resume-timeline-dot'"></div>
               <div class="resume-timeline-header">
-                <h4 class="resume-timeline-title">高级前端开发工程师</h4>
-                <span class="resume-timeline-date-active">2021 至今</span>
+                <h4 class="resume-timeline-title">{{ item.title }}</h4>
+                <span :class="index === 0 ? 'resume-timeline-date-active' : 'resume-timeline-date'">
+                  {{ item.date }}
+                </span>
               </div>
-              <p class="resume-timeline-company">Tech Innovators Inc.</p>
+              <p v-if="item.company" class="resume-timeline-company">{{ item.company }}</p>
               <ul class="resume-timeline-desc">
-                <li>• 主导公司核心 SaaS 产品的前端架构设计与开发，使用 Vue 3 和 TypeScript。</li>
-                <li>• 搭建并维护企业级 UI 组件库，提升团队 30% 的开发效率。</li>
-                <li>• 优化首屏加载时间，将核心指标 LCP 降低了 40%。</li>
-              </ul>
-            </div>
-
-            <!-- Item 2 -->
-            <div class="resume-timeline-item">
-              <div class="resume-timeline-dot"></div>
-              <div class="resume-timeline-header">
-                <h4 class="resume-timeline-title">前端开发工程师</h4>
-                <span class="resume-timeline-date">2018 - 2021</span>
-              </div>
-              <p class="resume-timeline-company">Creative Digital Agency</p>
-              <ul class="resume-timeline-desc">
-                <li>• 为多个国际品牌开发响应式营销网站和交互式 Web 应用。</li>
-                <li>• 引入并推广 Tailwind CSS，规范了团队的 CSS 编写标准。</li>
-                <li>• 参与开发基于 React Native 的跨平台移动端应用。</li>
+                <li v-for="desc in itemDescList(item)" :key="desc">{{ desc }}</li>
               </ul>
             </div>
           </div>
-        </div>
+        </section>
 
-        <!-- Education -->
-        <div
-          v-motion
-          :initial="{ opacity: 0, x: 30 }"
-          :enter="{ opacity: 1, x: 0, transition: { duration: 800, delay: 200 } }"
-          class="resume-education-card interactive-card"
-        >
+        <section class="resume-education-card interactive-card">
           <div class="resume-section-header-large">
             <GraduationCap class="resume-section-icon-large" />
             <h3 class="resume-section-title-large">教育背景</h3>
           </div>
 
           <div class="resume-timeline">
-            <div class="resume-timeline-item">
+            <div v-for="(item, index) in resume.educations" :key="`education-${index}`" class="resume-timeline-item">
               <div class="resume-timeline-dot"></div>
               <div class="resume-timeline-header">
-                <h4 class="resume-timeline-title">计算机科学与技术 学士</h4>
-                <span class="resume-timeline-date">2014 - 2018</span>
+                <h4 class="resume-timeline-title">{{ item.title }}</h4>
+                <span class="resume-timeline-date">{{ item.date }}</span>
               </div>
-              <p class="resume-timeline-company">某知名科技大学</p>
-              <p class="resume-timeline-desc-inline">
-                主修软件工程、数据结构、算法设计。在校期间曾获得全国大学生编程竞赛二等奖。
-              </p>
+              <p v-if="item.school" class="resume-timeline-company">{{ item.school }}</p>
+              <p class="resume-timeline-desc-inline">{{ itemDescList(item).join(' ') }}</p>
             </div>
           </div>
-        </div>
+        </section>
 
-        <!-- Projects -->
-        <div
-          v-motion
-          :initial="{ opacity: 0, x: 30 }"
-          :enter="{ opacity: 1, x: 0, transition: { duration: 800, delay: 300 } }"
-          class="resume-education-card interactive-card mt-8"
-        >
+        <section class="resume-education-card interactive-card">
           <div class="resume-section-header-large">
             <FolderGit2 class="resume-section-icon-large" />
             <h3 class="resume-section-title-large">项目经历</h3>
           </div>
 
           <div class="resume-timeline">
-            <!-- Project 1 -->
-            <div class="resume-timeline-item mb-8">
+            <div v-for="(item, index) in resume.projects" :key="`project-${index}`" class="resume-timeline-item project-item">
               <div class="resume-timeline-dot"></div>
               <div class="resume-timeline-header">
-                <h4 class="resume-timeline-title">企业级后台管理平台</h4>
-                <span class="resume-timeline-date">2023.06 - 2024.03 | 前端开发</span>
+                <h4 class="resume-timeline-title">{{ item.title }}</h4>
+                <span class="resume-timeline-date">{{ item.date }}</span>
               </div>
-              <p class="resume-timeline-company">Vue3 + Vite + TypeScript + Tailwind + Pinia</p>
-              <ul class="resume-timeline-desc mt-2">
-                <li>• 搭建前端脚手架与组件库，形成 20+ 复用组件</li>
-                <li>• 实现动态菜单与基于 RBAC 的路由权限</li>
-                <li>• 引入 ECharts 与虚拟滚动，页面渲染性能提升约 35%</li>
-              </ul>
-            </div>
-
-            <!-- Project 2 -->
-            <div class="resume-timeline-item mb-8">
-              <div class="resume-timeline-dot"></div>
-              <div class="resume-timeline-header">
-                <h4 class="resume-timeline-title">营销落地页与表单系统</h4>
-                <span class="resume-timeline-date">2022.10 - 2023.05 | 前端负责人</span>
-              </div>
-              <p class="resume-timeline-company">React + Next.js + Tailwind + Node.js</p>
-              <ul class="resume-timeline-desc mt-2">
-                <li>• 搭建可视化表单生成器，支持 15+ 常用字段组件</li>
-                <li>• SSR 与图片懒加载，TTFB 降低 40%，转化率提升约 18%</li>
-                <li>• Node 服务编排与缓存，接口 P95 响应从 420ms 降至 210ms</li>
-              </ul>
-            </div>
-
-            <!-- Project 3 -->
-            <div class="resume-timeline-item">
-              <div class="resume-timeline-dot"></div>
-              <div class="resume-timeline-header">
-                <h4 class="resume-timeline-title">组件库与工程化优化</h4>
-                <span class="resume-timeline-date">2021.08 - 2022.08 | 工程实践</span>
-              </div>
-              <p class="resume-timeline-company">Rollup + Storybook + Vitest</p>
-              <ul class="resume-timeline-desc mt-2">
-                <li>• 沉淀 UI 组件库并接入 Storybook，覆盖 90% UI 需求</li>
-                <li>• 引入单元测试与 CI，关键模块用例覆盖率 85%+</li>
-                <li>• 包体积按需构建与 Tree-shaking，体积下降 45%</li>
+              <p v-if="item.stack" class="resume-timeline-company">{{ item.stack }}</p>
+              <ul class="resume-timeline-desc">
+                <li v-for="desc in itemDescList(item)" :key="desc">{{ desc }}</li>
               </ul>
             </div>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   </div>
@@ -359,413 +195,345 @@ onUnmounted(() => {
 
 <style scoped>
 .resume-page-container {
-  @apply min-h-[80vh] py-12 pt-24 px-6 mx-auto max-w-screen-2xl;
-}
-@media (min-width: 640px) {
-  .resume-page-container {
-    @apply px-12;
-  }
-}
-@media (min-width: 768px) {
-  .resume-page-container {
-    @apply px-20;
-  }
-}
-@media (min-width: 1024px) {
-  .resume-page-container {
-    @apply py-20 pt-32 px-32;
-  }
-}
-@media (min-width: 1280px) {
-  .resume-page-container {
-    @apply px-48;
-  }
+  min-height: 80vh;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 8rem 1.5rem 4rem;
 }
 
 .resume-header-wrapper {
-  @apply mb-16 flex flex-col items-start gap-8;
-  will-change: transform;
-}
-@media (min-width: 768px) {
-  .resume-header-wrapper {
-    @apply flex-row justify-between items-end;
-  }
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 4rem;
 }
 
 .resume-title {
-  @apply text-4xl font-bold tracking-tight mb-4;
+  margin-bottom: 1rem;
   color: var(--color-heading);
-}
-:global(html.dark .resume-title){
-  color: #e2e8f0;
-}
-@media (min-width: 768px) {
-  .resume-title {
-    @apply text-5xl;
-  }
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1.1;
 }
 
 .resume-subtitle {
-  @apply text-lg max-w-2xl;
+  max-width: 42rem;
   color: var(--color-text);
+  font-size: 1.125rem;
+  line-height: 1.8;
 }
 
 .resume-download-btn {
-  @apply inline-flex items-center justify-center px-6 py-2.5 rounded-full font-medium active:translate-y-0 transition-all duration-300;
-  background-color: var(--color-primary);
-  color: white;
-  position: relative;
-  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.72rem 1.45rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
   box-shadow: 0 12px 26px rgba(244, 63, 94, 0.18);
-}
-.resume-download-btn::before {
-  content: '';
-  position: absolute;
-  inset: -40% auto -40% -60%;
-  width: 45%;
-  transform: skewX(-18deg);
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.48), transparent);
-  transition: transform 520ms ease;
-  pointer-events: none;
-}
-.resume-download-btn:hover {
-  background-color: #e11d48;
-  box-shadow: 0 10px 15px -3px rgba(244, 63, 94, 0.3);
-}
-.resume-download-btn:hover::before {
-  transform: translateX(360%) skewX(-18deg);
 }
 
 .resume-download-icon {
-  @apply w-4 h-4 ml-2 transition-transform;
-}
-
-.resume-download-btn:hover .resume-download-icon {
-  @apply translate-y-0.5;
+  width: 1rem;
+  height: 1rem;
 }
 
 .resume-grid {
-  @apply grid grid-cols-1 gap-12;
-}
-@media (min-width: 1024px) {
-  .resume-grid {
-    @apply grid-cols-12;
-  }
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 3rem;
 }
 
-.resume-left-column {
-  @apply space-y-8;
-}
-@media (min-width: 1024px) {
-  .resume-left-column {
-    @apply col-span-4;
-  }
-}
-
+.resume-left-column,
 .resume-right-column {
-  @apply space-y-8;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
 }
-@media (min-width: 1024px) {
-  .resume-right-column {
-    @apply col-span-8;
-  }
+
+.resume-profile-card,
+.resume-skills-card,
+.resume-experience-card,
+.resume-education-card {
+  padding: 2rem;
+  border: 1px solid var(--color-border);
+  border-radius: 1.5rem;
+  background: var(--color-card);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
 }
 
 .resume-profile-card {
-  @apply p-8 text-center rounded-3xl transition-all duration-300;
-  background-color: var(--color-card);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--color-border);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
-  position: relative;
-  overflow: hidden;
-  --resume-spot-x: 160;
-  --resume-spot-y: 48;
-}
-.resume-profile-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0;
-  background: radial-gradient(
-    circle at calc(var(--resume-spot-x) * 1px) calc(var(--resume-spot-y) * 1px),
-    rgba(244, 63, 94, 0.18),
-    rgba(14, 165, 233, 0.08) 28%,
-    transparent 55%
-  );
-  transition: opacity 240ms ease;
-}
-.resume-profile-card:hover::before {
-  opacity: 1;
-}
-:global(html.dark .resume-profile-card){
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  text-align: center;
 }
 
 .resume-avatar-wrapper {
-  @apply w-32 h-32 mx-auto rounded-full mb-6 border-4 border-white shadow-lg;
   position: relative;
-  overflow: hidden;
   isolation: isolate;
-  box-shadow:
-    0 16px 36px rgba(244, 63, 94, 0.18),
-    0 0 0 8px rgba(244, 63, 94, 0.06);
-  will-change: transform;
+  width: 8rem;
+  height: 8rem;
+  margin: 0 auto 1.5rem;
+  overflow: hidden;
+  border: 4px solid #fff;
+  border-radius: 999px;
+  box-shadow: 0 16px 36px rgba(244, 63, 94, 0.18);
 }
+
 .resume-avatar-orbit {
   position: absolute;
   inset: -35%;
   z-index: 0;
-  background: conic-gradient(
-    from 120deg,
-    rgba(244, 63, 94, 0),
-    rgba(244, 63, 94, 0.72),
-    rgba(14, 165, 233, 0.6),
-    rgba(244, 63, 94, 0)
-  );
+  background: conic-gradient(from 120deg, transparent, rgba(244, 63, 94, 0.72), rgba(14, 165, 233, 0.6), transparent);
   filter: blur(4px);
   opacity: 0.78;
 }
 
 .resume-avatar {
-  @apply w-full h-full object-cover;
   position: relative;
   z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   border-radius: inherit;
   padding: 4px;
 }
 
 .resume-name {
-  @apply text-2xl font-bold text-slate-900 mb-2;
+  margin-bottom: 0.5rem;
+  color: var(--color-heading);
+  font-size: 1.5rem;
+  font-weight: 800;
 }
 
 .resume-role {
-  @apply text-rose-500 font-medium mb-6;
+  margin-bottom: 1.5rem;
+  color: var(--color-primary);
+  font-weight: 700;
 }
 
 .resume-contact-list {
-  @apply space-y-4 text-sm text-slate-500 text-left;
+  display: grid;
+  gap: 1rem;
+  color: var(--color-text);
+  font-size: 0.875rem;
+  text-align: left;
 }
 
 .resume-contact-item {
-  @apply flex items-center gap-3;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .resume-contact-icon {
-  @apply w-4 h-4 text-slate-400;
+  width: 1rem;
+  height: 1rem;
+  color: #94a3b8;
 }
 
-.resume-contact-link {
-  @apply hover:text-rose-500 transition-colors;
+.resume-contact-link:hover {
+  color: var(--color-primary);
 }
 
-.resume-skills-card {
-  @apply p-8 rounded-3xl transition-all duration-300;
-  background-color: var(--color-card);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--color-border);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
-}
-:global(html.dark .resume-skills-card){
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
-}
-
-.resume-section-header {
-  @apply flex items-center gap-2 mb-6 text-slate-900;
-}
-
-.resume-section-icon {
-  @apply w-5 h-5 text-rose-500;
+.resume-section-header,
+.resume-section-header-large {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 1.5rem;
+  color: var(--color-heading);
 }
 
 .resume-section-title {
-  @apply font-bold text-lg;
-}
-
-.resume-skills-list {
-  @apply space-y-4;
-}
-
-.resume-skill-item {
-  @apply flex justify-between items-center px-4 py-3 rounded-xl transition-all duration-300;
-  background-color: var(--color-background);
-  border: 1px solid var(--color-border);
-  position: relative;
-  overflow: hidden;
-}
-.resume-skill-item:hover {
-  background-color: var(--color-card);
-  box-shadow:
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
-}
-
-.resume-skill-name {
-  @apply font-medium;
-  color: var(--color-heading);
-}
-
-.resume-skill-tag {
-  @apply rounded-full px-3 py-0.5 text-xs font-semibold tracking-wide border;
-}
-
-.cl-tag-rose {
-  @apply bg-rose-50 text-rose-600 border-rose-100 shadow-[0_0_8px_rgba(244,63,94,0.1)];
-}
-
-.cl-tag-amber {
-  @apply bg-amber-50 text-amber-600 border-amber-100 shadow-[0_0_8px_rgba(245,158,11,0.1)];
-}
-
-.cl-tag-sky {
-  @apply bg-sky-50 text-sky-600 border-sky-100 shadow-[0_0_8px_rgba(14,165,233,0.1)];
-}
-
-.resume-experience-card {
-  @apply p-8 rounded-3xl transition-all duration-300;
-  background-color: var(--color-card);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--color-border);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
-}
-:global(html.dark .resume-experience-card){
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
-}
-@media (min-width: 768px) {
-  .resume-experience-card {
-    @apply p-10;
-  }
-}
-
-.resume-education-card {
-  @apply p-8 rounded-3xl transition-all duration-300;
-  background-color: var(--color-card);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--color-border);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
-}
-:global(html.dark .resume-education-card){
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
-}
-@media (min-width: 768px) {
-  .resume-education-card {
-    @apply p-10;
-  }
-}
-
-.resume-section-header-large {
-  @apply flex items-center gap-2 mb-8;
-  color: var(--color-heading);
+  font-size: 1.125rem;
+  font-weight: 800;
 }
 
 .resume-section-icon-large {
-  @apply w-6 h-6 text-rose-500;
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--color-primary);
 }
 
 .resume-section-title-large {
-  @apply font-bold text-xl;
+  font-size: 1.25rem;
+  font-weight: 800;
 }
 
+.resume-skills-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.resume-skill-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.9rem;
+  background: var(--color-background);
+}
+
+.resume-skill-name {
+  color: var(--color-heading);
+  font-weight: 700;
+}
+
+.resume-skill-tag {
+  flex: none;
+  padding: 0.16rem 0.75rem;
+  border: 1px solid;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.cl-tag-rose {
+  border-color: #fecdd3;
+  background: #fff1f2;
+  color: #e11d48;
+}
+
+.cl-tag-amber {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.cl-tag-sky {
+  border-color: #bae6fd;
+  background: #f0f9ff;
+  color: #0284c7;
+}
+
+.resume-timeline,
 .resume-timeline-spaced {
-  @apply relative border-l ml-3 space-y-12;
-  border-color: var(--color-border);
-}
-
-.resume-timeline {
-  @apply relative border-l ml-3;
-  border-color: var(--color-border);
+  position: relative;
+  display: grid;
+  gap: 2rem;
+  margin-left: 0.75rem;
+  border-left: 1px solid var(--color-border);
 }
 
 .resume-timeline-item {
-  @apply relative pl-8;
+  position: relative;
+  padding-left: 2rem;
 }
 
+.project-item:not(:last-child) {
+  margin-bottom: 0.5rem;
+}
+
+.resume-timeline-dot,
 .resume-timeline-dot-active {
-  @apply absolute -left-[5px] top-1.5 w-[10px] h-[10px] rounded-full bg-rose-500 ring-4;
-  --tw-ring-color: var(--color-secondary);
-  box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.32);
-  will-change: transform;
+  position: absolute;
+  top: 0.4rem;
+  left: -0.34rem;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 999px;
+  box-shadow: 0 0 0 4px var(--color-background);
 }
 
 .resume-timeline-dot {
-  @apply absolute -left-[5px] top-1.5 w-[10px] h-[10px] rounded-full ring-4;
-  background-color: var(--color-text);
-  --tw-ring-color: var(--color-background);
-  transition:
-    background-color 220ms ease,
-    box-shadow 220ms ease,
-    transform 220ms ease;
+  background: var(--color-text);
 }
 
-.resume-timeline-item:hover .resume-timeline-dot {
-  background-color: var(--color-primary);
-  box-shadow: 0 0 0 6px rgba(244, 63, 94, 0.12);
-  transform: scale(1.18);
+.resume-timeline-dot-active {
+  background: var(--color-primary);
 }
 
 .resume-timeline-header {
-  @apply flex flex-col mb-2;
-}
-@media (min-width: 768px) {
-  .resume-timeline-header {
-    @apply flex-row items-center justify-between;
-  }
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 0.5rem;
 }
 
 .resume-timeline-title {
-  @apply text-lg font-bold;
   color: var(--color-heading);
+  font-size: 1.05rem;
+  font-weight: 800;
 }
 
+.resume-timeline-date,
 .resume-timeline-date-active {
-  @apply text-sm font-medium px-3 py-1 rounded-full w-fit mt-2;
-  background-color: var(--color-secondary);
-  color: var(--color-primary);
-}
-@media (min-width: 768px) {
-  .resume-timeline-date-active {
-    @apply mt-0;
-  }
-}
-:global(html.dark .resume-timeline-date-active){
-  background-color: rgba(244, 63, 94, 0.15);
-  color: var(--color-primary);
+  width: fit-content;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 700;
 }
 
 .resume-timeline-date {
-  @apply text-sm font-medium px-3 py-1 rounded-full w-fit mt-2;
-  background-color: var(--color-background);
-  color: var(--color-text);
   border: 1px solid var(--color-border);
+  background: var(--color-background);
+  color: var(--color-text);
 }
-@media (min-width: 768px) {
-  .resume-timeline-date {
-    @apply mt-0;
-  }
-}
-:global(html.dark .resume-timeline-date){
-  background-color: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
-  color: #cbd5e1;
+
+.resume-timeline-date-active {
+  background: var(--color-secondary);
+  color: var(--color-primary);
 }
 
 .resume-timeline-company {
-  @apply font-medium mb-4;
+  margin-bottom: 1rem;
   color: var(--color-heading);
+  font-weight: 700;
 }
 
 .resume-timeline-desc {
-  @apply space-y-2 text-sm leading-relaxed;
+  display: grid;
+  gap: 0.5rem;
   color: var(--color-text);
+  font-size: 0.92rem;
+  line-height: 1.75;
 }
 
 .resume-timeline-desc-inline {
-  @apply text-sm;
   color: var(--color-text);
+  font-size: 0.92rem;
+  line-height: 1.75;
+}
+
+.interactive-card,
+.interactive-lift {
+  transition: transform 220ms ease, box-shadow 220ms ease;
+}
+
+.interactive-card:hover,
+.interactive-lift:hover {
+  transform: translateY(-2px);
+}
+
+@media (min-width: 768px) {
+  .resume-header-wrapper {
+    flex-direction: row;
+    align-items: flex-end;
+  }
+
+  .resume-timeline-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+@media (min-width: 1024px) {
+  .resume-page-container {
+    padding-inline: 3rem;
+  }
+
+  .resume-grid {
+    grid-template-columns: 4fr 8fr;
+  }
 }
 </style>

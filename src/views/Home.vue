@@ -1,15 +1,22 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { ArrowRight, Code2, Coffee, Sparkles } from 'lucide-vue-next'
 import { RouterLink } from 'vue-router'
 import { gsap } from 'gsap'
+import { getLatestArticles } from '@/api/blog'
+import { date } from '@/utils/date'
+import type { ArticleSummary } from '@/types/content'
 
 const homeRoot = ref<HTMLElement | null>(null)
+const latestArticles = ref<ArticleSummary[]>([])
+const latestLoaded = ref(false)
 let ctx: gsap.Context | undefined
 const cleanups: Array<() => void> = []
 const prefersReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 
 onMounted(() => {
+  void loadLatestArticles()
+
   if (!homeRoot.value) return
 
   const reduceMotion = prefersReducedMotion()
@@ -71,7 +78,7 @@ onMounted(() => {
       ease: 'sine.inOut',
     })
 
-    gsap.from('.recent-header, .post-card, .mobile-view-all', {
+    gsap.from('.recent-header, .mobile-view-all', {
       autoAlpha: 0,
       y: 22,
       duration: 0.65,
@@ -147,21 +154,6 @@ onMounted(() => {
         scrub: 1.2,
       },
     })
-
-    gsap.fromTo(
-      '.recent-posts-section',
-      { y: 24 },
-      {
-        y: -40,
-        ease: 'none',
-        scrollTrigger: {
-          trigger: '.recent-posts-section',
-          start: 'top bottom',
-          end: 'top 35%',
-          scrub: 1,
-        },
-      },
-    )
   }, homeRoot.value)
 
   if (reduceMotion || !homeRoot.value) return
@@ -205,6 +197,64 @@ onMounted(() => {
   })
 })
 
+const loadLatestArticles = async () => {
+  latestLoaded.value = false
+  try {
+    latestArticles.value = await getLatestArticles(3)
+  } catch {
+    latestArticles.value = []
+  } finally {
+    latestLoaded.value = true
+    await nextTick()
+    await playRecentPostsEnter()
+    setupRecentPostsParallax()
+  }
+}
+
+const playRecentPostsEnter = () => {
+  if (!homeRoot.value || prefersReducedMotion()) return Promise.resolve()
+
+  const items = homeRoot.value.querySelectorAll<HTMLElement>(
+    '.recent-header, .post-card, .recent-empty, .mobile-view-all',
+  )
+  if (!items.length) return Promise.resolve()
+
+  return new Promise<void>((resolve) => {
+    gsap.fromTo(
+      items,
+      { autoAlpha: 0, y: 22 },
+      {
+        autoAlpha: 1,
+        y: 0,
+        duration: 0.65,
+        stagger: 0.08,
+        ease: 'power2.out',
+        overwrite: true,
+        onComplete: resolve,
+      },
+    )
+  })
+}
+
+const setupRecentPostsParallax = () => {
+  if (!homeRoot.value || prefersReducedMotion()) return
+
+  gsap.fromTo(
+    '.recent-posts-section',
+    { y: 24 },
+    {
+      y: -40,
+      ease: 'none',
+      scrollTrigger: {
+        trigger: '.recent-posts-section',
+        start: 'top bottom',
+        end: 'top 35%',
+        scrub: 1,
+      },
+    },
+  )
+}
+
 onUnmounted(() => {
   cleanups.splice(0).forEach((cleanup) => cleanup())
   ctx?.revert()
@@ -228,13 +278,13 @@ onUnmounted(() => {
           </div>
 
           <h1 class="hero-title">
-            用代码 <br />
-            <span class="hero-title-highlight">构建世界</span>，<br />
-            用文字记录生活。
+            慢一点，<br />
+            <span class="hero-title-highlight">也没关系</span>，<br />
+            <span class="hero-title-line-long">生活本来就可以慢慢记录。</span>
           </h1>
 
           <p class="hero-desc">
-            一位热衷于创建简洁、易用且交互丰富的界面的前端开发人员。
+            把日常里的微光、心情和小事，慢慢写给现在与以后的自己。
           </p>
 
           <div class="hero-actions">
@@ -242,6 +292,7 @@ onUnmounted(() => {
               阅读文章
               <ArrowRight class="btn-primary-icon" />
             </RouterLink>
+            <RouterLink to="/diary" class="btn-secondary"> 翻翻日记 </RouterLink>
             <RouterLink to="/portfolio" class="btn-secondary"> 查看作品 </RouterLink>
           </div>
         </div>
@@ -296,26 +347,25 @@ onUnmounted(() => {
         </RouterLink>
       </div>
 
-      <div class="recent-grid">
-        <RouterLink v-for="i in 3" :key="i" :to="`/blog/${i}`" class="post-card group">
+      <div v-if="latestArticles.length" class="recent-grid">
+        <RouterLink
+          v-for="article in latestArticles"
+          :key="article.id"
+          :to="`/blog/${article.id}`"
+          class="post-card group"
+        >
           <div class="post-meta">
-            <span class="post-tag">精选开发</span>
-            <span class="post-date">2024-03-{{ 10 + i }}</span>
+            <span class="post-tag">{{ article.tag || '文章' }}</span>
+            <span class="post-date">{{ date(article.createTime) }}</span>
           </div>
-          <h3 class="post-title">
-            {{
-              i === 1
-                ? 'Vue 3 组合式 API 最佳实践'
-                : i === 2
-                  ? '如何构建一个现代化的博客系统'
-                  : 'Tailwind CSS 高级技巧分享'
-            }}
-          </h3>
+          <h3 class="post-title">{{ article.title }}</h3>
           <p class="post-desc">
-            在现代前端开发中，保持代码的简洁与可维护性至关重要。本文将分享在实际项目中总结的一些经验和技巧，帮助你写出更优雅的代码。
+            {{ article.describe || '暂无简介' }}
           </p>
         </RouterLink>
       </div>
+
+      <div v-else-if="latestLoaded" class="recent-empty">暂无文章</div>
 
       <div class="mobile-view-all">
         <RouterLink to="/blog" class="btn-secondary w-full-btn"> 查看全部文章 </RouterLink>
@@ -484,6 +534,12 @@ onUnmounted(() => {
     var(--color-primary),
     #fb7185
   ); /* from-rose-500 to-rose-400 */
+}
+
+.hero-title-line-long {
+  display: inline-block;
+  font-size: 0.82em;
+  white-space: nowrap;
 }
 
 .hero-desc {
@@ -687,6 +743,23 @@ onUnmounted(() => {
   grid-template-columns: repeat(1, minmax(0, 1fr));
   gap: 2rem; /* gap-8 */
 }
+
+.recent-empty {
+  padding: 3rem 1.5rem;
+  border-radius: 1.5rem;
+  background-color: var(--color-card);
+  color: var(--color-text);
+  text-align: center;
+  box-shadow:
+    0 -1px 0 0 rgb(0, 0, 0, 0.02),
+    0 8px 30px rgb(0, 0, 0, 0.04);
+}
+
+:global(html.dark .recent-empty){
+  background-color: #162032;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
 @media (min-width: 768px) {
   .recent-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -700,7 +773,7 @@ onUnmounted(() => {
 
 .post-card {
   padding: 1.5rem 2rem; /* p-8 */
-  transition-property: box-shadow, border-color, background-color;
+  transition-property: transform, box-shadow, border-color, background-color;
   transition-duration: 300ms;
   text-decoration: none;
   display: block;
@@ -715,6 +788,7 @@ onUnmounted(() => {
   will-change: transform;
 }
 .post-card:hover {
+  transform: translateY(-8px) scale(1.01);
   box-shadow:
     0 -1px 0 0 rgb(0, 0, 0, 0.03),
     0 20px 25px -5px rgb(244, 63, 94, 0.1),

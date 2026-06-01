@@ -1,8 +1,32 @@
-import { mockRequest } from './http'
-import { momentSummaries, moments } from './mock-data'
+import { apiClient } from './http'
+import type { DiaryMoment, DiaryMomentSummary } from '@/types/content'
 
-export const listMoments = () => mockRequest(momentSummaries)
+export const listMoments = async () => {
+  const res = await apiClient.get<DiaryMomentSummary[]>('/diary', {
+    params: {
+      page: 1,
+      pageSize: 1000,
+    },
+    cache: 'no-store',
+  })
 
-export const getMomentById = (id: number) => {
-  return mockRequest(moments.find((moment) => moment.id === id) ?? null)
+  return res
+}
+
+export const getMomentsTotal = async () => {
+  const res = await apiClient.getRaw<DiaryMomentSummary[]>('/diary', {
+    params: {
+      page: 1,
+      pageSize: 1,
+    },
+    cache: 'no-store',
+  })
+
+  return res.total ?? res.data?.length ?? 0
+}
+
+export const getMomentById = async (id: number) => {
+  return apiClient.get<DiaryMoment | null>(`/diary/${id}`, {
+    cache: 'no-store',
+  })
 }

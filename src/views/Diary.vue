@@ -3,12 +3,15 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import { MapPin, Calendar, ImageIcon, Video, FileText } from 'lucide-vue-next'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { listMoments } from '@/api/diary'
+import { getMomentsTotal, listMoments } from '@/api/diary'
 import type { DiaryMomentSummary } from '@/types/content'
 import { registerRouteTransitionCleanup } from '@/utils/route-transition-cleanup'
+import WeatherIcon from '@/components/WeatherIcon.vue'
 
 const moments = ref<DiaryMomentSummary[]>([])
 const isMomentsLoading = ref(true)
+const hasCheckedMoments = ref(false)
+const expectedMomentsTotal = ref(0)
 const diaryRoot = ref<HTMLElement | null>(null)
 let headerParallaxCtx: gsap.Context | undefined
 let unregisterTransitionCleanup: (() => void) | undefined
@@ -49,6 +52,12 @@ const setupHeaderParallax = () => {
 onMounted(async () => {
   isMomentsLoading.value = true
   try {
+    expectedMomentsTotal.value = await getMomentsTotal()
+    hasCheckedMoments.value = true
+    if (expectedMomentsTotal.value === 0) {
+      moments.value = []
+      return
+    }
     moments.value = await listMoments()
   } finally {
     isMomentsLoading.value = false
@@ -65,6 +74,15 @@ const getTypeIcon = (type: string) => {
   if (type === 'image') return ImageIcon
   if (type === 'video') return Video
   return FileText
+}
+
+const getMomentText = (content: string) => {
+  return content
+    .replace(/!\[[^\]]*]\([^)]*\)/g, '')
+    .replace(/\[[^\]]*]\([^)]*\)/g, (match) => match.replace(/^\[|\]\([^)]*\)$/g, ''))
+    .replace(/[#>*_`~-]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 </script>
 
@@ -104,8 +122,11 @@ const getTypeIcon = (type: string) => {
     </div>
 
     <!-- Masonry Layout -->
-    <div v-if="isMomentsLoading" class="diary-masonry-grid" aria-live="polite" aria-busy="true">
-      <div v-for="item in 6" :key="item" class="diary-masonry-item">
+    <div v-if="isMomentsLoading && !hasCheckedMoments" class="diary-checking-state" aria-live="polite" aria-busy="true" aria-label="加载内容">
+      <span class="diary-checking-dot"></span>
+    </div>
+    <div v-else-if="isMomentsLoading" class="diary-masonry-grid" aria-live="polite" aria-busy="true">
+      <div v-for="item in Math.min(expectedMomentsTotal || 6, 6)" :key="item" class="diary-masonry-item">
         <div class="diary-card diary-card-skeleton">
           <span class="diary-skeleton-badge"></span>
           <div class="diary-skeleton-media" :class="{ 'diary-skeleton-media-tall': item % 3 === 0 }"></div>
@@ -120,6 +141,10 @@ const getTypeIcon = (type: string) => {
           </div>
         </div>
       </div>
+    </div>
+    <div v-else-if="moments.length === 0" class="diary-empty-state" aria-live="polite">
+      <p class="diary-empty-title">暂无日记</p>
+      <p class="diary-empty-desc">一些生活片段还在路上。</p>
     </div>
     <div v-else class="diary-masonry-grid">
       <div
@@ -161,7 +186,7 @@ const getTypeIcon = (type: string) => {
             <!-- Text Content -->
             <div class="diary-content-wrap" :class="{ 'diary-content-bg-text': moment.type === 'text' }">
               <p class="diary-text-content" :class="{ 'diary-text-lg': moment.type === 'text', 'diary-text-md': moment.type !== 'text' }">
-                {{ moment.content }}
+                {{ getMomentText(moment.content) }}
               </p>
 
               <!-- Meta -->
@@ -172,6 +197,7 @@ const getTypeIcon = (type: string) => {
                     {{ moment.date }}
                   </span>
                   <span class="diary-meta-weather">
+                    <WeatherIcon :weather="moment.weather" class="diary-weather-icon" />
                     {{ moment.weather }}
                   </span>
                 </div>
@@ -231,6 +257,77 @@ const getTypeIcon = (type: string) => {
 
 .diary-masonry-grid {
   @apply columns-1 md:columns-2 lg:columns-3 gap-6 lg:gap-8;
+}
+
+.diary-empty-state {
+  position: relative;
+  min-height: clamp(12rem, 28vh, 18rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  isolation: isolate;
+}
+
+.diary-empty-state::before {
+  content: '';
+  position: absolute;
+  inset: 10% 18%;
+  z-index: -1;
+  border-radius: 9999px;
+  background:
+    radial-gradient(circle at 38% 45%, rgba(244, 63, 94, 0.1), transparent 36%),
+    radial-gradient(circle at 62% 46%, rgba(147, 197, 253, 0.16), transparent 34%);
+  filter: blur(28px);
+  opacity: 0.75;
+}
+
+.diary-empty-state::after {
+  content: '';
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-top: 1rem;
+  border-radius: 9999px;
+  background: var(--color-primary);
+  opacity: 0.38;
+}
+
+.diary-checking-state {
+  min-height: clamp(12rem, 28vh, 18rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.diary-checking-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 9999px;
+  background: var(--color-primary);
+  opacity: 0.45;
+  animation: diary-checking-pulse 0.9s ease-in-out infinite alternate;
+}
+
+.diary-empty-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+.diary-empty-desc {
+  margin: 0.5rem 0 0;
+  font-size: 0.9375rem;
+  color: var(--color-text);
+}
+
+:global(html.dark .diary-empty-title){
+  color: #e2e8f0;
+}
+
+:global(html.dark .diary-empty-state::before){
+  opacity: 0.32;
 }
 
 .diary-masonry-item {
@@ -346,11 +443,20 @@ const getTypeIcon = (type: string) => {
 
 .diary-content-bg-text {
   background-color: rgba(244, 63, 94, 0.05); /* bg-rose-50/30 equivalent */
+  
 }
 
 .diary-text-content {
   @apply leading-relaxed mb-6;
   color: var(--color-text);
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-wrap: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  line-clamp: 6;
+  overflow: hidden;
 }
 
 .diary-text-lg {
@@ -387,6 +493,11 @@ const getTypeIcon = (type: string) => {
   @apply flex items-center gap-1;
 }
 
+.diary-weather-icon {
+  @apply w-3.5 h-3.5;
+  color: var(--color-primary);
+}
+
 .diary-meta-location {
   @apply flex items-center gap-1 px-2 py-1 rounded-md;
   background-color: var(--color-background);
@@ -415,11 +526,23 @@ const getTypeIcon = (type: string) => {
   }
 }
 
+@keyframes diary-checking-pulse {
+  0% {
+    opacity: 0.28;
+    transform: scale(0.78);
+  }
+  100% {
+    opacity: 0.72;
+    transform: scale(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .diary-skeleton-badge,
   .diary-skeleton-media,
   .diary-skeleton-line,
-  .diary-skeleton-meta span {
+  .diary-skeleton-meta span,
+  .diary-checking-dot {
     animation: none;
   }
 }

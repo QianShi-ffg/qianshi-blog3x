@@ -1,23 +1,31 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, reactive } from 'vue'
+import { computed, nextTick, onMounted, ref, reactive, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useColorMode } from '@vueuse/core'
 import { useBlogStore } from '@/stores/blog'
-import { Calendar, Clock, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-vue-next'
-import { getArticleDetail, getClassifyIdList } from '@/api/blog'
-import type { ArticleDetail } from '@/types/content'
+import { Calendar, Eye, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-vue-next'
+import { getAdjacentArticles, getArticleDetail, getClassifyIdList } from '@/api/blog'
+import type { ArticleDetail, ArticleSummary } from '@/types/content'
 import thumb from '@/assets/img/thumb.png'
-import { MdPreview, config } from 'md-editor-v3';
- import 'md-editor-v3/lib/style.css';
+import { MdPreview } from 'md-editor-v3'
+import 'md-editor-v3/lib/style.css'
 
 const route = useRoute()
 const router = useRouter()
 const blogStore = useBlogStore()
 const colorMode = useColorMode()
-const articleId = route.params.id
 const article = ref<ArticleDetail | null>(null)
+const adjacentArticles = ref<{
+  prev: ArticleSummary | null
+  next: ArticleSummary | null
+}>({
+  prev: null,
+  next: null,
+})
 const isLoading = ref(true)
 const isCoverRevealed = ref(false)
+const loadError = ref('')
+const coverLoadFailed = ref(false)
 const filters = reactive({
   rows: [{ id: '全部', name: '全部' }], // 默认添加一个“全部”分类
   total: 0,
@@ -26,6 +34,65 @@ const filters = reactive({
 const id = "preview-only";
 
 const coverSrc = computed(() => article.value?.coverUrl || blogStore.coverUrl || thumb)
+const hasArticleContent = computed(() => Boolean(article.value?.articleContent?.trim()))
+const postState = computed(() => {
+  if (isLoading.value) return 'loading'
+  if (loadError.value) return 'error'
+  if (!article.value) return 'empty'
+  if (!hasArticleContent.value) return 'no-content'
+  return 'ready'
+})
+
+interface TocItem {
+  id: string
+  text: string
+  level: number
+}
+
+const tocItems = computed<TocItem[]>(() => {
+  const content = article.value?.articleContent ?? ''
+  const usedIds = new Map<string, number>()
+
+  return content
+    .split(/\r?\n/)
+    .map((line) => {
+      const match = /^(#{1,6})\s+(.+?)\s*$/.exec(line)
+      if (!match) return null
+
+      const text = match[2]
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+        .replace(/[`*_~#]/g, '')
+        .trim()
+      if (!text) return null
+
+      const baseId = `heading-${text
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}]+/gu, '-')
+        .replace(/^-+|-+$/g, '') || 'section'}`
+      const count = usedIds.get(baseId) ?? 0
+      usedIds.set(baseId, count + 1)
+
+      return {
+        id: count ? `${baseId}-${count + 1}` : baseId,
+        text,
+        level: match[1].length,
+      }
+    })
+    .filter((item): item is TocItem => Boolean(item))
+})
+
+const markdownSanitize = (html: string) => {
+  let headingIndex = 0
+
+  return html.replace(/<h([1-6])([^>]*)>/g, (match, level, attrs) => {
+    const tocItem = tocItems.value[headingIndex]
+    headingIndex += 1
+    if (!tocItem) return match
+
+    const safeAttrs = attrs.replace(/\s+id=(["']).*?\1/, '')
+    return `<h${level}${safeAttrs} id="${tocItem.id}">`
+  })
+}
 
 const preloadImage = (src: string) => {
   return new Promise<void>((resolve) => {
@@ -46,19 +113,40 @@ const preloadImage = (src: string) => {
   })
 }
 
-onMounted(async () => {
+const currentArticleId = computed(() => String(route.params.id ?? ''))
+
+const loadArticle = async () => {
   isLoading.value = true
   isCoverRevealed.value = false
+  loadError.value = ''
+  coverLoadFailed.value = false
+  article.value = null
+  adjacentArticles.value = {
+    prev: null,
+    next: null,
+  }
   try {
-    await classify();
-    const articleDetail = (await getArticleDetail({ id: articleId })) as ArticleDetail | null
+    const articleDetail = (await getArticleDetail({ id: currentArticleId.value })) as ArticleDetail | null
     article.value = articleDetail
     if (articleDetail) {
       void preloadImage(articleDetail.coverUrl || thumb)
+      adjacentArticles.value = await getAdjacentArticles(articleDetail.id)
     }
+  } catch (error) {
+    loadError.value = error instanceof Error ? error.message : '文章加载失败，请稍后再试'
   } finally {
     isLoading.value = false
+    await nextTick()
   }
+}
+
+onMounted(async () => {
+  await classify();
+  await loadArticle()
+})
+
+watch(currentArticleId, () => {
+  void loadArticle()
 })
 
 const classify = async () => {
@@ -73,6 +161,25 @@ const classify = async () => {
 
 const goBack = () => {
   router.push({ path: '/blog' })
+}
+
+const goArticle = (target: ArticleSummary | null) => {
+  if (!target) return
+  blogStore.setCoverUrl(target.coverUrl || '')
+  router.push({ path: `/blog/${target.id}` })
+}
+
+const scrollToHeading = (headingId: string) => {
+  const target = document.getElementById(headingId)
+  if (!target) return
+
+  const fixedOffset = 300
+  const top = target.getBoundingClientRect().top + window.pageYOffset - fixedOffset
+
+  window.scrollTo({
+    top: Math.max(top, 0),
+    behavior: 'smooth',
+  })
 }
 </script>
 
@@ -92,7 +199,7 @@ const goBack = () => {
           alt="Cover"
           class="post-cover-image"
           @load="isCoverRevealed = true"
-          @error="isCoverRevealed = true"
+          @error="coverLoadFailed = true; isCoverRevealed = true"
         />
       </div>
       <!-- Gradient Overlay (Darker at bottom for text readability) -->
@@ -112,6 +219,7 @@ const goBack = () => {
           <span class="post-category-badge">
              {{ (filters.rows.find((ii: any) => ii.id === article?.classifyId)?.name) ?? '' }}
           </span>
+          <span v-if="coverLoadFailed" class="post-cover-fallback-note">封面暂时无法显示，已使用默认背景</span>
           <h1 class="post-main-title">
             {{ article.title }}
           </h1>
@@ -122,8 +230,8 @@ const goBack = () => {
               {{ article.createTime }}
             </span>
             <span class="post-meta-item">
-              <Clock class="post-meta-icon" />
-              {{ article.readTime }}
+              <Eye class="post-meta-icon" />
+              {{ article.Views ?? 0 }}
             </span>
           </div>
         </div>
@@ -143,19 +251,34 @@ const goBack = () => {
     <main class="post-main-area">
       <!-- Main content container -->
       <article
-        v-if="article"
+        v-if="postState === 'ready'"
         class="post-article-container"
       >
-        <!-- Markdown Content (Simulated with raw HTML for now, would normally use a markdown parser) -->
-        <!-- <div class="prose" v-html="article.articleContent"></div> -->
-        <MdPreview
-          :editorId="id"
-          :modelValue="article.articleContent"
-          :theme="colorMode === 'dark' ? 'dark' : 'light'"
-        />
+        <div class="post-reading-layout">
+          <MdPreview
+            :editorId="id"
+            :modelValue="article.articleContent"
+            :theme="colorMode === 'dark' ? 'dark' : 'light'"
+            :sanitize="markdownSanitize"
+          />
+
+          <aside v-if="tocItems.length" class="post-toc" aria-label="文章目录">
+            <p class="post-toc-title">目录</p>
+            <a
+              v-for="item in tocItems"
+              :key="item.id"
+              :href="`#${item.id}`"
+              class="post-toc-link"
+              :class="`post-toc-level-${Math.min(item.level, 4)}`"
+              @click.prevent="scrollToHeading(item.id)"
+            >
+              {{ item.text }}
+            </a>
+          </aside>
+        </div>
       </article>
 
-      <div v-else class="post-loading-card">
+      <div v-else-if="postState === 'loading'" class="post-loading-card">
         <span class="post-loading-paragraph post-loading-line"></span>
         <span class="post-loading-paragraph post-loading-line"></span>
         <span class="post-loading-paragraph-short post-loading-line"></span>
@@ -165,23 +288,51 @@ const goBack = () => {
         <span class="post-loading-paragraph-mid post-loading-line"></span>
       </div>
 
+      <div v-else class="post-state-card">
+        <p class="post-state-title">
+          {{ postState === 'error' ? '文章加载失败' : postState === 'no-content' ? '暂无正文内容' : '找不到这篇文章' }}
+        </p>
+        <p class="post-state-desc">
+          {{
+            postState === 'error'
+              ? loadError
+              : postState === 'no-content'
+                ? '这篇文章已经发布，但正文还没有整理完成。'
+                : '这篇文章可能已经下架，或还没有发布。'
+          }}
+        </p>
+        <button @click="goBack" class="post-state-action interactive-lift">返回文章列表</button>
+      </div>
+
       <!-- Bottom Navigation / Share (Optional) -->
       <div class="post-nav-bottom">
-        <button class="post-nav-btn interactive-lift">
+        <button
+          class="post-nav-btn interactive-lift"
+          :class="{ 'post-nav-btn-disabled': !adjacentArticles.prev }"
+          :disabled="!adjacentArticles.prev"
+          @click="goArticle(adjacentArticles.prev)"
+        >
           <ChevronLeft class="post-icon-sm" />
-          上一篇
+          <span class="post-nav-copy">
+            <span class="post-nav-label">上一篇</span>
+            <span class="post-nav-title">{{ adjacentArticles.prev?.title || '没有更早的文章' }}</span>
+          </span>
         </button>
-        <button class="post-nav-btn interactive-lift">
-          下一篇
+        <button
+          class="post-nav-btn post-nav-btn-next interactive-lift"
+          :class="{ 'post-nav-btn-disabled': !adjacentArticles.next }"
+          :disabled="!adjacentArticles.next"
+          @click="goArticle(adjacentArticles.next)"
+        >
+          <span class="post-nav-copy">
+            <span class="post-nav-label">下一篇</span>
+            <span class="post-nav-title">{{ adjacentArticles.next?.title || '已经是最新文章' }}</span>
+          </span>
           <ChevronRight class="post-icon-sm" />
         </button>
       </div>
     </main>
 
-    <div v-if="!article && !isLoading" class="post-not-found">
-      <h2>找不到该文章</h2>
-      <button @click="goBack" class="post-nav-btn interactive-lift">返回文章列表</button>
-    </div>
   </div>
 </template>
 
@@ -189,11 +340,6 @@ const goBack = () => {
 .blog-post-page {
   @apply min-h-screen bg-transparent pb-20;
   position: relative;
-}
-
-.post-not-found {
-  @apply min-h-screen flex flex-col items-center justify-center gap-4 py-32;
-  color: var(--color-heading);
 }
 
 .post-loading-chip {
@@ -272,6 +418,70 @@ const goBack = () => {
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+}
+
+.post-state-card {
+  width: 100%;
+  min-height: 18rem;
+  padding: 3rem 2rem;
+  border-radius: 1.5rem;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.post-state-card::before {
+  content: '';
+  position: absolute;
+  inset: 14% 22%;
+  z-index: -1;
+  border-radius: 9999px;
+  background:
+    radial-gradient(circle at 40% 46%, rgba(244, 63, 94, 0.1), transparent 36%),
+    radial-gradient(circle at 62% 48%, rgba(147, 197, 253, 0.16), transparent 34%);
+  filter: blur(30px);
+  opacity: 0.8;
+}
+
+.post-state-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+.post-state-desc {
+  max-width: 28rem;
+  margin: 0.75rem 0 1.5rem;
+  color: var(--color-text);
+  line-height: 1.7;
+}
+
+.post-state-action {
+  padding: 0.75rem 1.25rem;
+  border-radius: 9999px;
+  color: var(--color-primary);
+  background: var(--color-secondary);
+  border: 1px solid rgba(244, 63, 94, 0.14);
+  font-weight: 600;
+}
+
+:global(html.dark .post-state-card){
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.6) 0%, var(--color-card) 200px);
+  border-color: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+}
+
+:global(html.dark .post-state-card::before){
+  opacity: 0.34;
 }
 @media (min-width: 768px) {
   .post-loading-card {
@@ -407,6 +617,20 @@ const goBack = () => {
   @apply inline-block px-4 py-1.5 mb-6 rounded-full bg-rose-500/90 backdrop-blur-sm border border-rose-400/30 text-white text-sm font-bold tracking-widest shadow-lg shadow-rose-500/20;
 }
 
+.post-cover-fallback-note {
+  display: block;
+  width: fit-content;
+  margin-bottom: 1rem;
+  padding: 0.45rem 0.8rem;
+  border-radius: 9999px;
+  color: rgba(255, 255, 255, 0.86);
+  background: rgba(15, 23, 42, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  font-size: 0.75rem;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
 .post-main-title {
   @apply text-4xl md:text-5xl lg:text-6xl font-extrabold text-white leading-tight mb-8 drop-shadow-lg;
 }
@@ -441,20 +665,125 @@ const goBack = () => {
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
 }
 
+.post-reading-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 14rem;
+  gap: 3rem;
+  align-items: start;
+}
+
+.post-toc {
+  position: sticky;
+  top: 6rem;
+  max-height: calc(100vh - 8rem);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-left: 1.25rem;
+  border-left: 1px solid var(--color-border);
+  overscroll-behavior: contain;
+}
+
+.post-toc-title {
+  margin: 0 0 0.85rem;
+  color: var(--color-heading);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.post-toc-link {
+  width: 100%;
+  display: block;
+  margin: 0;
+  padding: 0.35rem 0;
+  color: var(--color-text);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  text-align: left;
+  text-decoration: none;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  transition:
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.post-toc-link:hover {
+  color: var(--color-primary);
+  transform: translateX(0.125rem);
+}
+
+.post-toc-level-3 {
+  padding-left: 0.75rem;
+}
+
+.post-toc-level-4 {
+  padding-left: 1.5rem;
+}
+
+.post-toc::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+:global(#preview-only h1),
+:global(#preview-only h2),
+:global(#preview-only h3),
+:global(#preview-only h4),
+:global(#preview-only h5),
+:global(#preview-only h6) {
+  scroll-margin-top: 300px;
+}
+
+:global(html.dark .post-toc){
+  border-left-color: rgba(255, 255, 255, 0.08);
+}
+
 .post-nav-bottom {
-  @apply mt-12 flex items-center justify-between;
+  @apply mt-12 flex items-stretch justify-between gap-4;
 }
 
 .post-nav-btn {
-  @apply flex items-center gap-2 px-6 py-3 rounded-full font-medium transition-all;
+  @apply flex items-center gap-3 px-6 py-4 rounded-2xl font-medium transition-all;
+  width: min(48%, 28rem);
   background-color: var(--color-background);
   color: var(--color-text);
   border: 1px solid var(--color-border);
+  text-align: left;
 }
-.post-nav-btn:hover {
+.post-nav-btn:not(:disabled):hover {
   background-color: var(--color-secondary);
   color: var(--color-primary);
   border-color: var(--color-secondary);
+}
+
+.post-nav-btn-next {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.post-nav-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.post-nav-label {
+  font-size: 0.75rem;
+  color: var(--color-primary);
+}
+
+.post-nav-title {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--color-heading);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.post-nav-btn-disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
 }
 
 @media (max-width: 767px) {
@@ -531,6 +860,34 @@ const goBack = () => {
     margin-top: 0;
     padding-inline: 1rem;
   }
+
+  .post-reading-layout {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 1.5rem;
+  }
+
+  .post-toc {
+    position: relative;
+    top: auto;
+    max-height: none;
+    padding: 0 0 1rem;
+    border-left: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .post-toc-link {
+    padding-block: 0.28rem;
+  }
+
+  .post-nav-bottom {
+    flex-direction: column;
+  }
+
+  .post-nav-btn {
+    width: 100%;
+  }
+
 }
 
 @keyframes post-cover-drift {

@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { ref, reactive, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Calendar, Clock, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { Calendar, Eye, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { listArticles, getClassifyIdList } from '@/api/blog'
 import type { ArticleSummary } from '@/types/content'
-import { date } from "@/util/date";
+import { date } from '@/utils/date'
 import { useBlogStore } from '@/stores/blog'
 import { registerRouteTransitionCleanup } from '@/utils/route-transition-cleanup'
 
@@ -22,6 +22,7 @@ const filters = reactive({
 const articles = ref<ArticleSummary[]>([])
 const isArticlesLoading = ref(true)
 const hasLoadedArticles = ref(false)
+const hasCheckedArticles = ref(false)
 const articleTotal = ref(0)
 const pageSize = 6
 const filterScroller = ref<HTMLElement | null>(null)
@@ -43,7 +44,13 @@ onMounted(async () => {
   await nextTick()
   updateFilterOverflow()
   updateFilterGlow(true)
-  await loadArticles(blogStore.currentPage)
+  setupBlogParallax()
+  if (filters.total > 0) {
+    await loadArticles(blogStore.currentPage)
+  } else {
+    isArticlesLoading.value = false
+    hasLoadedArticles.value = true
+  }
   window.addEventListener('resize', updateFilterOverflow)
   window.addEventListener('resize', updateFilterGlowOnResize)
 })
@@ -63,6 +70,8 @@ const classify = async () => {
   }
   filters.rows.push(...res.rows)
   filters.total = res.total
+  articleTotal.value = res.total
+  hasCheckedArticles.value = true
 };
 
 
@@ -156,8 +165,38 @@ const loadArticles = async (page = blogStore.currentPage) => {
     isArticlesLoading.value = false
     hasLoadedArticles.value = true
     await nextTick()
-    setupBlogParallax()
+    await playArticleEnterAnimation()
+    ScrollTrigger.refresh()
   }
+}
+
+const playArticleEnterAnimation = () => {
+  if (!blogRoot.value || prefersReducedMotion()) return Promise.resolve()
+
+  const cards = blogRoot.value.querySelectorAll<HTMLElement>(
+    '.blog-article-card:not(.blog-article-skeleton)',
+  )
+  if (!cards.length) return Promise.resolve()
+
+  return new Promise<void>((resolve) => {
+    gsap.fromTo(
+      cards,
+      { autoAlpha: 0, y: 22, scale: 0.95 },
+      {
+        autoAlpha: 1,
+        y: 0,
+        scale: 1,
+        duration: 0.46,
+        ease: 'power2.out',
+        stagger: 0.06,
+        overwrite: true,
+        onComplete: () => {
+          gsap.set(cards, { clearProps: 'transform' })
+          resolve()
+        },
+      },
+    )
+  })
 }
 
 const setupBlogParallax = () => {
@@ -450,8 +489,11 @@ const openArticle = (article: ArticleSummary) => {
 
     <!-- Articles Grid -->
     <div class="blog-grid-wrapper">
-      <div v-if="isArticlesLoading && !hasLoadedArticles" class="blog-grid-container" aria-live="polite" aria-busy="true">
-        <article v-for="item in pageSize" :key="item" class="blog-article-card blog-article-skeleton">
+      <div v-if="isArticlesLoading && !hasCheckedArticles" class="blog-checking-state" aria-live="polite" aria-busy="true" aria-label="加载内容">
+        <span class="blog-checking-dot"></span>
+      </div>
+      <div v-else-if="isArticlesLoading && !hasLoadedArticles && articleTotal > 0" class="blog-grid-container" aria-live="polite" aria-busy="true">
+        <article v-for="item in Math.min(articleTotal || pageSize, pageSize)" :key="item" class="blog-article-card blog-article-skeleton">
           <div class="blog-article-inner">
             <div class="blog-skeleton-meta">
               <span class="blog-skeleton-pill"></span>
@@ -464,6 +506,10 @@ const openArticle = (article: ArticleSummary) => {
             <span class="blog-skeleton-link"></span>
           </div>
         </article>
+      </div>
+      <div v-else-if="hasLoadedArticles && filteredArticles.length === 0" class="blog-empty-state" aria-live="polite">
+        <p class="blog-empty-title">暂无文章</p>
+        <p class="blog-empty-desc">新的内容整理好后会出现在这里。</p>
       </div>
       <TransitionGroup
         v-else
@@ -491,8 +537,8 @@ const openArticle = (article: ArticleSummary) => {
                   {{ date(article.createTime) }}
                 </span>
                 <span class="blog-article-info-item">
-                  <Clock class="blog-icon-sm" />
-                  {{ article.readTime }}
+                  <Eye class="blog-icon-sm" />
+                  {{ article.Views ?? 0 }}
                 </span>
               </div>
             </div>
@@ -955,6 +1001,77 @@ const openArticle = (article: ArticleSummary) => {
   width: 100%;
 }
 
+.blog-empty-state {
+  position: relative;
+  min-height: clamp(12rem, 28vh, 18rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  isolation: isolate;
+}
+
+.blog-empty-state::before {
+  content: '';
+  position: absolute;
+  inset: 10% 18%;
+  z-index: -1;
+  border-radius: 9999px;
+  background:
+    radial-gradient(circle at 38% 45%, rgba(244, 63, 94, 0.1), transparent 36%),
+    radial-gradient(circle at 62% 46%, rgba(147, 197, 253, 0.16), transparent 34%);
+  filter: blur(28px);
+  opacity: 0.75;
+}
+
+.blog-empty-state::after {
+  content: '';
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-top: 1rem;
+  border-radius: 9999px;
+  background: var(--color-primary);
+  opacity: 0.38;
+}
+
+.blog-checking-state {
+  min-height: clamp(12rem, 28vh, 18rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.blog-checking-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 9999px;
+  background: var(--color-primary);
+  opacity: 0.45;
+  animation: blog-checking-pulse 0.9s ease-in-out infinite alternate;
+}
+
+.blog-empty-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+.blog-empty-desc {
+  margin: 0.5rem 0 0;
+  font-size: 0.9375rem;
+  color: var(--color-text);
+}
+
+:global(html.dark .blog-empty-title){
+  color: #e2e8f0;
+}
+
+:global(html.dark .blog-empty-state::before){
+  opacity: 0.32;
+}
+
 .blog-grid-container-updating {
   opacity: 0.72;
   filter: saturate(0.92);
@@ -1041,19 +1158,19 @@ const openArticle = (article: ArticleSummary) => {
   padding-top: 0.25rem; /* py-1 */
   padding-bottom: 0.25rem;
   border-radius: 9999px; /* rounded-full */
-  background-color: rgba(255, 255, 255, 0.66);
-  color: var(--color-text);
+  background-color: var(--color-secondary);
+  color: var(--color-primary);
   font-size: 0.75rem; /* text-xs */
   font-weight: 500; /* font-medium */
-  border: 1px solid var(--color-border);
+  border: 1px solid rgba(244, 63, 94, 0.14);
   box-shadow: 0 8px 18px -16px rgba(15, 23, 42, 0.22);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
 }
 :global(html.dark .blog-article-category){
-  background-color: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
-  color: #cbd5e1;
+  background-color: rgba(244, 63, 94, 0.15);
+  border-color: rgba(244, 63, 94, 0.2);
+  color: var(--color-primary);
 }
 
 .blog-article-info {
@@ -1091,6 +1208,7 @@ const openArticle = (article: ArticleSummary) => {
   -webkit-box-orient: vertical;
   overflow: hidden;
   line-height: 1.375; /* leading-snug */
+  min-height: calc(1.25rem * 1.375 * 2);
 }
 :global(html.dark .blog-article-title){
   color: #e2e8f0; /* Brighter white for titles in dark mode */
@@ -1108,6 +1226,7 @@ const openArticle = (article: ArticleSummary) => {
   -webkit-box-orient: vertical;
   overflow: hidden;
   margin: 0;
+  min-height: calc(0.875rem * 1.625 * 3);
 }
 :global(html.dark .blog-article-desc){
   color: #64748b; /* slate-500 for less contrast in dark mode excerpts */
@@ -1424,6 +1543,17 @@ const openArticle = (article: ArticleSummary) => {
   }
 }
 
+@keyframes blog-checking-pulse {
+  0% {
+    opacity: 0.28;
+    transform: scale(0.78);
+  }
+  100% {
+    opacity: 0.72;
+    transform: scale(1);
+  }
+}
+
 @keyframes blog-loading-pulse {
   0% {
     opacity: 0.42;
@@ -1441,6 +1571,7 @@ const openArticle = (article: ArticleSummary) => {
   .blog-skeleton-title,
   .blog-skeleton-text,
   .blog-skeleton-link,
+  .blog-checking-dot,
   .blog-grid-loading-dot {
     animation: none;
   }

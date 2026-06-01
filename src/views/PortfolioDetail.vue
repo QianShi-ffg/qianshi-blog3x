@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, Github, ExternalLink, Calendar, User, LayoutGrid } from 'lucide-vue-next'
 import { getProjectById } from '@/api/portfolio'
@@ -15,9 +15,21 @@ onMounted(async () => {
   isLoading.value = true
   try {
     project.value = await getProjectById(projectId)
+  } catch {
+    project.value = null
   } finally {
     isLoading.value = false
   }
+})
+
+const hasProjectContent = computed(() => {
+  if (!project.value) return false
+
+  return Boolean(
+    project.value.longDesc?.trim()
+    || project.value.videoUrl?.trim()
+    || project.value.images?.length,
+  )
 })
 
 const goBack = () => {
@@ -128,36 +140,54 @@ const goBack = () => {
 
     <!-- Content Section -->
     <div class="pd-content-section" v-motion :initial="{ opacity: 0, y: 30 }" :enter="{ opacity: 1, y: 0, transition: { duration: 800, delay: 300 } }">
-      <h2 class="pd-section-title">项目介绍</h2>
-      <p class="pd-text-paragraph">{{ project.longDesc }}</p>
-      
-      <!-- Video Section (If exists) -->
-      <div v-if="project.videoUrl" class="pd-video-wrapper mt-12">
-        <h2 class="pd-section-title">功能演示 (视频)</h2>
-        <div class="pd-video-container">
-          <video controls class="pd-video" :poster="project.image">
-            <source :src="project.videoUrl" type="video/mp4">
-            您的浏览器不支持 HTML5 视频。
-          </video>
+      <template v-if="hasProjectContent">
+        <div v-if="project.longDesc?.trim()" class="pd-detail-block">
+          <h2 class="pd-section-title">项目介绍</h2>
+          <p class="pd-text-paragraph">{{ project.longDesc }}</p>
         </div>
-      </div>
 
-      <!-- Additional Images Gallery -->
-      <div v-if="project.images && project.images.length > 0" class="pd-gallery mt-12">
-        <h2 class="pd-section-title">项目截图</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div v-for="(img, index) in project.images" :key="index" class="pd-gallery-item interactive-media">
-            <img :src="img" alt="Gallery image" class="pd-gallery-img" />
+        <!-- Video Section (If exists) -->
+        <div v-if="project.videoUrl" class="pd-video-wrapper mt-12">
+          <h2 class="pd-section-title">功能演示 (视频)</h2>
+          <div class="pd-video-container">
+            <video controls class="pd-video" :poster="project.image">
+              <source :src="project.videoUrl" type="video/mp4">
+              您的浏览器不支持 HTML5 视频。
+            </video>
           </div>
         </div>
+
+        <!-- Additional Images Gallery -->
+        <div v-if="project.images && project.images.length > 0" class="pd-gallery mt-12">
+          <h2 class="pd-section-title">项目截图</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div v-for="(img, index) in project.images" :key="index" class="pd-gallery-item interactive-media">
+              <img :src="img" alt="Gallery image" class="pd-gallery-img" />
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <div v-else class="pd-content-empty-state" aria-live="polite">
+        <p class="pd-empty-title">暂无作品内容</p>
+        <p class="pd-empty-desc">这个作品的介绍、视频和截图还没有整理好。</p>
       </div>
     </div>
   </div>
   
   <!-- 404 Fallback -->
-  <div v-else class="pd-container text-center py-32">
-    <h2 class="text-2xl font-bold text-slate-800 mb-4">找不到该作品</h2>
-    <button @click="goBack" class="pd-btn pd-btn-outline mx-auto">返回列表</button>
+  <div v-else class="pd-container">
+    <div class="pd-back-wrapper">
+      <button @click="goBack" class="pd-back-btn group">
+        <ArrowLeft class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+        返回作品列表
+      </button>
+    </div>
+
+    <div class="pd-detail-empty-state" aria-live="polite">
+      <p class="pd-empty-title">暂无作品详情</p>
+      <p class="pd-empty-desc">这个作品可能已经下架，或还没有发布完整内容。</p>
+    </div>
   </div>
 </template>
 
@@ -483,6 +513,67 @@ const goBack = () => {
   }
 }
 
+.pd-detail-block {
+  min-width: 0;
+}
+
+.pd-content-empty-state,
+.pd-detail-empty-state {
+  position: relative;
+  min-height: clamp(13rem, 30vh, 19rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  isolation: isolate;
+}
+
+.pd-detail-empty-state {
+  border-radius: 2rem;
+  background-color: var(--color-card);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+}
+
+.pd-content-empty-state::before,
+.pd-detail-empty-state::before {
+  content: '';
+  position: absolute;
+  inset: 12% 18%;
+  z-index: -1;
+  border-radius: 9999px;
+  background:
+    radial-gradient(circle at 38% 45%, rgba(244, 63, 94, 0.1), transparent 36%),
+    radial-gradient(circle at 62% 46%, rgba(147, 197, 253, 0.14), transparent 34%);
+  filter: blur(28px);
+  opacity: 0.72;
+}
+
+.pd-content-empty-state::after,
+.pd-detail-empty-state::after {
+  content: '';
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-top: 1rem;
+  border-radius: 9999px;
+  background: var(--color-primary);
+  opacity: 0.38;
+}
+
+.pd-empty-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+.pd-empty-desc {
+  margin: 0.5rem 0 0;
+  font-size: 0.9375rem;
+  color: var(--color-text);
+}
+
 .pd-video-wrapper {
   @apply w-full;
 
@@ -583,6 +674,25 @@ const goBack = () => {
   color: #cbd5e1;
   background: rgba(148, 163, 184, 0.12);
   border-color: rgba(148, 163, 184, 0.2);
+}
+
+:global(html.dark .pd-container .pd-detail-empty-state) {
+  background: var(--color-card);
+  border-color: rgba(148, 163, 184, 0.16);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.22);
+}
+
+:global(html.dark .pd-container .pd-empty-title) {
+  color: #e2e8f0;
+}
+
+:global(html.dark .pd-container .pd-empty-desc) {
+  color: #94a3b8;
+}
+
+:global(html.dark .pd-container .pd-content-empty-state::before),
+:global(html.dark .pd-container .pd-detail-empty-state::before) {
+  opacity: 0.32;
 }
 
 @keyframes pd-skeleton-shimmer {

@@ -1,65 +1,62 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { MessageCircle, Heart, Share2, CornerDownRight, User } from 'lucide-vue-next'
+import { computed, ref, onMounted } from 'vue'
+import { Heart, User } from 'lucide-vue-next'
+import { likeComment, listComments, saveComment } from '@/api/comment'
+import type { CommentItem } from '@/types/content'
 
-const comments = ref([
-  {
-    id: 1,
-    author: '前端小菜鸟',
-    avatar:
-      'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20cute%20cartoon%20bird%20avatar%2C%20flat%20design%2C%20blue%20background&image_size=square',
-    content:
-      '太强了！原生 Pointer Events 确实比很多第三方库在定制化场景下好用，就是边界情况处理起来太痛苦了。',
-    time: '2 小时前',
-    likes: 12,
-    isLiked: false,
-    replies: [
-      {
-        id: 101,
-        author: 'QianShiBlog',
-        isAuthor: true,
-        content: '是的，特别是多层级嵌套的时候，`pointer-events: none` 和事件穿透简直让人头秃 😂',
-        time: '1 小时前',
-      },
-    ],
-  },
-  {
-    id: 2,
-    author: 'CodeMaster99',
-    avatar:
-      'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20minimalist%20geometric%20avatar%2C%20dark%20theme%2C%20hacker%20style&image_size=square',
-    content: '请问有开源相关的实现逻辑吗？最近公司也有类似的需求，正在调研技术方案。',
-    time: '5 小时前',
-    likes: 5,
-    isLiked: true,
-    replies: [],
-  },
-  {
-    id: 3,
-    author: '摸鱼达人',
-    avatar:
-      'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20lazy%20cat%20avatar%2C%20cute%2C%20pastel%20colors&image_size=square',
-    content: '这就是我不做前端的原因，DOM操作太繁琐了，还是写接口爽。不过视觉反馈确实很直接。',
-    time: '1 天前',
-    likes: 2,
-    isLiked: false,
-    replies: [],
-  },
-])
+const props = defineProps<{
+  targetType: string
+  targetId: number
+}>()
+
+const emits = defineEmits<{
+  commentChange: [count: number]
+}>()
+
+const comments = ref<CommentItem[]>([])
 
 const visitorName = ref('')
 const newComment = ref('')
+const isLoading = ref(false)
+const errorMessage = ref('')
+const noticeMessage = ref('')
 
 // Reply state
 const activeReplyId = ref<number | null>(null)
 const replyContent = ref('')
 const replyTargetAuthor = ref('')
 
-onMounted(() => {
+const commentCount = computed(() => {
+  return comments.value.reduce((total, comment) => total + 1 + (comment.replies?.length || 0), 0)
+})
+
+const avatarFrameCount = 150
+
+const getAvatarFrame = (seed: string | number, offset = 0) => {
+  const value = String(seed || 'visitor')
+  let hash = offset
+
+  for (let index = 0; index < value.length; index++) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0
+  }
+
+  return hash % avatarFrameCount
+}
+
+const getAvatarStyle = (seed: string | number, offset = 0, size = 40) => {
+  const frame = getAvatarFrame(seed, offset)
+
+  return {
+    '--avatar-y': `-${frame * size}px`,
+  }
+}
+
+onMounted(async () => {
   const savedName = localStorage.getItem('blog_visitor_name')
   if (savedName) {
     visitorName.value = savedName
   }
+  await loadComments()
 })
 
 const saveVisitorName = () => {
@@ -70,30 +67,56 @@ const saveVisitorName = () => {
   }
 }
 
-const toggleLike = (comment: any) => {
-  comment.isLiked = !comment.isLiked
-  comment.likes += comment.isLiked ? 1 : -1
+const isCommentLiked = (comment: CommentItem) => Boolean(comment.liked)
+
+const getCommentErrorMessage = (error: unknown, fallback: string) => {
+  const message = error instanceof Error ? error.message : fallback
+  return message === '请求错误(400)' ? '评论太频繁，请稍后再试' : message
 }
 
-const submitComment = () => {
+const loadComments = async () => {
+  isLoading.value = true
+  errorMessage.value = ''
+  try {
+    comments.value = await listComments(props.targetType, props.targetId)
+    emits('commentChange', commentCount.value)
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '评论加载失败'
+    comments.value = []
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const toggleLike = async (comment: CommentItem) => {
+  noticeMessage.value = ''
+  try {
+    const res = await likeComment(comment.id)
+    comment.likes = res.likes
+    comment.liked = res.liked
+  } catch (error) {
+    noticeMessage.value = error instanceof Error ? error.message : '点赞失败'
+  }
+}
+
+const submitComment = async () => {
   if (!newComment.value.trim()) return
 
-  saveVisitorName()
-  const nameToUse = visitorName.value.trim() || '访客'
+  noticeMessage.value = ''
+  try {
+    saveVisitorName()
+    await saveComment({
+      targetType: props.targetType,
+      targetId: props.targetId,
+      author: visitorName.value.trim() || '访客',
+      content: newComment.value,
+    })
 
-  comments.value.unshift({
-    id: Date.now(),
-    author: nameToUse,
-    avatar:
-      'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20simple%20default%20user%20avatar%2C%20gray%20silhouette%20on%20white%20background&image_size=square',
-    content: newComment.value,
-    time: '刚刚',
-    likes: 0,
-    isLiked: false,
-    replies: [],
-  })
-
-  newComment.value = ''
+    newComment.value = ''
+    await loadComments()
+  } catch (error) {
+    noticeMessage.value = getCommentErrorMessage(error, '评论发布失败')
+  }
 }
 
 const openReply = (commentId: number, author: string) => {
@@ -107,44 +130,44 @@ const openReply = (commentId: number, author: string) => {
   replyContent.value = ''
 }
 
-const submitReply = (commentId: number) => {
+const submitReply = async (commentId: number) => {
   if (!replyContent.value.trim()) return
 
-  saveVisitorName()
-  const nameToUse = visitorName.value.trim() || '访客'
-
-  const comment = comments.value.find((c) => c.id === commentId)
-  if (comment) {
-    if (!comment.replies) {
-      comment.replies = []
-    }
-    comment.replies.push({
-      id: Date.now(),
-      author: nameToUse,
-      isAuthor: false,
-      content: `回复 @${replyTargetAuthor.value} : ${replyContent.value}`,
-      time: '刚刚',
+  noticeMessage.value = ''
+  try {
+    saveVisitorName()
+    await saveComment({
+      targetType: props.targetType,
+      targetId: props.targetId,
+      parentId: commentId,
+      replyTo: replyTargetAuthor.value,
+      author: visitorName.value.trim() || '访客',
+      content: replyContent.value,
     })
-  }
 
-  activeReplyId.value = null
-  replyContent.value = ''
+    activeReplyId.value = null
+    replyContent.value = ''
+    await loadComments()
+  } catch (error) {
+    noticeMessage.value = getCommentErrorMessage(error, '回复发布失败')
+  }
 }
 </script>
 
 <template>
   <div class="comments-section">
     <h3 class="section-title">
-      评论 <span class="comment-count">({{ comments.length }})</span>
+      评论 <span class="comment-count">({{ commentCount }})</span>
     </h3>
 
     <!-- Comment Input -->
     <div class="comment-input-wrapper">
-      <img
-        src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20simple%20default%20user%20avatar%2C%20gray%20silhouette%20on%20white%20background&image_size=square"
-        alt="Your Avatar"
-        class="current-user-avatar"
-      />
+      <span
+        class="current-user-avatar avatar-sprite"
+        :style="getAvatarStyle(visitorName || 'current-user')"
+        role="img"
+        aria-label="Your Avatar"
+      ></span>
       <div class="input-container">
         <div class="visitor-info">
           <User class="w-4 h-4 text-slate-400 shrink-0" />
@@ -171,26 +194,35 @@ const submitReply = (commentId: number) => {
     </div>
 
     <!-- Comments List -->
-    <div class="comments-list">
+    <p v-if="noticeMessage" class="comment-state comment-notice">{{ noticeMessage }}</p>
+    <p v-if="errorMessage" class="comment-state">{{ errorMessage }}</p>
+    <p v-else-if="isLoading" class="comment-state">评论加载中...</p>
+    <p v-else-if="comments.length === 0" class="comment-state">还没有评论，来做第一个留言的人吧。</p>
+    <div v-else class="comments-list">
       <div v-for="comment in comments" :key="comment.id" class="comment-item">
         <!-- Main Comment -->
         <div class="comment-main">
-          <img :src="comment.avatar" :alt="comment.author" class="comment-avatar" />
+          <span
+            class="comment-avatar avatar-sprite"
+            :style="getAvatarStyle(comment.author || comment.id)"
+            role="img"
+            :aria-label="comment.author"
+          ></span>
           <div class="comment-content-wrapper">
             <div class="comment-header">
               <span class="comment-author">{{ comment.author }}</span>
-              <span class="comment-time">{{ comment.time }}</span>
+              <span class="comment-time">{{ comment.time || comment.createTime }}</span>
             </div>
             <p class="comment-text">{{ comment.content }}</p>
             <div class="comment-actions">
               <button
                 @click="toggleLike(comment)"
                 class="action-btn group"
-                :class="{ 'is-liked': comment.isLiked }"
+                :class="{ 'is-liked': isCommentLiked(comment) }"
               >
                 <Heart
                   class="w-4 h-4"
-                  :class="{ 'fill-rose-500 text-rose-500': comment.isLiked }"
+                  :class="{ 'fill-rose-500 text-rose-500': isCommentLiked(comment) }"
                 />
                 <span>{{ comment.likes }}</span>
               </button>
@@ -210,27 +242,31 @@ const submitReply = (commentId: number) => {
           class="replies-wrapper"
         >
           <div v-for="reply in comment.replies" :key="reply.id" class="reply-item">
-            <img
-              v-if="reply.isAuthor"
-              src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20minimalist%20avatar%20illustration%2C%20flat%20design%2C%20soft%20colors%2C%20young%20developer&image_size=square"
-              alt="Author"
-              class="reply-avatar"
-            />
-            <img
+            <span
+              v-if="reply.author === 'QianShiBlog'"
+              class="reply-avatar avatar-sprite"
+              :style="{ '--avatar-y': '-160px' }"
+              role="img"
+              aria-label="Author"
+            ></span>
+            <span
               v-else
-              src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20simple%20default%20user%20avatar%2C%20gray%20silhouette%20on%20white%20background&image_size=square"
-              alt="Visitor"
-              class="reply-avatar"
-            />
+              class="reply-avatar avatar-sprite"
+              :style="getAvatarStyle(reply.author || reply.id, 1, 32)"
+              role="img"
+              aria-label="Visitor"
+            ></span>
             <div class="reply-content-wrapper">
               <div class="comment-header">
                 <div class="flex items-center gap-2">
                   <span class="comment-author">{{ reply.author }}</span>
-                  <span v-if="reply.isAuthor" class="author-badge">作者</span>
+                  <span v-if="reply.author === 'QianShiBlog'" class="author-badge">作者</span>
                 </div>
-                <span class="comment-time">{{ reply.time }}</span>
+                <span class="comment-time">{{ reply.time || reply.createTime }}</span>
               </div>
-              <p class="comment-text">{{ reply.content }}</p>
+              <p class="comment-text">
+                <span v-if="reply.replyTo" class="reply-target">@{{ reply.replyTo }} </span>{{ reply.content }}
+              </p>
               <div class="comment-actions">
                 <button
                   class="action-btn hover:text-slate-700"
@@ -362,6 +398,19 @@ const submitReply = (commentId: number) => {
   @apply space-y-8;
 }
 
+.comment-state {
+  @apply text-sm py-6;
+  color: var(--color-text);
+}
+
+.comment-notice {
+  margin-bottom: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.875rem;
+  color: var(--color-primary);
+  background: rgba(244, 63, 94, 0.08);
+}
+
 .comment-item {
   @apply flex flex-col gap-4 rounded-2xl p-3;
   position: relative;
@@ -409,7 +458,14 @@ const submitReply = (commentId: number) => {
 
 .comment-avatar,
 .reply-avatar {
-  @apply w-10 h-10 rounded-full object-cover shrink-0;
+  @apply w-10 h-10 rounded-full shrink-0;
+}
+
+.avatar-sprite {
+  background-image: url('/images/comment-cat-avatars.png');
+  background-repeat: no-repeat;
+  background-size: 100% auto;
+  background-position: 0 var(--avatar-y);
 }
 
 .reply-avatar {
@@ -444,6 +500,10 @@ const submitReply = (commentId: number) => {
 .comment-text {
   @apply text-sm leading-relaxed mb-2;
   color: var(--color-text);
+}
+
+.reply-target {
+  color: var(--color-primary);
 }
 
 .comment-actions {

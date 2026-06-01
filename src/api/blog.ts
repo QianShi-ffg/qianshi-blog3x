@@ -1,5 +1,6 @@
 import { mockRequest, apiClient } from './http'
 import { articleDetails, articles } from './mock-data'
+import type { ArticleSummary } from '@/types/content'
 
 export interface ArticleListParams {
   page?: number
@@ -12,6 +13,22 @@ export interface ArticleListParams {
 
 export const listArticles = (params: ArticleListParams = {}) => {
   return apiClient.get('/article/publishArticle', { params, cache: 'no-store' })
+}
+
+export interface AdjacentArticles {
+  prev: ArticleSummary | null
+  next: ArticleSummary | null
+}
+
+export const getLatestArticles = (limit = 3) => {
+  return apiClient.get<ArticleSummary[]>('/article/latest', {
+    params: { limit },
+    cache: 'no-store',
+  })
+}
+
+export const getAdjacentArticles = (id: number | string) => {
+  return apiClient.get<AdjacentArticles>(`/article/adjacent/${id}`, { cache: 'no-store' })
 }
 
 // 文章详情

@@ -3,12 +3,14 @@ import { nextTick, onBeforeUnmount, onMounted, onUnmounted, ref } from 'vue'
 import { ArrowUpRight, Github, ExternalLink } from 'lucide-vue-next'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { listProjects } from '@/api/portfolio'
+import { getProjectsTotal, listProjects } from '@/api/portfolio'
 import type { Project } from '@/types/content'
 import { registerRouteTransitionCleanup } from '@/utils/route-transition-cleanup'
 
 const projects = ref<Project[]>([])
 const isProjectsLoading = ref(true)
+const hasCheckedProjects = ref(false)
+const expectedProjectsTotal = ref(0)
 const portfolioRoot = ref<HTMLElement | null>(null)
 let hoverCtx: gsap.Context | undefined
 let headerParallaxCtx: gsap.Context | undefined
@@ -123,6 +125,12 @@ const setupHeaderParallax = () => {
 onMounted(async () => {
   isProjectsLoading.value = true
   try {
+    expectedProjectsTotal.value = await getProjectsTotal()
+    hasCheckedProjects.value = true
+    if (expectedProjectsTotal.value === 0) {
+      projects.value = []
+      return
+    }
     projects.value = await listProjects()
   } finally {
     isProjectsLoading.value = false
@@ -168,8 +176,11 @@ onUnmounted(() => {
     </div>
 
     <!-- Projects Grid -->
-    <div v-if="isProjectsLoading" class="portfolio-grid" aria-live="polite" aria-busy="true">
-      <div v-for="item in 4" :key="item" class="portfolio-card portfolio-card-skeleton">
+    <div v-if="isProjectsLoading && !hasCheckedProjects" class="portfolio-checking-state" aria-live="polite" aria-busy="true" aria-label="加载内容">
+      <span class="portfolio-checking-dot"></span>
+    </div>
+    <div v-else-if="isProjectsLoading" class="portfolio-grid" aria-live="polite" aria-busy="true">
+      <div v-for="item in Math.min(expectedProjectsTotal || 4, 4)" :key="item" class="portfolio-card portfolio-card-skeleton">
         <div class="portfolio-image-wrapper portfolio-skeleton-image"></div>
         <div class="portfolio-skeleton-chip"></div>
         <div class="portfolio-skeleton-title"></div>
@@ -181,6 +192,10 @@ onUnmounted(() => {
           <span></span>
         </div>
       </div>
+    </div>
+    <div v-else-if="projects.length === 0" class="portfolio-empty-state" aria-live="polite">
+      <p class="portfolio-empty-title">暂无作品</p>
+      <p class="portfolio-empty-desc">作品整理完成后会在这里展示。</p>
     </div>
     <div v-else class="portfolio-grid">
       <div
@@ -287,6 +302,77 @@ onUnmounted(() => {
   .portfolio-grid {
     @apply grid-cols-2 gap-16;
   }
+}
+
+.portfolio-empty-state {
+  position: relative;
+  min-height: clamp(12rem, 28vh, 18rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  isolation: isolate;
+}
+
+.portfolio-empty-state::before {
+  content: '';
+  position: absolute;
+  inset: 10% 18%;
+  z-index: -1;
+  border-radius: 9999px;
+  background:
+    radial-gradient(circle at 38% 45%, rgba(244, 63, 94, 0.1), transparent 36%),
+    radial-gradient(circle at 62% 46%, rgba(147, 197, 253, 0.16), transparent 34%);
+  filter: blur(28px);
+  opacity: 0.75;
+}
+
+.portfolio-empty-state::after {
+  content: '';
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-top: 1rem;
+  border-radius: 9999px;
+  background: var(--color-primary);
+  opacity: 0.38;
+}
+
+.portfolio-checking-state {
+  min-height: clamp(12rem, 28vh, 18rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.portfolio-checking-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 9999px;
+  background: var(--color-primary);
+  opacity: 0.45;
+  animation: portfolio-checking-pulse 0.9s ease-in-out infinite alternate;
+}
+
+.portfolio-empty-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+.portfolio-empty-desc {
+  margin: 0.5rem 0 0;
+  font-size: 0.9375rem;
+  color: var(--color-text);
+}
+
+:global(html.dark .portfolio-empty-title){
+  color: #e2e8f0;
+}
+
+:global(html.dark .portfolio-empty-state::before){
+  opacity: 0.32;
 }
 
 .portfolio-card {
@@ -489,12 +575,24 @@ onUnmounted(() => {
   }
 }
 
+@keyframes portfolio-checking-pulse {
+  0% {
+    opacity: 0.28;
+    transform: scale(0.78);
+  }
+  100% {
+    opacity: 0.72;
+    transform: scale(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .portfolio-skeleton-image,
   .portfolio-skeleton-chip,
   .portfolio-skeleton-title,
   .portfolio-skeleton-text,
-  .portfolio-skeleton-tags span {
+  .portfolio-skeleton-tags span,
+  .portfolio-checking-dot {
     animation: none;
   }
 }

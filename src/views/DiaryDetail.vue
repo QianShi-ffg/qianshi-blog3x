@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useColorMode } from '@vueuse/core'
 import {
   ArrowLeft,
   MapPin,
@@ -13,19 +14,30 @@ import {
   MessageCircle,
 } from 'lucide-vue-next'
 import Comments from '../components/Comments.vue'
+import WeatherIcon from '@/components/WeatherIcon.vue'
 import { getMomentById } from '@/api/diary'
+import { getLikeStatus, likeDiary } from '@/api/comment'
 import type { DiaryMoment } from '@/types/content'
+import { MdPreview } from 'md-editor-v3'
+import 'md-editor-v3/lib/style.css'
 
 const route = useRoute()
 const router = useRouter()
+const colorMode = useColorMode()
 const momentId = Number(route.params.id)
 const moment = ref<DiaryMoment | null>(null)
 const isLoading = ref(true)
+const isDiaryLiked = ref(false)
+const actionMessage = ref('')
+const previewId = `diary-preview-${momentId}`
+const diaryContent = computed(() => moment.value?.longContent || moment.value?.content || '')
 
 onMounted(async () => {
   isLoading.value = true
   try {
     moment.value = await getMomentById(momentId)
+    const likeStatus = await getLikeStatus('diary', momentId)
+    isDiaryLiked.value = likeStatus.liked
   } finally {
     isLoading.value = false
   }
@@ -40,141 +52,152 @@ const getTypeIcon = (type: string) => {
 const goBack = () => {
   router.push('/diary')
 }
+
+const toggleDiaryLike = async () => {
+  if (!moment.value) return
+  try {
+    const res = await likeDiary(moment.value.id)
+    moment.value.likes = res.likes
+    isDiaryLiked.value = res.liked
+    actionMessage.value = ''
+  } catch (error) {
+    actionMessage.value = error instanceof Error ? error.message : '点赞失败'
+  }
+}
+
+const syncCommentCount = (count: number) => {
+  if (moment.value) {
+    moment.value.comments = count
+  }
+}
 </script>
 
 
 <template>
-  <div v-if="isLoading" class="dd-page-container" aria-live="polite" aria-busy="true">
-    <div class="dd-top-bar">
-      <div class="dd-loading-back"></div>
-      <div class="dd-loading-type"></div>
-    </div>
-    <article class="dd-article-card dd-loading-card">
-      <header class="dd-meta-header">
-        <span class="dd-loading-meta"></span>
-        <span class="dd-loading-meta dd-loading-meta-short"></span>
-      </header>
-      <div class="dd-loading-media"></div>
-      <div class="dd-content-section pt-8">
-        <span class="dd-loading-quote"></span>
-        <span class="dd-loading-line"></span>
-        <span class="dd-loading-line"></span>
-        <span class="dd-loading-line dd-loading-line-short"></span>
+  <div>
+
+    <div v-if="isLoading" class="dd-page-container" aria-live="polite" aria-busy="true">
+      <div class="dd-top-bar">
+        <div class="dd-loading-back"></div>
+        <div class="dd-loading-type"></div>
       </div>
-      <footer class="dd-interaction-footer">
-        <span class="dd-loading-action"></span>
-        <span class="dd-loading-action dd-loading-action-small"></span>
-      </footer>
-    </article>
-  </div>
-
-  <div class="dd-page-container" v-else-if="moment">
-    <!-- Top Action Bar -->
-    <div
-      class="dd-top-bar"
-      v-motion
-      :initial="{ opacity: 0, y: -10 }"
-      :enter="{ opacity: 1, y: 0, transition: { duration: 400 } }"
-    >
-      <button @click="goBack" class="dd-back-btn group">
-        <span class="dd-back-icon-wrap">
-          <ArrowLeft class="dd-back-icon" />
-        </span>
-        <span class="text-sm font-medium">返回碎片</span>
-      </button>
-
-      <div class="dd-type-badge dd-type-badge-top">
-        <component :is="getTypeIcon(moment.type)" class="w-4 h-4" />
-        <span class="uppercase text-xs font-bold tracking-wider">{{ moment.type }}</span>
-      </div>
-    </div>
-
-    <!-- Main Content Card -->
-    <article
-      class="dd-article-card"
-      v-motion
-      :initial="{ opacity: 0, y: 30 }"
-      :enter="{ opacity: 1, y: 0, transition: { duration: 800, delay: 100 } }"
-    >
-      <!-- Meta Header -->
-      <header class="dd-meta-header">
-        <div class="dd-meta-item">
-          <Calendar class="w-4 h-4 text-rose-500" />
-          <span class="font-medium dd-meta-text">{{ moment.date }}</span>
+      <article class="dd-article-card dd-loading-card">
+        <header class="dd-meta-header">
+          <span class="dd-loading-meta"></span>
+          <span class="dd-loading-meta dd-loading-meta-short"></span>
+        </header>
+        <div class="dd-loading-media"></div>
+        <div class="dd-content-section pt-8">
+          <span class="dd-loading-quote"></span>
+          <span class="dd-loading-line"></span>
+          <span class="dd-loading-line"></span>
+          <span class="dd-loading-line dd-loading-line-short"></span>
         </div>
-        <div class="flex items-center gap-4 dd-meta-text">
-          <div class="dd-meta-item">
-            <span>{{ moment.weather }}</span>
-          </div>
-          <div class="dd-meta-item dd-meta-location">
-            <MapPin class="w-3.5 h-3.5" />
-            <span class="text-sm">{{ moment.location }}</span>
-          </div>
-        </div>
-      </header>
-
-      <!-- Media Section -->
-      <div v-if="moment.type === 'image' && moment.media" class="dd-media-section interactive-media">
-        <img :src="moment.media" alt="Diary cover" class="dd-media-img" />
-      </div>
-
-      <div v-else-if="moment.type === 'video' && moment.media" class="dd-media-section">
-        <video :src="moment.media" :poster="moment.poster" controls class="dd-media-video"></video>
-      </div>
-
-      <!-- Text Content -->
+        <footer class="dd-interaction-footer">
+          <span class="dd-loading-action"></span>
+          <span class="dd-loading-action dd-loading-action-small"></span>
+        </footer>
+      </article>
+    </div>
+  
+    <div class="dd-page-container" v-else-if="moment">
+      <!-- Top Action Bar -->
       <div
-        class="dd-content-section"
-        :class="{ 'pt-8 md:pt-12': !moment.media, 'pt-8': moment.media }"
+        class="dd-top-bar"
+        v-motion
+        :initial="{ opacity: 0, y: -10 }"
+        :enter="{ opacity: 1, y: 0, transition: { duration: 400 } }"
       >
-        <!-- Quote style for short content -->
-        <blockquote class="dd-quote">
-          {{ moment.content }}
-        </blockquote>
-
-        <!-- Detailed Long Content -->
-        <div class="dd-long-content">
-          <p v-for="(paragraph, index) in moment.longContent.split('\n\n')" :key="index">
-            {{ paragraph }}
-          </p>
-        </div>
-      </div>
-
-      <!-- Interaction Footer -->
-      <footer class="dd-interaction-footer">
-        <div class="flex items-center gap-6">
-          <button class="dd-like-btn">
-            <Heart class="w-5 h-5" />
-            <span>{{ moment.likes }}</span>
-          </button>
-          <button class="dd-action-btn group">
-            <MessageCircle
-              class="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors"
-            />
-            <span class="group-hover:text-blue-600 transition-colors">{{ moment.comments }}</span>
-          </button>
-        </div>
-        <button class="dd-action-btn hover:text-slate-900 transition-colors">
-          <Share2 class="w-5 h-5" />
+        <button @click="goBack" class="dd-back-btn group">
+          <span class="dd-back-icon-wrap">
+            <ArrowLeft class="dd-back-icon" />
+          </span>
+          <span class="text-sm font-medium">返回碎片</span>
         </button>
-      </footer>
-
-      <!-- Comments Module -->
-      <div class="px-6 md:px-10 pb-10">
-        <Comments />
+  
+        <div class="dd-type-badge dd-type-badge-top">
+          <component :is="getTypeIcon(moment.type)" class="w-4 h-4" />
+          <span class="uppercase text-xs font-bold tracking-wider">{{ moment.type }}</span>
+        </div>
       </div>
-    </article>
-  </div>
-
-  <!-- 404 Fallback -->
-  <div v-else class="min-h-screen flex flex-col items-center justify-center py-32">
-    <h2 class="text-2xl font-bold text-slate-800 mb-4">找不到该日记</h2>
-    <button
-      @click="goBack"
-      class="px-6 py-2 bg-rose-500 text-white rounded-full hover:bg-rose-600 transition-colors"
-    >
-      返回列表
-    </button>
+  
+      <!-- Main Content Card -->
+      <article
+        class="dd-article-card"
+        v-motion
+        :initial="{ opacity: 0, y: 30 }"
+        :enter="{ opacity: 1, y: 0, transition: { duration: 800, delay: 100 } }"
+      >
+        <!-- Meta Header -->
+        <header class="dd-meta-header">
+          <div class="dd-meta-item">
+            <Calendar class="w-4 h-4 text-rose-500" />
+            <span class="font-medium dd-meta-text">{{ moment.date }}</span>
+          </div>
+          <div class="flex items-center gap-4 dd-meta-text">
+            <div class="dd-meta-item">
+              <WeatherIcon :weather="moment.weather" class="dd-weather-icon" />
+              <span>{{ moment.weather || '未知' }}</span>
+            </div>
+            <div class="dd-meta-item dd-meta-location">
+              <MapPin class="w-3.5 h-3.5" />
+              <span class="text-sm">{{ moment.location || '未知' }}</span>
+            </div>
+          </div>
+        </header>
+  
+        <!-- Media Section -->
+        <div v-if="moment.type === 'image' && moment.media" class="dd-media-section interactive-media">
+          <img :src="moment.media" alt="Diary cover" class="dd-media-img" />
+        </div>
+  
+        <div v-else-if="moment.type === 'video' && moment.media" class="dd-media-section">
+          <video :src="moment.media" :poster="moment.poster" controls class="dd-media-video"></video>
+        </div>
+  
+        <!-- Text Content -->
+        <div
+          class="dd-content-section"
+          :class="{ 'pt-8 md:pt-12': !moment.media, 'pt-8': moment.media }"
+        >
+          <MdPreview
+            :editorId="previewId"
+            :modelValue="diaryContent"
+            :theme="colorMode === 'dark' ? 'dark' : 'light'"
+          />
+        </div>
+  
+        <!-- Interaction Footer -->
+        <footer class="dd-interaction-footer">
+          <div class="flex items-center gap-6">
+            <button class="dd-like-btn" :class="{ 'is-liked': isDiaryLiked }" @click="toggleDiaryLike">
+              <Heart class="w-5 h-5" :class="{ 'fill-rose-500 text-rose-500': isDiaryLiked }" />
+              <span>{{ moment.likes }}</span>
+            </button>
+            <button class="dd-action-btn group">
+              <MessageCircle
+                class="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors"
+              />
+              <span class="group-hover:text-blue-600 transition-colors">{{ moment.comments }}</span>
+            </button>
+          </div>
+          <button class="dd-action-btn hover:text-slate-900 transition-colors">
+            <Share2 class="w-5 h-5" />
+          </button>
+        </footer>
+        <p v-if="actionMessage" class="dd-action-message">{{ actionMessage }}</p>
+  
+        <!-- Comments Module -->
+        <div class="px-6 md:px-10 pb-10">
+          <Comments target-type="diary" :target-id="moment.id" @comment-change="syncCommentCount" />
+        </div>
+      </article>
+    </div>
+  
+    <!-- 404 Fallback -->
+    <div v-else-if="`${null}`" class="dd-page-container dd-empty-state" aria-live="polite">
+      <p class="dd-empty-title">暂无日记详情</p>
+    </div>
   </div>
 </template>
 
@@ -198,9 +221,9 @@ const goBack = () => {
 .dd-loading-action {
   display: block;
   border-radius: 9999px;
+  animation: dd-skeleton-shimmer 1.5s ease-in-out infinite;
   background: linear-gradient(90deg, rgba(148, 163, 184, 0.14), rgba(244, 63, 94, 0.12), rgba(148, 163, 184, 0.14));
   background-size: 220% 100%;
-  animation: dd-skeleton-shimmer 1.5s ease-in-out infinite;
 }
 
 .dd-loading-back {
@@ -372,6 +395,12 @@ const goBack = () => {
   color: var(--color-text);
 }
 
+.dd-weather-icon {
+  width: 1rem;
+  height: 1rem;
+  color: var(--color-primary);
+}
+
 .dd-meta-text {
   color: var(--color-text);
 }
@@ -422,47 +451,92 @@ const goBack = () => {
     linear-gradient(180deg, rgba(255, 241, 242, 0.48), rgba(255, 255, 255, 0.22) 14rem, transparent);
 }
 
-.dd-quote {
-  @apply text-lg md:text-xl font-semibold leading-relaxed mb-8 pl-5 relative;
-  color: var(--color-heading);
-  max-width: 56rem;
-  border-left: 2px solid rgba(244, 63, 94, 0.52);
-
-  &::before {
-    content: '';
-    position: absolute;
-    left: -0.125rem;
-    top: 0.35rem;
-    width: 0.375rem;
-    height: 0.375rem;
-    border-radius: 9999px;
-    box-shadow: 0 0 0 0.375rem rgba(244, 63, 94, 0.1);
-    background-color: var(--color-primary);
-  }
-
-  &::after {
-    content: '"';
-    position: absolute;
-    left: 0.875rem;
-    top: -0.8rem;
-    font-family: Georgia, serif;
-    font-size: 2.75rem;
-    line-height: 1;
-    opacity: 0.12;
-    color: var(--color-primary);
-  }
-}
-:global(html.dark .dd-quote){
-  color: #e2e8f0;
+:deep(.md-editor),
+:deep(.md-editor-preview-wrapper),
+:deep(.md-editor-preview) {
+  background: transparent;
+  background-color: transparent;
+  box-shadow: none;
+  border: 0;
 }
 
-.dd-long-content {
-  @apply space-y-5 text-base leading-relaxed;
+:deep(.md-editor-preview) {
   color: var(--color-text);
-  max-width: 58rem;
+  line-height: 1.85;
+  font-size: 1rem;
+  max-width: none;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
-:global(html.dark .dd-long-content){
-  color: #94a3b8;
+
+:deep(.md-editor-preview p) {
+  margin: 0.9em 0;
+}
+
+:deep(.md-editor-preview ul),
+:deep(.md-editor-preview ol) {
+  padding-left: 1.35rem;
+}
+
+:deep(.md-editor-preview code) {
+  border-radius: 0.45rem;
+  background: rgba(244, 63, 94, 0.08);
+  color: var(--color-primary);
+}
+
+:deep(.md-editor-preview pre code) {
+  color: inherit;
+  background: transparent;
+}
+
+:deep(.md-editor-preview a) {
+  color: var(--color-primary);
+}
+
+:deep(.md-editor-preview blockquote) {
+  border-left: 2px solid rgba(244, 63, 94, 0.52);
+  color: var(--color-heading);
+  background: rgba(244, 63, 94, 0.055);
+  border-radius: 0 0.85rem 0.85rem 0;
+}
+
+:global(html.dark .dd-content-section .md-editor-preview),
+:global(html.dark .dd-content-section .md-editor-preview p),
+:global(html.dark .dd-content-section .md-editor-preview li),
+:global(html.dark .dd-content-section .md-editor-preview span) {
+  color: #cbd5e1;
+}
+
+:global(html.dark .dd-content-section) {
+  background:
+    radial-gradient(circle at 0 0, rgba(244, 63, 94, 0.12), transparent 16rem),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.28) 14rem, transparent);
+}
+
+:global(html.dark .dd-content-section .md-editor-preview) {
+  background: transparent;
+  background-color: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+:global(html.dark .dd-content-section .md-editor),
+:global(html.dark .dd-content-section .md-editor-preview-wrapper) {
+  background: transparent;
+  background-color: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+:global(html.dark .dd-content-section .md-editor-preview h1),
+:global(html.dark .dd-content-section .md-editor-preview h2),
+:global(html.dark .dd-content-section .md-editor-preview h3),
+:global(html.dark .dd-content-section .md-editor-preview h4),
+:global(html.dark .dd-content-section .md-editor-preview h5),
+:global(html.dark .dd-content-section .md-editor-preview h6) {
+  color: #f1f5f9;
 }
 
 .dd-interaction-footer {
@@ -483,6 +557,11 @@ const goBack = () => {
   }
 }
 
+.dd-action-message {
+  @apply px-6 md:px-10 pt-4 text-sm;
+  color: var(--color-primary);
+}
+
 .dd-like-btn {
   @apply flex items-center gap-2 px-5 py-2.5 rounded-full font-medium transition-all;
   background-color: var(--color-background);
@@ -490,6 +569,12 @@ const goBack = () => {
   border: 1px solid var(--color-border);
 
   &:hover {
+    background-color: var(--color-secondary);
+    color: var(--color-primary);
+    border-color: var(--color-secondary);
+  }
+
+  &.is-liked {
     background-color: var(--color-secondary);
     color: var(--color-primary);
     border-color: var(--color-secondary);
@@ -505,6 +590,71 @@ const goBack = () => {
   }
 }
 
+.dd-empty-state {
+  position: relative;
+  min-height: clamp(18rem, 80vh, 30rem);
+  // min-height: clamp(12rem, 28vh, 18rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  isolation: isolate;
+  padding-top: 35vh;
+}
+
+.dd-empty-state::before {
+  content: '';
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  bottom: 10%;
+  top: 45%;
+  z-index: -1;
+  border-radius: 9999px;
+  background:
+    radial-gradient(circle at 38% 45%, rgba(244, 63, 94, 0.1), transparent 36%),
+    radial-gradient(circle at 62% 46%, rgba(147, 197, 253, 0.16), transparent 34%);
+  filter: blur(28px);
+  opacity: 0.75;
+}
+
+.dd-empty-state::after {
+  content: '';
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-top: 1rem;
+  border-radius: 9999px;
+  background: var(--color-primary);
+  opacity: 0.38;
+}
+
+.dd-empty-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+.dd-empty-desc {
+  margin: 0.625rem 0 0;
+  font-size: 0.9375rem;
+  color: var(--color-text);
+}
+
+:global(html.dark .dd-empty-title) {
+  color: #e2e8f0;
+}
+
+:global(html.dark .dd-empty-desc) {
+  color: #94a3b8;
+}
+
+
+:global(html.dark .dd-empty-state::before){
+  opacity: 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dd-loading-back,
   .dd-loading-type,
@@ -513,6 +663,7 @@ const goBack = () => {
   .dd-loading-quote,
   .dd-loading-line,
   .dd-loading-action {
+    background-color: transparent;
     animation: none;
   }
 }
