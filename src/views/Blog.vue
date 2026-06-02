@@ -38,6 +38,22 @@ let filterPreventClickUntil = 0
 let scrollCtx: gsap.Context | undefined
 let unregisterTransitionCleanup: (() => void) | undefined
 const prefersReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+const isMobileViewport = () => window.matchMedia?.('(max-width: 640px)').matches ?? false
+const shouldAnimateBlogFilters = () => !prefersReducedMotion() && !isMobileViewport()
+
+const blogFiltersMotionInitial = () => {
+  if (!shouldAnimateBlogFilters()) return { opacity: 1, y: 0 }
+
+  return { opacity: 0, y: 24 }
+}
+
+const blogFiltersMotionEnter = () => {
+  if (!shouldAnimateBlogFilters()) {
+    return { opacity: 1, y: 0, transition: { duration: 0 } }
+  }
+
+  return { opacity: 1, y: 0, transition: { duration: 820 } }
+}
 
 onMounted(async () => {
   await classify();
@@ -165,33 +181,29 @@ const loadArticles = async (page = blogStore.currentPage) => {
     isArticlesLoading.value = false
     hasLoadedArticles.value = true
     await nextTick()
-    await playArticleEnterAnimation()
+    await playArticleListEnterAnimation()
     ScrollTrigger.refresh()
   }
 }
 
-const playArticleEnterAnimation = () => {
-  if (!blogRoot.value || prefersReducedMotion()) return Promise.resolve()
+const playArticleListEnterAnimation = () => {
+  if (!blogRoot.value || prefersReducedMotion() || isMobileViewport()) return Promise.resolve()
 
-  const cards = blogRoot.value.querySelectorAll<HTMLElement>(
-    '.blog-article-card:not(.blog-article-skeleton)',
-  )
-  if (!cards.length) return Promise.resolve()
+  const grid = blogRoot.value.querySelector<HTMLElement>('.blog-grid-container')
+  if (!grid) return Promise.resolve()
 
   return new Promise<void>((resolve) => {
     gsap.fromTo(
-      cards,
-      { autoAlpha: 0, y: 22, scale: 0.95 },
+      grid,
+      { autoAlpha: 0, y: 24 },
       {
         autoAlpha: 1,
         y: 0,
-        scale: 1,
-        duration: 0.46,
+        duration: 0.82,
         ease: 'power2.out',
-        stagger: 0.06,
         overwrite: true,
         onComplete: () => {
-          gsap.set(cards, { clearProps: 'transform' })
+          gsap.set(grid, { clearProps: 'transform' })
           resolve()
         },
       },
@@ -226,16 +238,21 @@ const setupBlogParallax = () => {
     }
 
     if (filters) {
-      gsap.to(filters, {
-        y: -20,
-        ease: 'none',
-        scrollTrigger: {
-          trigger: filters,
-          start: 'top 75%',
-          end: 'bottom 8%',
-          scrub: 0.7,
+      gsap.fromTo(
+        filters,
+        { y: 0 },
+        {
+          y: -20,
+          ease: 'none',
+          immediateRender: false,
+          scrollTrigger: {
+            trigger: filters,
+            start: 'top 20%',
+            end: 'bottom 8%',
+            scrub: 0.7,
+          },
         },
-      })
+      )
     }
 
     if (grid) {
@@ -407,6 +424,8 @@ const selectFilter = async (id: string) => {
   if (activeFilter.value === id) return
 
   activeFilter.value = id
+  articles.value = []
+  articleTotal.value = 0
   await nextTick()
   updateFilterGlow()
   await loadArticles(1)
@@ -446,8 +465,8 @@ const openArticle = (article: ArticleSummary) => {
     <!-- Filters -->
     <div
       v-motion
-      :initial="{ opacity: 0, y: 20 }"
-      :enter="{ opacity: 1, y: 0, transition: { duration: 800, delay: 200 } }"
+      :initial="blogFiltersMotionInitial()"
+      :enter="blogFiltersMotionEnter()"
       class="blog-filters-wrap"
     >
       <div
@@ -507,13 +526,22 @@ const openArticle = (article: ArticleSummary) => {
           </div>
         </article>
       </div>
+      <div v-else-if="isArticlesLoading" class="blog-empty-state blog-updating-state" aria-live="polite" aria-busy="true">
+        <p class="blog-empty-title">正在更新</p>
+        <p class="blog-empty-desc">新的内容马上就好。</p>
+        <span class="blog-updating-dots" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </span>
+      </div>
       <div v-else-if="hasLoadedArticles && filteredArticles.length === 0" class="blog-empty-state" aria-live="polite">
         <p class="blog-empty-title">暂无文章</p>
         <p class="blog-empty-desc">新的内容整理好后会出现在这里。</p>
       </div>
       <TransitionGroup
         v-else
-        name="list"
+        :name="undefined"
         tag="div"
         class="blog-grid-container"
         :class="{ 'blog-grid-container-updating': isArticlesLoading }"
@@ -563,10 +591,6 @@ const openArticle = (article: ArticleSummary) => {
           </div>
         </article>
       </TransitionGroup>
-      <div v-if="isArticlesLoading && hasLoadedArticles" class="blog-grid-loading" aria-live="polite">
-        <span class="blog-grid-loading-dot"></span>
-        <span>正在更新</span>
-      </div>
     </div>
 
     <nav
@@ -710,7 +734,7 @@ const openArticle = (article: ArticleSummary) => {
 }
 
 .blog-header-wrapper {
-  margin-bottom: 4rem; /* mb-16 */
+  margin-bottom: 3.5rem; /* mb-16 */
 }
 
 .blog-title {
@@ -954,7 +978,7 @@ const openArticle = (article: ArticleSummary) => {
 .blog-grid-wrapper {
   position: relative;
   width: 100%;
-  margin-top: 5.625rem;
+  margin-top: 3rem;
 }
 
 .blog-grid-loading {
@@ -1033,6 +1057,51 @@ const openArticle = (article: ArticleSummary) => {
   border-radius: 9999px;
   background: var(--color-primary);
   opacity: 0.38;
+}
+
+.blog-updating-state::after {
+  display: none;
+}
+
+.blog-updating-state {
+  opacity: 0.62;
+}
+
+.blog-updating-state .blog-empty-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.blog-updating-state .blog-empty-desc {
+  margin-top: 0.35rem;
+  font-size: 0.8125rem;
+  opacity: 0.72;
+}
+
+.blog-updating-dots {
+  margin-top: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.32rem;
+}
+
+.blog-updating-dots span {
+  width: 0.32rem;
+  height: 0.32rem;
+  border-radius: 9999px;
+  background: var(--color-primary);
+  opacity: 0.42;
+  animation: blog-updating-bounce 1.05s ease-in-out infinite;
+}
+
+.blog-updating-dots span:nth-child(2) {
+  animation-delay: 0.12s;
+}
+
+.blog-updating-dots span:nth-child(3) {
+  animation-delay: 0.24s;
 }
 
 .blog-checking-state {
@@ -1141,7 +1210,7 @@ const openArticle = (article: ArticleSummary) => {
 }
 @media (min-width: 768px) {
   .blog-article-inner {
-    padding: 2rem; /* md:p-8 */
+    padding: 2rem 2rem 1.5rem; /* md:p-8 */
   }
 }
 
@@ -1222,19 +1291,19 @@ const openArticle = (article: ArticleSummary) => {
   font-size: 0.875rem; /* text-sm */
   line-height: 1.625; /* leading-relaxed */
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   margin: 0;
-  min-height: calc(0.875rem * 1.625 * 3);
+  min-height: calc(0.875rem * 1.625 * 2);
 }
 :global(html.dark .blog-article-desc){
   color: #64748b; /* slate-500 for less contrast in dark mode excerpts */
 }
 
 .blog-article-action {
-  margin-top: 1.5rem; /* mt-6 */
-  padding-top: 1.5rem; /* pt-6 */
+  margin-top: 1rem; /* mt-6 */
+  padding-top: 1rem; /* pt-6 */
   border-top: 1px solid var(--color-border); /* border-slate-100 */
   display: flex;
   align-items: center;
@@ -1500,6 +1569,73 @@ const openArticle = (article: ArticleSummary) => {
 }
 
 @media (max-width: 640px) {
+  .blog-grid-wrapper {
+    margin-top: 2rem;
+  }
+
+  .blog-grid-container {
+    gap: 0.75rem;
+  }
+
+  .blog-article-card {
+    min-height: 0;
+    border-radius: 1rem;
+  }
+
+  .blog-article-inner {
+    padding: 1rem;
+  }
+
+  .blog-article-meta {
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .blog-article-info {
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .blog-article-title,
+  .blog-article-desc {
+    min-height: 0;
+  }
+
+  .blog-article-title {
+    margin-bottom: 0.45rem;
+    font-size: 1rem;
+    line-height: 1.45;
+  }
+
+  .blog-article-desc {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .blog-article-action {
+    display: none;
+  }
+
+  .blog-article-skeleton .blog-skeleton-divider,
+  .blog-article-skeleton .blog-skeleton-link {
+    display: none;
+  }
+
+  .blog-filter-more {
+    top: 0;
+    right: 0;
+    width: 44px;
+    height: 44px;
+  }
+
+  .blog-filter-btn {
+    min-height: 2.75rem;
+    padding-top: 0.625rem;
+    padding-bottom: 0.625rem;
+  }
+
   .blog-pagination {
     gap: 0.5rem;
     margin-top: 2.25rem;
@@ -1512,8 +1648,8 @@ const openArticle = (article: ArticleSummary) => {
 
   .blog-pagination-arrow,
   .blog-pagination-page {
-    width: 2.25rem;
-    height: 2.25rem;
+    width: 2.75rem;
+    height: 2.75rem;
   }
 }
 
@@ -1527,6 +1663,9 @@ const openArticle = (article: ArticleSummary) => {
 .list-enter-from,
 .list-leave-to {
   opacity: 0;
+}
+
+.list-leave-to {
   transform: scale(0.95) translateY(20px);
 }
 
@@ -1565,6 +1704,20 @@ const openArticle = (article: ArticleSummary) => {
   }
 }
 
+@keyframes blog-updating-bounce {
+  0%,
+  80%,
+  100% {
+    opacity: 0.36;
+    transform: translateY(0) scale(0.9);
+  }
+
+  40% {
+    opacity: 0.78;
+    transform: translateY(-0.18rem) scale(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .blog-skeleton-pill,
   .blog-skeleton-date,
@@ -1572,7 +1725,8 @@ const openArticle = (article: ArticleSummary) => {
   .blog-skeleton-text,
   .blog-skeleton-link,
   .blog-checking-dot,
-  .blog-grid-loading-dot {
+  .blog-grid-loading-dot,
+  .blog-updating-dots span {
     animation: none;
   }
 }

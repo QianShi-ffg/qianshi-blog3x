@@ -89,4 +89,11 @@ const toggleTheme = () => {
   transform: scale(1.08);
   filter: drop-shadow(0 4px 10px rgba(244, 63, 94, 0.2));
 }
+
+@media (max-width: 767px) {
+  .theme-toggle-btn {
+    width: 44px;
+    height: 44px;
+  }
+}
 </style>

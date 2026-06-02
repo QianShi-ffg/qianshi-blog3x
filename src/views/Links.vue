@@ -858,26 +858,137 @@ onUnmounted(() => {
 }
 
 @media (max-width: 640px) {
+  .lk-header-wrapper {
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .lk-btn-apply {
+    min-height: 48px;
+    padding-top: 0.625rem;
+    padding-bottom: 0.625rem;
+    line-height: 1.4;
+  }
+
+  .lk-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 0;
+  }
+
+  .lk-card {
+    min-height: 0;
+    padding: 0.875rem 1rem;
+    border-radius: 1.125rem;
+    justify-content: flex-start;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.035);
+  }
+
+  .lk-card-preview,
+  .lk-card-preview-img,
+  .lk-card-preview-mask {
+    display: none;
+  }
+
+  .lk-card-inner,
+  .lk-card-content {
+    min-height: 0;
+    height: auto;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .lk-icon-wrap {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.875rem;
+  }
+
+  .lk-info-wrap {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .lk-link-name {
+    margin-bottom: 0.125rem;
+    font-size: 0.95rem;
+    line-height: 1.35;
+  }
+
+  .lk-link-name .lk-external-icon {
+    opacity: 0.46;
+    transform: none;
+  }
+
+  .lk-link-desc {
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+  }
+
+  .lk-card-skeleton {
+    min-height: 4rem;
+  }
+
+  .lk-skeleton-icon {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.875rem;
+  }
+
+  .lk-skeleton-info {
+    gap: 0.5rem;
+    padding-top: 0;
+  }
+
+  .lk-apply-section {
+    display: none;
+  }
+
   .lk-dialog-form {
     grid-template-columns: 1fr;
+    gap: 0.875rem;
   }
 
   .lk-dialog-backdrop {
     align-items: flex-start;
+    padding: 0.75rem;
   }
 
   .lk-apply-dialog {
     width: 100%;
     max-height: calc(100dvh - 2rem);
+    border-radius: 1.25rem;
+    padding: 1rem;
+  }
+
+  .lk-dialog-close {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 auto;
+  }
+
+  .lk-field input,
+  .lk-field textarea {
+    min-height: 44px;
+  }
+
+  .lk-field textarea {
+    min-height: 7rem;
   }
 
   .lk-dialog-actions {
     justify-content: stretch;
+    margin-top: 1rem;
   }
 
   .lk-dialog-secondary,
   .lk-dialog-primary {
     flex: 1;
+    min-height: 44px;
   }
 }
 

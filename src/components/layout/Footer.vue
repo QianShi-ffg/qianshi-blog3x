@@ -245,6 +245,25 @@ const scrollToTop = () => {
   }
 }
 
+@media (max-width: 767px) {
+  .footer-logo-link {
+    min-height: 44px;
+  }
+
+  .footer-list {
+    gap: 0.5rem;
+  }
+
+  .footer-link {
+    min-height: 44px;
+    padding: 0.625rem 0.5rem;
+  }
+
+  .footer-back-to-top {
+    min-height: 44px;
+  }
+}
+
 .footer-copyright {
   color: var(--color-text); /* text-slate-400 */
   font-size: 0.875rem; /* text-sm */

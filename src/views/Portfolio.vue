@@ -504,6 +504,71 @@ onUnmounted(() => {
   transition-delay: 0.05s;
 }
 
+@media (max-width: 767px) {
+  .portfolio-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .portfolio-card {
+    display: grid;
+    grid-template-columns: 5.75rem minmax(0, 1fr);
+    gap: 0.875rem;
+    padding-bottom: 0;
+    border-radius: 1rem;
+  }
+
+  .portfolio-image-wrapper {
+    width: 5.75rem;
+    height: 5.75rem;
+    margin-bottom: 0;
+    border-radius: 1rem;
+    aspect-ratio: auto;
+  }
+
+  .portfolio-overlay {
+    display: none;
+  }
+
+  .portfolio-action-btn {
+    opacity: 1;
+    transform: none;
+  }
+
+  .portfolio-content-link {
+    min-width: 0;
+    padding: 0.35rem 0.75rem 0.35rem 0;
+  }
+
+  .portfolio-category-wrapper,
+  .portfolio-tags-wrapper,
+  .portfolio-arrow-icon {
+    display: none;
+  }
+
+  .portfolio-project-title {
+    margin-bottom: 0.35rem;
+    font-size: 1rem;
+    line-height: 1.4;
+  }
+
+  .portfolio-project-desc {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    font-size: 0.8125rem;
+  }
+
+  .portfolio-card-skeleton {
+    grid-template-columns: 5.75rem minmax(0, 1fr);
+  }
+
+  .portfolio-card-skeleton .portfolio-skeleton-chip,
+  .portfolio-card-skeleton .portfolio-skeleton-tags {
+    display: none;
+  }
+}
+
 .portfolio-icon {
   @apply w-5 h-5;
 }

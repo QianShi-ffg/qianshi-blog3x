@@ -9,8 +9,48 @@ const resumeRoot = ref<HTMLElement | null>(null)
 const resume = ref<ResumeProfile>(defaultResume)
 let ctx: gsap.Context | undefined
 
+const getFileUrl = (path: string) => {
+  if (!path) return ''
+  if (/^https?:\/\//i.test(path)) return path
+  const baseURL = import.meta.env.VITE_API_BASE_URL || ''
+  return `${baseURL.replace(/\/$/, '')}${path}`
+}
+
 const avatarUrl = computed(() => resume.value.avatar || defaultResume.avatar)
+const resumeFileUrl = computed(() => getFileUrl(resume.value.resumeFile))
 const prefersReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+
+const getResumeFilename = () => {
+  const path = resumeFileUrl.value.split('?')[0]
+  const filename = decodeURIComponent(path.split('/').pop() || '')
+  return filename || 'resume.pdf'
+}
+
+const downloadResume = async () => {
+  if (!resumeFileUrl.value) return
+
+  const link = document.createElement('a')
+  link.download = getResumeFilename()
+
+  try {
+    const response = await fetch(resumeFileUrl.value)
+    if (!response.ok) throw new Error('resume download failed')
+    const blob = await response.blob()
+    const url = URL.createObjectURL(blob)
+    link.href = url
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.setTimeout(() => URL.revokeObjectURL(url), 0)
+  } catch {
+    link.href = resumeFileUrl.value
+    link.target = '_blank'
+    link.rel = 'noopener'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+  }
+}
 
 const skillTagClass = (skill: ResumeSkill) => {
   if (skill.level.includes('精通')) return 'cl-tag-rose'
@@ -75,7 +115,11 @@ onUnmounted(() => {
         <h1 class="resume-title">{{ resume.title }}</h1>
         <p class="resume-subtitle">{{ resume.subtitle }}</p>
       </div>
-      <button class="resume-download-btn interactive-lift">
+      <button
+        class="resume-download-btn interactive-lift"
+        :disabled="!resumeFileUrl"
+        @click="downloadResume"
+      >
         下载简历 PDF
         <Download class="resume-download-icon" />
       </button>
@@ -238,6 +282,12 @@ onUnmounted(() => {
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 12px 26px rgba(244, 63, 94, 0.18);
+  text-decoration: none;
+}
+
+.resume-download-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.56;
 }
 
 .resume-download-icon {
@@ -339,6 +389,87 @@ onUnmounted(() => {
 
 .resume-contact-link:hover {
   color: var(--color-primary);
+}
+
+@media (max-width: 767px) {
+  .resume-profile-card,
+  .resume-skills-card,
+  .resume-experience-card,
+  .resume-education-card {
+    padding: 1rem;
+    border-radius: 1rem;
+    box-shadow: none;
+  }
+
+  .resume-profile-card {
+    text-align: left;
+  }
+
+  .resume-avatar-wrapper {
+    display: none;
+  }
+
+  .resume-role {
+    margin-bottom: 0.75rem;
+  }
+
+  .resume-contact-list {
+    gap: 0.25rem;
+  }
+
+  .resume-contact-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    overflow-wrap: anywhere;
+  }
+
+  .resume-grid {
+    gap: 1rem;
+  }
+
+  .resume-left-column,
+  .resume-right-column {
+    gap: 1rem;
+  }
+
+  .resume-section-header,
+  .resume-section-header-large {
+    margin-bottom: 1rem;
+  }
+
+  .resume-section-icon-large {
+    display: none;
+  }
+
+  .resume-skill-item {
+    padding: 0.7rem 0.875rem;
+  }
+
+  .resume-timeline,
+  .resume-timeline-spaced {
+    gap: 1.5rem;
+    margin-left: 0;
+    border-left: 0;
+  }
+
+  .resume-timeline-item {
+    padding-left: 0;
+  }
+
+  .resume-timeline-dot,
+  .resume-timeline-dot-active {
+    display: none;
+  }
+
+  .resume-timeline-company {
+    margin-bottom: 0.5rem;
+  }
+
+  .resume-timeline-desc {
+    gap: 0.35rem;
+    line-height: 1.6;
+  }
 }
 
 .resume-section-header,

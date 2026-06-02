@@ -13,6 +13,26 @@ const latestLoaded = ref(false)
 let ctx: gsap.Context | undefined
 const cleanups: Array<() => void> = []
 const prefersReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+const isMobileViewport = () => window.matchMedia?.('(max-width: 767px)').matches ?? false
+const shouldAnimateRecentPosts = () => !prefersReducedMotion() && !isMobileViewport()
+
+const recentPostMotionInitial = () => {
+  if (!shouldAnimateRecentPosts()) return { opacity: 1, y: 0 }
+
+  return { opacity: 0, y: 24 }
+}
+
+const recentPostMotionEnter = () => {
+  if (!shouldAnimateRecentPosts()) {
+    return { opacity: 1, y: 0, transition: { duration: 0 } }
+  }
+
+  return {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 820 },
+  }
+}
 
 onMounted(() => {
   void loadLatestArticles()
@@ -206,48 +226,21 @@ const loadLatestArticles = async () => {
   } finally {
     latestLoaded.value = true
     await nextTick()
-    await playRecentPostsEnter()
     setupRecentPostsParallax()
   }
 }
 
-const playRecentPostsEnter = () => {
-  if (!homeRoot.value || prefersReducedMotion()) return Promise.resolve()
-
-  const items = homeRoot.value.querySelectorAll<HTMLElement>(
-    '.recent-header, .post-card, .recent-empty, .mobile-view-all',
-  )
-  if (!items.length) return Promise.resolve()
-
-  return new Promise<void>((resolve) => {
-    gsap.fromTo(
-      items,
-      { autoAlpha: 0, y: 22 },
-      {
-        autoAlpha: 1,
-        y: 0,
-        duration: 0.65,
-        stagger: 0.08,
-        ease: 'power2.out',
-        overwrite: true,
-        onComplete: resolve,
-      },
-    )
-  })
-}
-
 const setupRecentPostsParallax = () => {
-  if (!homeRoot.value || prefersReducedMotion()) return
+  if (!homeRoot.value || prefersReducedMotion() || isMobileViewport()) return
 
-  gsap.fromTo(
+  gsap.to(
     '.recent-posts-section',
-    { y: 24 },
     {
       y: -40,
       ease: 'none',
       scrollTrigger: {
         trigger: '.recent-posts-section',
-        start: 'top bottom',
+        start: 'top 65%',
         end: 'top 35%',
         scrub: 1,
       },
@@ -347,7 +340,13 @@ onUnmounted(() => {
         </RouterLink>
       </div>
 
-      <div v-if="latestArticles.length" class="recent-grid">
+      <div
+        v-if="latestArticles.length"
+        v-motion
+        :initial="recentPostMotionInitial()"
+        :visible-once="recentPostMotionEnter()"
+        class="recent-grid"
+      >
         <RouterLink
           v-for="article in latestArticles"
           :key="article.id"
@@ -879,5 +878,89 @@ onUnmounted(() => {
 
 .w-full-btn {
   width: 100%;
+}
+
+@media (max-width: 767px) {
+  .home-container,
+  .hero-section,
+  .hero-grid,
+  .hero-visual {
+    overflow-x: clip;
+  }
+
+  .home-container {
+    padding-top: 5.5rem;
+    padding-bottom: 2rem;
+  }
+
+  .hero-section {
+    padding-top: 3rem;
+    padding-bottom: 2rem;
+  }
+
+  .hero-grid {
+    gap: 2rem;
+  }
+
+  .hero-text-content {
+    gap: 1.35rem;
+  }
+
+  .hero-badge,
+  .hero-visual {
+    display: none;
+  }
+
+  .hero-title {
+    font-size: 2.5rem;
+    line-height: 1.16;
+  }
+
+  .hero-title-line-long {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .hero-actions .btn-primary,
+  .hero-actions .btn-secondary,
+  .mobile-view-all .btn-secondary {
+    min-height: 2.75rem;
+  }
+
+  .recent-posts-section {
+    padding-top: 2rem;
+  }
+
+  .recent-header {
+    margin-bottom: 1.25rem;
+  }
+
+  .recent-desc {
+    display: none;
+  }
+
+  .recent-grid {
+    gap: 0.75rem;
+  }
+
+  .post-card {
+    padding: 1rem;
+    border-radius: 1rem;
+  }
+
+  .post-meta {
+    margin-bottom: 0.55rem;
+  }
+
+  .post-title {
+    margin-bottom: 0.35rem;
+    font-size: 1rem;
+    line-height: 1.45rem;
+  }
+
+  .post-desc {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
 }
 </style>

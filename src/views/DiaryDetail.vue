@@ -581,6 +581,32 @@ const syncCommentCount = (count: number) => {
   }
 }
 
+@media (max-width: 767px) {
+  .dd-back-btn {
+    min-height: 44px;
+  }
+
+  .dd-interaction-footer {
+    padding: 1rem;
+  }
+
+  .dd-interaction-footer > div {
+    gap: 0.75rem;
+  }
+
+  .dd-like-btn,
+  .dd-action-btn {
+    min-height: 44px;
+  }
+
+  .dd-action-btn {
+    min-width: 44px;
+    justify-content: center;
+    padding-inline: 0.75rem;
+    border-radius: 9999px;
+  }
+}
+
 @keyframes dd-skeleton-shimmer {
   0% {
     background-position: 120% 0;

@@ -213,6 +213,20 @@ const goBack = () => {
   @apply flex items-center gap-2 text-slate-500 font-medium hover:text-rose-500 transition-colors bg-white/70 px-4 py-2 rounded-full border border-slate-200/60 shadow-sm;
 }
 
+@media (max-width: 767px) {
+  .pd-back-btn {
+    min-height: 44px;
+  }
+
+  .pd-container {
+    padding-inline: 1rem;
+  }
+
+  .pd-back-wrapper {
+    margin-bottom: 2rem;
+  }
+}
+
 .pd-back-btn svg {
   transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -617,6 +631,72 @@ const goBack = () => {
   gap: 0.5rem;
   margin-top: 0.25rem;
   align-items: center;
+}
+
+@media (max-width: 767px) {
+  .pd-hero {
+    margin-bottom: 1.5rem;
+
+    .pd-hero-layout {
+      gap: 1rem;
+    }
+
+    .pd-hero-meta {
+      margin-bottom: 1rem;
+    }
+
+    .pd-title {
+      margin-bottom: 0.75rem;
+      font-size: 2rem;
+      line-height: 1.2;
+    }
+
+    .pd-desc {
+      margin-bottom: 1rem;
+      font-size: 1rem;
+      line-height: 1.65;
+    }
+
+    .pd-project-brief {
+      display: none;
+    }
+
+    .pd-actions {
+      gap: 0.75rem;
+
+      .pd-btn {
+        min-height: 44px;
+        padding-inline: 1rem;
+      }
+    }
+  }
+
+  .pd-main-media {
+    margin-bottom: 1.25rem;
+    border-radius: 1rem;
+  }
+
+  .pd-content-section {
+    padding: 1rem;
+    border-radius: 1rem;
+
+    .pd-section-title {
+      margin-bottom: 1rem;
+      font-size: 1.125rem;
+    }
+
+    .pd-text-paragraph {
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+  }
+
+  .pd-content-empty-state,
+  .pd-detail-empty-state {
+    min-height: 10rem;
+    padding: 1rem;
+    border-radius: 1rem;
+  }
 }
 
 :global(html.dark .pd-container .pd-back-btn) {

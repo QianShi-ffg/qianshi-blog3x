@@ -114,6 +114,7 @@ export interface ResumeProfile {
   name: string
   role: string
   avatar: string
+  resumeFile: string
   location: string
   email: string
   summary: string

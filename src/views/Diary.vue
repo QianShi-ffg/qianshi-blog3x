@@ -156,7 +156,10 @@ const getMomentText = (content: string) => {
         class="diary-masonry-item"
       >
         <router-link :to="`/diary/${moment.id}`" class="block cursor-pointer">
-          <div class="diary-card interactive-card group">
+          <div
+            class="diary-card interactive-card group"
+            :class="{ 'diary-card-text': !moment.media || moment.type === 'text' }"
+          >
 
               <!-- Type Badge -->
             <div class="diary-type-badge">
@@ -544,6 +547,97 @@ const getMomentText = (content: string) => {
   .diary-skeleton-meta span,
   .diary-checking-dot {
     animation: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .diary-page-container {
+    padding-top: 6rem;
+    padding-inline: 1rem;
+  }
+
+  .diary-header-wrapper {
+    margin-bottom: 2rem;
+    gap: 1rem;
+  }
+
+  .diary-subtitle,
+  .diary-badge-wrap {
+    display: none;
+  }
+
+  .diary-masonry-grid {
+    columns: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .diary-masonry-item {
+    margin-bottom: 0;
+  }
+
+  .diary-card {
+    display: grid;
+    grid-template-columns: 5rem minmax(0, 1fr);
+    min-height: 5rem;
+    border-radius: 1rem;
+  }
+
+  .diary-card-text {
+    display: block;
+  }
+
+  .diary-type-badge,
+  .diary-media-overlay,
+  .diary-meta-weather,
+  .diary-meta-location {
+    display: none;
+  }
+
+  .diary-media-wrap,
+  .diary-video-wrap {
+    width: 5rem;
+    min-height: 100%;
+    aspect-ratio: auto;
+  }
+
+  .diary-media-img,
+  .diary-video-element {
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .diary-video-element {
+    pointer-events: none;
+  }
+
+  .diary-content-wrap {
+    padding: 0.875rem 1rem;
+  }
+
+  .diary-text-content {
+    margin-bottom: 0.75rem;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .diary-text-lg,
+  .diary-text-md {
+    font-size: 0.95rem;
+    line-height: 1.55;
+  }
+
+  .diary-meta-footer {
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .diary-skeleton-badge,
+  .diary-skeleton-media-tall,
+  .diary-skeleton-line-short,
+  .diary-skeleton-meta span:nth-child(2) {
+    display: none;
   }
 }
 </style>

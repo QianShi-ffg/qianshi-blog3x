@@ -7,6 +7,7 @@ import { Calendar, Eye, ChevronLeft, ChevronRight, ArrowLeft } from 'lucide-vue-
 import { getAdjacentArticles, getArticleDetail, getClassifyIdList } from '@/api/blog'
 import type { ArticleDetail, ArticleSummary } from '@/types/content'
 import thumb from '@/assets/img/thumb.png'
+import { date } from '@/utils/date'
 import { MdPreview } from 'md-editor-v3'
 import 'md-editor-v3/lib/style.css'
 
@@ -227,7 +228,7 @@ const scrollToHeading = (headingId: string) => {
           <div class="post-meta-info">
             <span class="post-meta-item">
               <Calendar class="post-meta-icon" />
-              {{ article.createTime }}
+              {{ date(article.createTime) }}
             </span>
             <span class="post-meta-item">
               <Eye class="post-meta-icon" />
@@ -811,7 +812,8 @@ const scrollToHeading = (headingId: string) => {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.375rem 1rem 0.375rem 0.5rem;
+    min-height: 44px;
+    padding: 0.5rem 1rem 0.5rem 0.5rem;
     background-color: var(--color-background);
     border-color: var(--color-border);
     color: var(--color-text);
@@ -868,16 +870,14 @@ const scrollToHeading = (headingId: string) => {
   }
 
   .post-toc {
-    position: relative;
-    top: auto;
-    max-height: none;
-    padding: 0 0 1rem;
-    border-left: 0;
-    border-bottom: 1px solid var(--color-border);
+    display: none;
   }
 
   .post-toc-link {
-    padding-block: 0.28rem;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    padding-block: 0.45rem;
   }
 
   .post-nav-bottom {
@@ -885,9 +885,25 @@ const scrollToHeading = (headingId: string) => {
   }
 
   .post-nav-btn {
+    min-height: 4.25rem;
+    padding: 1rem;
     width: 100%;
   }
 
+  .post-nav-title {
+    display: -webkit-box;
+    white-space: normal;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    text-overflow: clip;
+  }
+
+  .prose pre,
+  :global(#preview-only pre) {
+    position: relative;
+    margin-inline: -0.25rem;
+    border-radius: 1rem;
+  }
 }
 
 @keyframes post-cover-drift {

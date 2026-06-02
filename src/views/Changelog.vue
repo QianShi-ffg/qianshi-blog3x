@@ -369,6 +369,95 @@ onUnmounted(() => {
   color: var(--color-text);
 }
 
+@media (max-width: 767px) {
+  .cl-page-container {
+    overflow-x: clip;
+  }
+
+  .cl-header-wrapper {
+    margin-bottom: 2rem;
+  }
+
+  .cl-subtitle,
+  .cl-timeline-line,
+  .cl-log-icon-node {
+    display: none;
+  }
+
+  .cl-logs-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .cl-log-item {
+    gap: 0;
+  }
+
+  .cl-timeline-line {
+    left: 1.25rem;
+  }
+
+  .cl-log-icon-outer {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .cl-log-content-col {
+    min-width: 0;
+    padding-left: 0;
+    padding-top: 0;
+  }
+
+  .cl-glass-card {
+    padding: 1rem;
+    border-radius: 1rem;
+  }
+
+  .cl-log-card-header,
+  .cl-log-card-header > div,
+  .cl-log-version-wrap {
+    min-width: 0;
+  }
+
+  .cl-log-card-header {
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .cl-log-version-wrap {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .cl-log-version,
+  .cl-log-card-title,
+  .cl-change-text {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .cl-log-version {
+    font-size: 1.25rem;
+    line-height: 1.35;
+  }
+
+  .cl-change-item {
+    gap: 0.5rem;
+  }
+
+  .cl-change-badge {
+    display: none;
+  }
+
+  .cl-changes-list {
+    display: grid;
+    gap: 0.5rem;
+  }
+}
+
 /* Colors */
 .cl-icon-rose { @apply text-rose-500; }
 .cl-bg-rose { background-color: var(--color-secondary); }

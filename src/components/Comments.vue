@@ -522,4 +522,77 @@ const submitReply = async (commentId: number) => {
     }
   }
 }
+
+@media (max-width: 767px) {
+  .comments-section {
+    margin-top: 2rem;
+    padding-top: 2rem;
+  }
+
+  .comment-input-wrapper {
+    gap: 0.75rem;
+  }
+
+  .input-container {
+    padding: 0.875rem;
+    border-radius: 1rem;
+  }
+
+  .visitor-info {
+    min-height: 44px;
+    padding-bottom: 0;
+    margin-bottom: 0;
+  }
+
+  .visitor-info .visitor-name-input {
+    min-height: 44px;
+  }
+
+  .comment-textarea {
+    min-height: 5.5rem;
+    padding-block: 0.5rem;
+  }
+
+  .input-actions .submit-btn,
+  .input-container.reply-container .submit-btn {
+    min-height: 44px;
+    padding: 0.625rem 1.125rem;
+    font-size: 0.875rem;
+  }
+
+  .cancel-btn {
+    min-height: 44px;
+    padding-inline: 0.75rem;
+  }
+
+  .comment-main,
+  .reply-item {
+    gap: 0.75rem;
+  }
+
+  .replies-wrapper {
+    padding-left: 1rem;
+  }
+
+  .replies-wrapper::before {
+    left: 0.25rem;
+  }
+
+  .comment-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .comment-actions {
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .comment-actions .action-btn {
+    min-height: 44px;
+    padding: 0.5rem 0.625rem;
+    border-radius: 9999px;
+  }
+}
 </style>

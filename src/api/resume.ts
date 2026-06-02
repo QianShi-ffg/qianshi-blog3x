@@ -8,6 +8,7 @@ export const defaultResume: ResumeProfile = {
   role: '前端开发人员',
   avatar:
     'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20minimalist%20avatar%20illustration%2C%20flat%20design%2C%20soft%20colors%2C%20young%20developer&image_size=square',
+  resumeFile: '',
   location: '中国 · 杭州',
   email: 'hello@QianShiBlog.dev',
   summary: '',
@@ -63,6 +64,7 @@ const normalizeResume = (resume: Partial<ResumeProfile> | null): ResumeProfile =
     ...defaultResume,
     ...resume,
     avatar: resume.avatar || defaultResume.avatar,
+    resumeFile: resume.resumeFile || defaultResume.resumeFile,
     skills: resume.skills?.length ? resume.skills : defaultResume.skills,
     experiences: resume.experiences?.length
       ? resume.experiences.map((item) => ({ ...item, desc: normalizeListText(item.desc) }))

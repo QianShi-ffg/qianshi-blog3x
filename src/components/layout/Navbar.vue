@@ -594,6 +594,15 @@ const onMobileMenuLeave = (el: Element, done: () => void) => {
 }
 
 @media (max-width: 767px) {
+  .navbar-brand {
+    min-height: 44px;
+  }
+
+  .navbar-mobile-toggle {
+    width: 44px;
+    height: 44px;
+  }
+
   .navbar-cover {
     color: var(--color-text);
   }
