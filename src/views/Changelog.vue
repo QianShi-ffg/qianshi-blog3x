@@ -79,6 +79,7 @@ const tagMetaMap: Record<string, Pick<ChangelogView, 'icon' | 'iconColor' | 'bgC
 }
 
 const logs = ref<ChangelogView[]>([])
+const isLogsLoading = ref(true)
 
 const decorateChangelog = (log: Changelog): ChangelogView => {
   const meta = tagMetaMap[log.tag] ?? defaultTagMeta
@@ -92,8 +93,13 @@ const decorateChangelog = (log: Changelog): ChangelogView => {
 }
 
 const loadChangelogs = async () => {
-  const changelogs = await listChangelogs()
-  logs.value = changelogs.map(decorateChangelog)
+  isLogsLoading.value = true
+  try {
+    const changelogs = await listChangelogs()
+    logs.value = changelogs.map(decorateChangelog)
+  } finally {
+    isLogsLoading.value = false
+  }
 }
 
 const getBadgeClass = (type: string) => {
@@ -153,7 +159,34 @@ onUnmounted(() => {
       <div class="cl-timeline-line"></div>
 
       <div class="cl-logs-container">
-        <div v-if="logs.length === 0" class="cl-empty-state">
+        <div v-if="isLogsLoading" class="cl-log-item cl-log-skeleton">
+          <div class="cl-log-date-desktop">
+            <span class="cl-skeleton-date"></span>
+          </div>
+
+          <div class="cl-log-icon-node">
+            <div class="cl-log-icon-outer">
+              <div class="cl-log-icon-inner cl-skeleton-icon"></div>
+            </div>
+          </div>
+
+          <div class="cl-log-content-col">
+            <div class="cl-glass-card">
+              <div class="cl-log-card-header">
+                <div class="cl-skeleton-header">
+                  <span class="cl-skeleton-version"></span>
+                  <span class="cl-skeleton-title"></span>
+                </div>
+              </div>
+              <div class="cl-skeleton-list">
+                <span></span>
+                <span></span>
+                <span class="is-short"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-else-if="logs.length === 0" class="cl-empty-state">
           <p class="cl-empty-title">暂无更新日志</p>
           <p class="cl-empty-desc">后台发布后，这里会同步显示。</p>
         </div>
@@ -222,6 +255,28 @@ onUnmounted(() => {
 <style scoped>
 .cl-page-container {
   @apply min-h-[80vh] py-12 lg:py-20 lg:pt-32 pt-24 px-6 sm:px-12 md:px-20 lg:px-32 xl:px-48 mx-auto max-w-screen-2xl;
+  max-width: var(--site-page-max-width);
+}
+
+@media (min-width: 1280px) {
+  .cl-page-container {
+    padding-left: var(--site-page-padding-wide);
+    padding-right: var(--site-page-padding-wide);
+  }
+}
+
+@media (min-width: 2561px) {
+  .cl-page-container {
+    padding-left: clamp(7rem, 6vw, 9rem);
+    padding-right: clamp(7rem, 6vw, 9rem);
+  }
+}
+
+@media (min-width: 3840px) {
+  .cl-page-container {
+    padding-left: clamp(8rem, 6vw, 12rem);
+    padding-right: clamp(8rem, 6vw, 12rem);
+  }
 }
 
 .cl-header-wrapper {
@@ -244,6 +299,12 @@ onUnmounted(() => {
 
 .cl-timeline-wrapper {
   @apply relative max-w-4xl mx-auto md:mx-0;
+}
+
+@media (min-width: 2561px) {
+  .cl-timeline-wrapper {
+    max-width: 72rem;
+  }
 }
 
 .cl-timeline-line {
@@ -269,6 +330,62 @@ onUnmounted(() => {
 .cl-empty-desc {
   @apply text-sm;
   color: var(--color-text);
+}
+
+.cl-log-skeleton {
+  pointer-events: none;
+}
+
+.cl-skeleton-date,
+.cl-skeleton-icon,
+.cl-skeleton-version,
+.cl-skeleton-title,
+.cl-skeleton-list span {
+  display: block;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0.14), rgba(244, 63, 94, 0.12), rgba(148, 163, 184, 0.14));
+  background-size: 220% 100%;
+  animation: cl-skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+.cl-skeleton-date {
+  width: 5rem;
+  height: 0.875rem;
+  margin-left: auto;
+}
+
+.cl-skeleton-icon {
+  width: 100%;
+  height: 100%;
+}
+
+.cl-skeleton-header {
+  width: min(28rem, 100%);
+}
+
+.cl-skeleton-version {
+  width: 8rem;
+  height: 1.75rem;
+  margin-bottom: 0.875rem;
+}
+
+.cl-skeleton-title {
+  width: min(24rem, 82%);
+  height: 1rem;
+}
+
+.cl-skeleton-list {
+  display: grid;
+  gap: 0.875rem;
+}
+
+.cl-skeleton-list span {
+  width: 100%;
+  height: 0.875rem;
+}
+
+.cl-skeleton-list .is-short {
+  width: 62%;
 }
 
 .cl-log-item {
@@ -482,4 +599,23 @@ onUnmounted(() => {
 
 .cl-badge-slate { @apply bg-slate-50 text-slate-600; }
 :global(html.dark .cl-badge-slate){ background-color: rgba(255, 255, 255, 0.05); color: #cbd5e1; }
+
+@keyframes cl-skeleton-shimmer {
+  0% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -120% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cl-skeleton-date,
+  .cl-skeleton-icon,
+  .cl-skeleton-version,
+  .cl-skeleton-title,
+  .cl-skeleton-list span {
+    animation: none;
+  }
+}
 </style>

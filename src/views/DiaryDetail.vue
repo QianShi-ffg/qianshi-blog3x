@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useColorMode } from '@vueuse/core'
 import {
@@ -29,6 +29,8 @@ const moment = ref<DiaryMoment | null>(null)
 const isLoading = ref(true)
 const isDiaryLiked = ref(false)
 const actionMessage = ref('')
+const backButtonAnchor = ref<HTMLElement | null>(null)
+const showFloatingBack = ref(false)
 const previewId = `diary-preview-${momentId}`
 const diaryContent = computed(() => moment.value?.longContent || moment.value?.content || '')
 
@@ -40,7 +42,12 @@ onMounted(async () => {
     isDiaryLiked.value = likeStatus.liked
   } finally {
     isLoading.value = false
+    requestAnimationFrame(setupFloatingBackButton)
   }
+})
+
+onUnmounted(() => {
+  backButtonObserver?.disconnect()
 })
 
 const getTypeIcon = (type: string) => {
@@ -51,6 +58,24 @@ const getTypeIcon = (type: string) => {
 
 const goBack = () => {
   router.push('/diary')
+}
+
+let backButtonObserver: IntersectionObserver | undefined
+
+const setupFloatingBackButton = () => {
+  backButtonObserver?.disconnect()
+  backButtonObserver = undefined
+  showFloatingBack.value = false
+
+  if (!backButtonAnchor.value) return
+
+  backButtonObserver = new IntersectionObserver(
+    ([entry]) => {
+      showFloatingBack.value = !entry.isIntersecting
+    },
+    { threshold: 0 },
+  )
+  backButtonObserver.observe(backButtonAnchor.value)
 }
 
 const toggleDiaryLike = async () => {
@@ -103,6 +128,7 @@ const syncCommentCount = (count: number) => {
     <div class="dd-page-container" v-else-if="moment">
       <!-- Top Action Bar -->
       <div
+        ref="backButtonAnchor"
         class="dd-top-bar"
         v-motion
         :initial="{ opacity: 0, y: -10 }"
@@ -120,6 +146,18 @@ const syncCommentCount = (count: number) => {
           <span class="uppercase text-xs font-bold tracking-wider">{{ moment.type }}</span>
         </div>
       </div>
+
+      <Transition name="floating-back">
+        <button
+          v-if="showFloatingBack"
+          type="button"
+          class="dd-floating-back-btn"
+          aria-label="返回碎片"
+          @click="goBack"
+        >
+          <ArrowLeft class="dd-floating-back-icon" />
+        </button>
+      </Transition>
   
       <!-- Main Content Card -->
       <article
@@ -205,6 +243,20 @@ const syncCommentCount = (count: number) => {
 .dd-page-container {
   @apply mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-28;
   max-width: 1120px;
+}
+
+@media (min-width: 2561px) {
+  .dd-page-container {
+    max-width: 1240px;
+    padding-top: 8rem;
+    padding-bottom: 7rem;
+  }
+}
+
+@media (min-width: 3840px) {
+  .dd-page-container {
+    max-width: 1320px;
+  }
 }
 
 .dd-top-bar {
@@ -328,6 +380,70 @@ const syncCommentCount = (count: number) => {
 :global(html.dark .dd-back-btn:hover .dd-back-icon-wrap){
   background-color: rgba(244, 63, 94, 0.16);
   box-shadow: inset 0 0 0 1px rgba(244, 63, 94, 0.16);
+}
+
+.dd-floating-back-btn {
+  position: fixed;
+  left: max(1.25rem, calc((100vw - 1240px) / 2 - 5rem));
+  top: 34vh;
+  z-index: 80;
+  width: 3.25rem;
+  height: 3.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--color-heading);
+  box-shadow: 0 18px 38px -26px rgba(15, 23, 42, 0.38);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  cursor: pointer;
+  transition:
+    transform 220ms ease,
+    color 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 220ms ease;
+}
+
+.dd-floating-back-btn:hover {
+  transform: translateX(-0.1875rem);
+  color: var(--color-primary);
+  border-color: rgba(244, 63, 94, 0.22);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 22px 42px -28px rgba(244, 63, 94, 0.45);
+}
+
+.dd-floating-back-icon {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+:global(html.dark .dd-floating-back-btn) {
+  background: rgba(15, 23, 42, 0.68);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+}
+
+:global(html.dark .dd-floating-back-btn:hover) {
+  background: rgba(30, 41, 59, 0.86);
+  border-color: rgba(244, 63, 94, 0.24);
+  color: var(--color-primary);
+}
+
+.floating-back-enter-active,
+.floating-back-leave-active {
+  transition:
+    opacity 180ms ease,
+    transform 220ms ease;
+}
+
+.floating-back-enter-from,
+.floating-back-leave-to {
+  opacity: 0;
+  transform: translateX(-0.5rem);
 }
 
 .dd-type-badge {
@@ -584,6 +700,10 @@ const syncCommentCount = (count: number) => {
 @media (max-width: 767px) {
   .dd-back-btn {
     min-height: 44px;
+  }
+
+  .dd-floating-back-btn {
+    display: none;
   }
 
   .dd-interaction-footer {

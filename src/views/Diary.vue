@@ -3,7 +3,7 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import { MapPin, Calendar, ImageIcon, Video, FileText } from 'lucide-vue-next'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { getMomentsTotal, listMoments } from '@/api/diary'
+import { listMoments } from '@/api/diary'
 import type { DiaryMomentSummary } from '@/types/content'
 import { registerRouteTransitionCleanup } from '@/utils/route-transition-cleanup'
 import WeatherIcon from '@/components/WeatherIcon.vue'
@@ -11,7 +11,6 @@ import WeatherIcon from '@/components/WeatherIcon.vue'
 const moments = ref<DiaryMomentSummary[]>([])
 const isMomentsLoading = ref(true)
 const hasCheckedMoments = ref(false)
-const expectedMomentsTotal = ref(0)
 const diaryRoot = ref<HTMLElement | null>(null)
 let headerParallaxCtx: gsap.Context | undefined
 let unregisterTransitionCleanup: (() => void) | undefined
@@ -52,13 +51,8 @@ const setupHeaderParallax = () => {
 onMounted(async () => {
   isMomentsLoading.value = true
   try {
-    expectedMomentsTotal.value = await getMomentsTotal()
-    hasCheckedMoments.value = true
-    if (expectedMomentsTotal.value === 0) {
-      moments.value = []
-      return
-    }
     moments.value = await listMoments()
+    hasCheckedMoments.value = true
   } finally {
     isMomentsLoading.value = false
     setupHeaderParallax()
@@ -126,7 +120,7 @@ const getMomentText = (content: string) => {
       <span class="diary-checking-dot"></span>
     </div>
     <div v-else-if="isMomentsLoading" class="diary-masonry-grid" aria-live="polite" aria-busy="true">
-      <div v-for="item in Math.min(expectedMomentsTotal || 6, 6)" :key="item" class="diary-masonry-item">
+      <div v-for="item in 6" :key="item" class="diary-masonry-item">
         <div class="diary-card diary-card-skeleton">
           <span class="diary-skeleton-badge"></span>
           <div class="diary-skeleton-media" :class="{ 'diary-skeleton-media-tall': item % 3 === 0 }"></div>
@@ -220,6 +214,28 @@ const getMomentText = (content: string) => {
 <style scoped>
 .diary-page-container {
   @apply min-h-[80vh] py-12 lg:py-20 lg:pt-32 pt-24 px-6 sm:px-12 md:px-20 lg:px-32 xl:px-48 mx-auto max-w-screen-2xl;
+  max-width: var(--site-page-max-width);
+}
+
+@media (min-width: 1280px) {
+  .diary-page-container {
+    padding-left: var(--site-page-padding-wide);
+    padding-right: var(--site-page-padding-wide);
+  }
+}
+
+@media (min-width: 2561px) {
+  .diary-page-container {
+    padding-left: clamp(7rem, 6vw, 9rem);
+    padding-right: clamp(7rem, 6vw, 9rem);
+  }
+}
+
+@media (min-width: 3840px) {
+  .diary-page-container {
+    padding-left: clamp(8rem, 6vw, 12rem);
+    padding-right: clamp(8rem, 6vw, 12rem);
+  }
 }
 
 .diary-header-wrapper {
@@ -260,6 +276,19 @@ const getMomentText = (content: string) => {
 
 .diary-masonry-grid {
   @apply columns-1 md:columns-2 lg:columns-3 gap-6 lg:gap-8;
+}
+
+@media (min-width: 2561px) {
+  .diary-masonry-grid {
+    column-count: 4;
+  }
+}
+
+@media (min-width: 3840px) {
+  .diary-masonry-grid {
+    column-count: 5;
+    column-gap: 2.25rem;
+  }
 }
 
 .diary-empty-state {

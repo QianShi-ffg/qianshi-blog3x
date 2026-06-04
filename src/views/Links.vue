@@ -107,7 +107,7 @@ const closeApplyDialog = () => {
 const submitApply = async () => {
   applyMessage.value = ''
   if (!applyForm.value.name.trim() || !applyForm.value.blogUrl.trim() || !applyForm.value.icon.trim()) {
-    applyMessage.value = '请填写站点名称、站点地址和头像/图标地址。'
+    applyMessage.value = '请填写站点名称、站点地址和头像图标地址。'
     return
   }
   if (!applyForm.value.hasBacklink) {
@@ -168,8 +168,7 @@ onUnmounted(() => {
           :enter="{ opacity: 1, y: 0, transition: { duration: 800, delay: 100 } }"
           class="lk-subtitle"
         >
-          那些有趣的人和他们创造的数字空间。
-        </p>
+          那些有趣的人和他们创造的数字空间</p>
       </div>
       <button
         v-motion
@@ -211,7 +210,7 @@ onUnmounted(() => {
         :visible-once="{ opacity: 1, y: 0, transition: { duration: 500, delay: index * 100 } }"
         class="lk-card interactive-card group"
       >
-        <!-- 网站缩略图 (Hover显示) -->
+        <!-- 网站缩略�?(Hover显示) -->
         <div
           v-if="link.screenShot"
           class="lk-card-preview interactive-media"
@@ -257,7 +256,7 @@ onUnmounted(() => {
         <li class="lk-apply-item">
           <div class="lk-apply-dot"></div>
           <div>
-            <p>请先在您的网站添加本站链接，信息如下：</p>
+            <p>请先在您的网站添加本站链接，信息如下。</p>
             <div class="lk-apply-info-box">
               <p>名称：QianShiBlog</p>
               <p>简介：一个极简主义的前端开发者博客。</p>
@@ -332,6 +331,28 @@ onUnmounted(() => {
 <style scoped>
 .lk-page-container {
   @apply min-h-[80vh] py-12 lg:py-20 lg:pt-32 pt-24 px-6 sm:px-12 md:px-20 lg:px-32 xl:px-48 mx-auto max-w-screen-2xl;
+  max-width: var(--site-page-max-width);
+}
+
+@media (min-width: 1280px) {
+  .lk-page-container {
+    padding-left: var(--site-page-padding-wide);
+    padding-right: var(--site-page-padding-wide);
+  }
+}
+
+@media (min-width: 2561px) {
+  .lk-page-container {
+    padding-left: clamp(7rem, 6vw, 9rem);
+    padding-right: clamp(7rem, 6vw, 9rem);
+  }
+}
+
+@media (min-width: 3840px) {
+  .lk-page-container {
+    padding-left: clamp(8rem, 6vw, 12rem);
+    padding-right: clamp(8rem, 6vw, 12rem);
+  }
 }
 
 .lk-header-wrapper {
@@ -369,6 +390,12 @@ onUnmounted(() => {
 
 .lk-grid {
   @apply grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 mb-20 auto-rows-fr;
+}
+
+@media (min-width: 2561px) {
+  .lk-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 .lk-card {

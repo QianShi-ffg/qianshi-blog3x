@@ -75,7 +75,7 @@ const scrollToTop = () => {
 }
 
 .footer-container {
-  max-width: 1536px; /* max-w-screen-2xl */
+  max-width: var(--site-shell-max-width); /* max-w-screen-2xl */
   margin-left: auto;
   margin-right: auto;
   padding-left: 1.5rem; /* px-6 */

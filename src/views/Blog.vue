@@ -652,7 +652,7 @@ const openArticle = (article: ArticleSummary) => {
   padding-right: 1.5rem;
   margin-left: auto;
   margin-right: auto;
-  max-width: 1536px; /* max-w-screen-2xl */
+  max-width: var(--site-page-max-width); /* max-w-screen-2xl */
 }
 
 .blog-header-wrapper,
@@ -719,8 +719,22 @@ const openArticle = (article: ArticleSummary) => {
 }
 @media (min-width: 1280px) {
   .blog-page-container {
-    padding-left: 12rem; /* xl:px-48 */
-    padding-right: 12rem;
+    padding-left: var(--site-page-padding-wide); /* xl:px-48 */
+    padding-right: var(--site-page-padding-wide);
+  }
+}
+
+@media (min-width: 2561px) {
+  .blog-page-container {
+    padding-left: clamp(7rem, 6vw, 9rem);
+    padding-right: clamp(7rem, 6vw, 9rem);
+  }
+}
+
+@media (min-width: 3840px) {
+  .blog-page-container {
+    padding-left: clamp(8rem, 6vw, 12rem);
+    padding-right: clamp(8rem, 6vw, 12rem);
   }
 }
 
@@ -730,6 +744,20 @@ const openArticle = (article: ArticleSummary) => {
 @media (min-width: 1024px) {
   .blog-page-container {
     padding-top: 8rem; /* lg:pt-32 */
+  }
+}
+
+@media (min-width: 2561px) {
+  .blog-page-container {
+    padding-top: 9rem;
+    padding-bottom: 6.5rem;
+  }
+}
+
+@media (min-width: 3840px) {
+  .blog-page-container {
+    padding-top: 10rem;
+    padding-bottom: 8rem;
   }
 }
 
@@ -1160,6 +1188,19 @@ const openArticle = (article: ArticleSummary) => {
   }
 }
 
+@media (min-width: 2561px) {
+  .blog-grid-container {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 2.25rem;
+  }
+}
+
+@media (min-width: 3840px) {
+  .blog-grid-container {
+    gap: 2.5rem;
+  }
+}
+
 .blog-article-card {
   background: rgba(255, 255, 255, 0.5);
   backdrop-filter: blur(12px);
@@ -1182,6 +1223,18 @@ const openArticle = (article: ArticleSummary) => {
     0 -1px 0 0 rgb(0, 0, 0, 0.02),
     0 0 rgb(0, 0, 0, 0.02),
     0 8px 30px rgb(0, 0, 0, 0.04);
+}
+
+@media (min-width: 2561px) {
+  .blog-article-card {
+    min-height: 18.5rem;
+  }
+}
+
+@media (min-width: 3840px) {
+  .blog-article-card {
+    min-height: 19.25rem;
+  }
 }
 :global(html.dark .blog-article-card) {
   background: rgba(218, 223, 230, 0.05);

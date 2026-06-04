@@ -3,14 +3,13 @@ import { nextTick, onBeforeUnmount, onMounted, onUnmounted, ref } from 'vue'
 import { ArrowUpRight, Github, ExternalLink } from 'lucide-vue-next'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { getProjectsTotal, listProjects } from '@/api/portfolio'
+import { listProjects } from '@/api/portfolio'
 import type { Project } from '@/types/content'
 import { registerRouteTransitionCleanup } from '@/utils/route-transition-cleanup'
 
 const projects = ref<Project[]>([])
 const isProjectsLoading = ref(true)
 const hasCheckedProjects = ref(false)
-const expectedProjectsTotal = ref(0)
 const portfolioRoot = ref<HTMLElement | null>(null)
 let hoverCtx: gsap.Context | undefined
 let headerParallaxCtx: gsap.Context | undefined
@@ -125,13 +124,8 @@ const setupHeaderParallax = () => {
 onMounted(async () => {
   isProjectsLoading.value = true
   try {
-    expectedProjectsTotal.value = await getProjectsTotal()
-    hasCheckedProjects.value = true
-    if (expectedProjectsTotal.value === 0) {
-      projects.value = []
-      return
-    }
     projects.value = await listProjects()
+    hasCheckedProjects.value = true
   } finally {
     isProjectsLoading.value = false
     await nextTick()
@@ -180,7 +174,7 @@ onUnmounted(() => {
       <span class="portfolio-checking-dot"></span>
     </div>
     <div v-else-if="isProjectsLoading" class="portfolio-grid" aria-live="polite" aria-busy="true">
-      <div v-for="item in Math.min(expectedProjectsTotal || 4, 4)" :key="item" class="portfolio-card portfolio-card-skeleton">
+      <div v-for="item in 4" :key="item" class="portfolio-card portfolio-card-skeleton">
         <div class="portfolio-image-wrapper portfolio-skeleton-image"></div>
         <div class="portfolio-skeleton-chip"></div>
         <div class="portfolio-skeleton-title"></div>
@@ -250,6 +244,7 @@ onUnmounted(() => {
 <style scoped>
 .portfolio-page-container {
   @apply min-h-[80vh] py-12 pt-24 px-6 mx-auto max-w-screen-2xl;
+  max-width: var(--site-page-max-width);
 }
 @media (min-width: 640px) {
   .portfolio-page-container {
@@ -268,7 +263,22 @@ onUnmounted(() => {
 }
 @media (min-width: 1280px) {
   .portfolio-page-container {
-    @apply px-48;
+    padding-left: var(--site-page-padding-wide);
+    padding-right: var(--site-page-padding-wide);
+  }
+}
+
+@media (min-width: 2561px) {
+  .portfolio-page-container {
+    padding-left: clamp(7rem, 6vw, 9rem);
+    padding-right: clamp(7rem, 6vw, 9rem);
+  }
+}
+
+@media (min-width: 3840px) {
+  .portfolio-page-container {
+    padding-left: clamp(8rem, 6vw, 12rem);
+    padding-right: clamp(8rem, 6vw, 12rem);
   }
 }
 
@@ -301,6 +311,20 @@ onUnmounted(() => {
 @media (min-width: 1024px) {
   .portfolio-grid {
     @apply grid-cols-2 gap-16;
+  }
+}
+
+@media (min-width: 2561px) {
+  .portfolio-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4rem;
+  }
+}
+
+@media (min-width: 3840px) {
+  .portfolio-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 3.5rem;
   }
 }
 

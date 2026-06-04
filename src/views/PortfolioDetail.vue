@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, Github, ExternalLink, Calendar, User, LayoutGrid } from 'lucide-vue-next'
 import { getProjectById } from '@/api/portfolio'
@@ -10,6 +10,8 @@ const router = useRouter()
 const projectId = Number(route.params.id)
 const project = ref<Project | null>(null)
 const isLoading = ref(true)
+const backButtonAnchor = ref<HTMLElement | null>(null)
+const showFloatingBack = ref(false)
 
 onMounted(async () => {
   isLoading.value = true
@@ -19,7 +21,12 @@ onMounted(async () => {
     project.value = null
   } finally {
     isLoading.value = false
+    requestAnimationFrame(setupFloatingBackButton)
   }
+})
+
+onUnmounted(() => {
+  backButtonObserver?.disconnect()
 })
 
 const hasProjectContent = computed(() => {
@@ -34,6 +41,24 @@ const hasProjectContent = computed(() => {
 
 const goBack = () => {
   router.push('/portfolio')
+}
+
+let backButtonObserver: IntersectionObserver | undefined
+
+const setupFloatingBackButton = () => {
+  backButtonObserver?.disconnect()
+  backButtonObserver = undefined
+  showFloatingBack.value = false
+
+  if (!backButtonAnchor.value) return
+
+  backButtonObserver = new IntersectionObserver(
+    ([entry]) => {
+      showFloatingBack.value = !entry.isIntersecting
+    },
+    { threshold: 0 },
+  )
+  backButtonObserver.observe(backButtonAnchor.value)
 }
 </script>
 
@@ -69,12 +94,24 @@ const goBack = () => {
 
   <div class="pd-container" v-else-if="project">
     <!-- Back Button -->
-    <div class="pd-back-wrapper">
+    <div ref="backButtonAnchor" class="pd-back-wrapper">
       <button @click="goBack" class="pd-back-btn group">
         <ArrowLeft class="w-5 h-5 transition-transform group-hover:-translate-x-1" />
         返回作品列表
       </button>
     </div>
+
+    <Transition name="floating-back">
+      <button
+        v-if="showFloatingBack"
+        type="button"
+        class="pd-floating-back-btn"
+        aria-label="返回作品列表"
+        @click="goBack"
+      >
+        <ArrowLeft class="pd-floating-back-icon" />
+      </button>
+    </Transition>
 
     <!-- Hero Section -->
     <header class="pd-hero" v-motion :initial="{ opacity: 0, y: 20 }" :enter="{ opacity: 1, y: 0, transition: { duration: 600 } }">
@@ -152,8 +189,7 @@ const goBack = () => {
           <div class="pd-video-container">
             <video controls class="pd-video" :poster="project.image">
               <source :src="project.videoUrl" type="video/mp4">
-              您的浏览器不支持 HTML5 视频。
-            </video>
+              您的浏览器不支持 HTML5 视频�?            </video>
           </div>
         </div>
 
@@ -194,7 +230,7 @@ const goBack = () => {
 <style scoped lang="scss">
 .pd-container {
   @apply min-h-screen py-12 pt-24 px-6 mx-auto;
-  max-width: 1200px;
+  max-width: min(1280px, var(--site-page-max-width));
 
   @media (min-width: 768px) {
     @apply px-12 pt-32;
@@ -202,6 +238,16 @@ const goBack = () => {
   
   @media (min-width: 1024px) {
     @apply pt-40;
+  }
+
+  @media (min-width: 2561px) {
+    max-width: 1440px;
+    padding-top: 11rem;
+    padding-bottom: 6rem;
+  }
+
+  @media (min-width: 3840px) {
+    max-width: 1520px;
   }
 }
 
@@ -225,10 +271,78 @@ const goBack = () => {
   .pd-back-wrapper {
     margin-bottom: 2rem;
   }
+
+  .pd-floating-back-btn {
+    display: none;
+  }
 }
 
 .pd-back-btn svg {
   transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.pd-floating-back-btn {
+  position: fixed;
+  left: max(1.25rem, calc((100vw - 1440px) / 2 - 5rem));
+  top: 34vh;
+  z-index: 80;
+  width: 3.25rem;
+  height: 3.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--color-heading);
+  box-shadow: 0 18px 38px -26px rgba(15, 23, 42, 0.38);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  cursor: pointer;
+  transition:
+    transform 220ms ease,
+    color 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 220ms ease;
+}
+
+.pd-floating-back-btn:hover {
+  transform: translateX(-0.1875rem);
+  color: var(--color-primary);
+  border-color: rgba(244, 63, 94, 0.22);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 22px 42px -28px rgba(244, 63, 94, 0.45);
+}
+
+.pd-floating-back-icon {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+:global(html.dark .pd-floating-back-btn) {
+  background: rgba(15, 23, 42, 0.68);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+}
+
+:global(html.dark .pd-floating-back-btn:hover) {
+  background: rgba(30, 41, 59, 0.86);
+  border-color: rgba(244, 63, 94, 0.24);
+  color: var(--color-primary);
+}
+
+.floating-back-enter-active,
+.floating-back-leave-active {
+  transition:
+    opacity 180ms ease,
+    transform 220ms ease;
+}
+
+.floating-back-enter-from,
+.floating-back-leave-to {
+  opacity: 0;
+  transform: translateX(-0.5rem);
 }
 
 .pd-loading-back,

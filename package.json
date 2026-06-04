@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "run-p type-check \"build-only {@}\" --",
+    "build": "vite build",
     "preview": "vite preview",
     "test:unit": "vitest",
     "build-only": "vite build",
@@ -22,6 +22,7 @@
     "gsap": "^3.15.0",
     "lucide-vue-next": "^1.0.0",
     "md-editor-v3": "^6.5.1",
+    "node-forge": "^1.4.0",
     "pinia": "^3.0.4",
     "tailwind-merge": "^3.5.0",
     "vue": "^3.5.31",

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, reactive, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, reactive, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useColorMode } from '@vueuse/core'
 import { useBlogStore } from '@/stores/blog'
@@ -27,6 +27,11 @@ const isLoading = ref(true)
 const isCoverRevealed = ref(false)
 const loadError = ref('')
 const coverLoadFailed = ref(false)
+const activeCoverSrc = ref(thumb)
+const backButtonAnchor = ref<HTMLElement | null>(null)
+const postNavAnchor = ref<HTMLElement | null>(null)
+const showFloatingBack = ref(false)
+const isAdjacentLoaded = ref(false)
 const filters = reactive({
   rows: [{ id: '全部', name: '全部' }], // 默认添加一个“全部”分类
   total: 0,
@@ -35,6 +40,7 @@ const filters = reactive({
 const id = "preview-only";
 
 const coverSrc = computed(() => article.value?.coverUrl || blogStore.coverUrl || thumb)
+const coverStyle = computed(() => ({ '--post-cover-image-url': `url(${activeCoverSrc.value})` }))
 const hasArticleContent = computed(() => Boolean(article.value?.articleContent?.trim()))
 const postState = computed(() => {
   if (isLoading.value) return 'loading'
@@ -96,10 +102,8 @@ const markdownSanitize = (html: string) => {
 }
 
 const preloadImage = (src: string) => {
-  return new Promise<void>((resolve) => {
+  return new Promise<boolean>((resolve) => {
     const image = new Image()
-
-    const finish = () => resolve()
 
     image.onload = async () => {
       try {
@@ -107,48 +111,76 @@ const preloadImage = (src: string) => {
       } catch {
         // Keep rendering even when the browser cannot decode ahead of paint.
       }
-      finish()
+      resolve(true)
     }
-    image.onerror = finish
+    image.onerror = () => resolve(false)
     image.src = src
   })
 }
 
 const currentArticleId = computed(() => String(route.params.id ?? ''))
 
-const loadArticle = async () => {
+const loadCover = async (src: string) => {
+  isCoverRevealed.value = false
+  coverLoadFailed.value = false
+
+  const nextCover = src || thumb
+  const loaded = await preloadImage(nextCover)
+
+  if (loaded) {
+    activeCoverSrc.value = nextCover
+  } else {
+    coverLoadFailed.value = true
+    await preloadImage(thumb)
+    activeCoverSrc.value = thumb
+  }
+
+  isCoverRevealed.value = true
+}
+
+const loadArticle = async (articleId = currentArticleId.value) => {
   isLoading.value = true
   isCoverRevealed.value = false
   loadError.value = ''
   coverLoadFailed.value = false
+  activeCoverSrc.value = thumb
   article.value = null
+  isAdjacentLoaded.value = false
   adjacentArticles.value = {
     prev: null,
     next: null,
   }
   try {
-    const articleDetail = (await getArticleDetail({ id: currentArticleId.value })) as ArticleDetail | null
+    const articleDetail = (await getArticleDetail({ id: articleId })) as ArticleDetail | null
     article.value = articleDetail
     if (articleDetail) {
-      void preloadImage(articleDetail.coverUrl || thumb)
-      adjacentArticles.value = await getAdjacentArticles(articleDetail.id)
+      void loadCover(articleDetail.coverUrl || blogStore.coverUrl || thumb)
     }
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : '文章加载失败，请稍后再试'
   } finally {
     isLoading.value = false
     await nextTick()
+    setupAdjacentObserver()
+    setupFloatingBackButton()
   }
 }
 
 onMounted(async () => {
   await classify();
-  await loadArticle()
+  await nextTick()
+  setupFloatingBackButton()
+  setupAdjacentObserver()
 })
 
-watch(currentArticleId, () => {
-  void loadArticle()
+onUnmounted(() => {
+  backButtonObserver?.disconnect()
+  adjacentObserver?.disconnect()
 })
+
+watch(currentArticleId, (nextId) => {
+  void loadArticle(nextId)
+}, { immediate: true })
 
 const classify = async () => {
   const res: any = await getClassifyIdList({});
@@ -162,6 +194,49 @@ const classify = async () => {
 
 const goBack = () => {
   router.push({ path: '/blog' })
+}
+
+let backButtonObserver: IntersectionObserver | undefined
+let adjacentObserver: IntersectionObserver | undefined
+
+const setupFloatingBackButton = () => {
+  backButtonObserver?.disconnect()
+  backButtonObserver = undefined
+  showFloatingBack.value = false
+
+  if (!backButtonAnchor.value) return
+
+  backButtonObserver = new IntersectionObserver(
+    ([entry]) => {
+      showFloatingBack.value = !entry.isIntersecting
+    },
+    { threshold: 0 },
+  )
+  backButtonObserver.observe(backButtonAnchor.value)
+}
+
+const loadAdjacentArticles = async () => {
+  if (!article.value || isAdjacentLoaded.value) return
+  isAdjacentLoaded.value = true
+  adjacentArticles.value = await getAdjacentArticles(article.value.id)
+}
+
+const setupAdjacentObserver = () => {
+  adjacentObserver?.disconnect()
+  adjacentObserver = undefined
+
+  if (!postNavAnchor.value) return
+
+  adjacentObserver = new IntersectionObserver(
+    ([entry]) => {
+      if (!entry.isIntersecting) return
+      adjacentObserver?.disconnect()
+      adjacentObserver = undefined
+      void loadAdjacentArticles()
+    },
+    { rootMargin: '240px 0px' },
+  )
+  adjacentObserver.observe(postNavAnchor.value)
 }
 
 const goArticle = (target: ArticleSummary | null) => {
@@ -192,22 +267,16 @@ const scrollToHeading = (headingId: string) => {
       <div
         class="post-cover-stage"
         :class="{ 'post-cover-stage-ready': isCoverRevealed }"
-        :style="{ '--post-cover-image-url': `url(${coverSrc})` }"
+        :style="coverStyle"
       >
         <div class="post-cover-soft" aria-hidden="true"></div>
-        <img
-          :src="coverSrc"
-          alt="Cover"
-          class="post-cover-image"
-          @load="isCoverRevealed = true"
-          @error="coverLoadFailed = true; isCoverRevealed = true"
-        />
+        <div class="post-cover-image" aria-hidden="true"></div>
       </div>
       <!-- Gradient Overlay (Darker at bottom for text readability) -->
       <div class="post-gradient-overlay"></div>
 
       <!-- Back Button -->
-      <div class="post-back-btn-wrap">
+      <div ref="backButtonAnchor" class="post-back-btn-wrap">
         <button @click="goBack" class="post-back-btn interactive-lift">
           <ArrowLeft class="post-icon-sm" />
           返回文章列表
@@ -216,11 +285,10 @@ const scrollToHeading = (headingId: string) => {
 
       <!-- Title & Meta -->
       <div class="post-header-content">
-        <div v-if="article" class="post-header-inner">
+        <div v-if="article" class="post-header-inner post-header-ready">
           <span class="post-category-badge">
              {{ (filters.rows.find((ii: any) => ii.id === article?.classifyId)?.name) ?? '' }}
           </span>
-          <span v-if="coverLoadFailed" class="post-cover-fallback-note">封面暂时无法显示，已使用默认背景</span>
           <h1 class="post-main-title">
             {{ article.title }}
           </h1>
@@ -247,6 +315,18 @@ const scrollToHeading = (headingId: string) => {
         </div>
       </div>
     </header>
+
+    <Transition name="floating-back">
+      <button
+        v-if="showFloatingBack"
+        type="button"
+        class="post-floating-back-btn"
+        aria-label="返回文章列表"
+        @click="goBack"
+      >
+        <ArrowLeft class="post-floating-back-icon" />
+      </button>
+    </Transition>
 
     <!-- Main Content Area - Optimal Reading Width -->
     <main class="post-main-area">
@@ -306,7 +386,7 @@ const scrollToHeading = (headingId: string) => {
       </div>
 
       <!-- Bottom Navigation / Share (Optional) -->
-      <div class="post-nav-bottom">
+      <div ref="postNavAnchor" class="post-nav-bottom">
         <button
           class="post-nav-btn interactive-lift"
           :class="{ 'post-nav-btn-disabled': !adjacentArticles.prev }"
@@ -387,11 +467,17 @@ const scrollToHeading = (headingId: string) => {
 
 .post-loading-main {
   width: 100%;
-  max-width: 1200px;
+  max-width: min(1280px, var(--site-page-max-width));
   margin: -4rem auto 0;
   position: relative;
   z-index: 2;
   padding: 0 1rem;
+}
+
+@media (min-width: 2561px) {
+  .post-loading-main {
+    max-width: 1360px;
+  }
 }
 @media (min-width: 640px) {
   .post-loading-main {
@@ -414,11 +500,11 @@ const scrollToHeading = (headingId: string) => {
   min-height: 28rem;
   padding: 2rem;
   border-radius: 1.5rem;
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.64));
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(22px) saturate(1.12);
+  -webkit-backdrop-filter: blur(22px) saturate(1.12);
 }
 
 .post-state-card {
@@ -426,9 +512,11 @@ const scrollToHeading = (headingId: string) => {
   min-height: 18rem;
   padding: 3rem 2rem;
   border-radius: 1.5rem;
-  background: var(--color-card);
-  border: 1px solid var(--color-border);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.64));
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(22px) saturate(1.12);
+  -webkit-backdrop-filter: blur(22px) saturate(1.12);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -476,9 +564,9 @@ const scrollToHeading = (headingId: string) => {
 }
 
 :global(html.dark .post-state-card){
-  background: linear-gradient(180deg, rgba(30, 41, 59, 0.6) 0%, var(--color-card) 200px);
-  border-color: rgba(255, 255, 255, 0.05);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.62), rgba(15, 23, 42, 0.7));
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
 }
 
 :global(html.dark .post-state-card::before){
@@ -523,17 +611,25 @@ const scrollToHeading = (headingId: string) => {
 }
 
 :global(html.dark .post-loading-card){
-  background: linear-gradient(180deg, rgba(30, 41, 59, 0.6) 0%, var(--color-card) 200px);
-  border-color: rgba(255, 255, 255, 0.05);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.62), rgba(15, 23, 42, 0.7));
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
 }
 
 @keyframes post-loading-shimmer {
   0% {
     background-position: 120% 0;
   }
+
   100% {
     background-position: -120% 0;
+  }
+}
+
+@keyframes post-header-reveal {
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -561,7 +657,12 @@ const scrollToHeading = (headingId: string) => {
 }
 
 .post-cover-image {
-  @apply absolute inset-0 w-full h-full object-cover object-center;
+  position: absolute;
+  inset: 0;
+  background-image: var(--post-cover-image-url);
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
   opacity: 0.98;
   clip-path: inset(0 0 0 0 round 0);
   mask-image: radial-gradient(circle at 50% 48%, #000 0%, #000 32%, transparent 34%);
@@ -602,6 +703,70 @@ const scrollToHeading = (headingId: string) => {
   @apply flex items-center gap-2 px-5 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white rounded-full text-sm font-medium transition-all duration-300 shadow-lg;
 }
 
+.post-floating-back-btn {
+  position: fixed;
+  left: max(1.25rem, calc((100vw - min(1280px, var(--site-page-max-width))) / 2 - 5rem));
+  top: 34vh;
+  z-index: 80;
+  width: 3.25rem;
+  height: 3.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--color-heading);
+  box-shadow: 0 18px 38px -26px rgba(15, 23, 42, 0.38);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  cursor: pointer;
+  transition:
+    transform 220ms ease,
+    color 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 220ms ease;
+}
+
+.post-floating-back-btn:hover {
+  transform: translateX(-0.1875rem);
+  color: var(--color-primary);
+  border-color: rgba(244, 63, 94, 0.22);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 22px 42px -28px rgba(244, 63, 94, 0.45);
+}
+
+.post-floating-back-icon {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+:global(html.dark .post-floating-back-btn) {
+  background: rgba(15, 23, 42, 0.68);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+}
+
+:global(html.dark .post-floating-back-btn:hover) {
+  background: rgba(30, 41, 59, 0.86);
+  border-color: rgba(244, 63, 94, 0.24);
+  color: var(--color-primary);
+}
+
+.floating-back-enter-active,
+.floating-back-leave-active {
+  transition:
+    opacity 180ms ease,
+    transform 220ms ease;
+}
+
+.floating-back-enter-from,
+.floating-back-leave-to {
+  opacity: 0;
+  transform: translateX(-0.5rem);
+}
+
 .post-icon-sm {
   @apply w-4 h-4;
 }
@@ -614,22 +779,24 @@ const scrollToHeading = (headingId: string) => {
   @apply container mx-auto max-w-[1200px];
 }
 
-.post-category-badge {
-  @apply inline-block px-4 py-1.5 mb-6 rounded-full bg-rose-500/90 backdrop-blur-sm border border-rose-400/30 text-white text-sm font-bold tracking-widest shadow-lg shadow-rose-500/20;
+.post-header-ready .post-category-badge,
+.post-header-ready .post-main-title,
+.post-header-ready .post-meta-info {
+  opacity: 0;
+  transform: translateY(0.875rem);
+  animation: post-header-reveal 560ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
-.post-cover-fallback-note {
-  display: block;
-  width: fit-content;
-  margin-bottom: 1rem;
-  padding: 0.45rem 0.8rem;
-  border-radius: 9999px;
-  color: rgba(255, 255, 255, 0.86);
-  background: rgba(15, 23, 42, 0.28);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  font-size: 0.75rem;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+.post-header-ready .post-main-title {
+  animation-delay: 80ms;
+}
+
+.post-header-ready .post-meta-info {
+  animation-delay: 150ms;
+}
+
+.post-category-badge {
+  @apply inline-block px-4 py-1.5 mb-6 rounded-full bg-rose-500/90 backdrop-blur-sm border border-rose-400/30 text-white text-sm font-bold tracking-widest shadow-lg shadow-rose-500/20;
 }
 
 .post-main-title {
@@ -649,24 +816,34 @@ const scrollToHeading = (headingId: string) => {
 }
 
 .post-main-area {
-  @apply w-full max-w-[1200px] mx-auto -mt-16 relative z-20 px-4 sm:px-6 md:px-8 xl:px-0 flex flex-col;
+  @apply w-full mx-auto -mt-16 relative z-20 px-4 sm:px-6 md:px-8 xl:px-0 flex flex-col;
+  max-width: min(1280px, var(--site-page-max-width));
+}
+
+@media (min-width: 2561px) {
+  .post-main-area {
+    max-width: 1260px;
+  }
 }
 
 .post-article-container {
   @apply rounded-3xl md:rounded-[2.5rem] p-6 sm:p-10 md:p-16 w-full relative z-10;
-  background-color: var(--color-card);
-  border: 1px solid var(--color-border);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0.70));
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(22px) saturate(1.12);
+  -webkit-backdrop-filter: blur(22px) saturate(1.12);
 }
 :global(html.dark .post-article-container){
-  background: linear-gradient(180deg, rgba(30, 41, 59, 0.6) 0%, var(--color-card) 200px);
-  border-color: rgba(255, 255, 255, 0.05);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.62), rgba(15, 23, 42, 0.7));
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
 }
 
 .post-reading-layout {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 14rem;
   gap: 3rem;
@@ -833,6 +1010,10 @@ const scrollToHeading = (headingId: string) => {
     border-color: var(--color-secondary);
   }
 
+  .post-floating-back-btn {
+    display: none;
+  }
+
   .post-header-content {
     position: relative;
     inset: auto;
@@ -929,12 +1110,20 @@ const scrollToHeading = (headingId: string) => {
   .post-loading-line {
     animation: none;
   }
+
+  .post-header-ready .post-category-badge,
+  .post-header-ready .post-main-title,
+  .post-header-ready .post-meta-info {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
 }
 
 /*
-  Tailwind Typography (@tailwindcss/typography) 插件的替代样式
+  Tailwind Typography (@tailwindcss/typography) 插件的替代样式。
   如果没有安装该插件，这些基础样式可以保证排版的优雅。
-  由于项目中没有安装 @tailwindcss/typography，这里手写核心的 prose 样式以保证"简约清新"的阅读体验。
+  由于项目中没有安装 @tailwindcss/typography，这里手写核心的 prose 样式以保持简约清晰的阅读体验。
 */
 .prose {
   color: var(--color-text);

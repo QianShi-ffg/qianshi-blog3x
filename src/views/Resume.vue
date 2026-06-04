@@ -1,54 +1,53 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { Briefcase, Download, FolderGit2, GraduationCap, Mail, MapPin } from 'lucide-vue-next'
+import { Briefcase, Download, FolderGit2, GraduationCap, Mail, MapPin, X } from 'lucide-vue-next'
 import { gsap } from 'gsap'
-import { defaultResume, getResume } from '@/api/resume'
+import { defaultResume, downloadResumeWithPassword, getResume } from '@/api/resume'
 import type { ResumeProfile, ResumeSkill, ResumeTimelineItem } from '@/types/content'
 
 const resumeRoot = ref<HTMLElement | null>(null)
 const resume = ref<ResumeProfile>(defaultResume)
+const passwordDialogVisible = ref(false)
+const resumePassword = ref('')
+const resumePasswordError = ref('')
+const isVerifyingResume = ref(false)
 let ctx: gsap.Context | undefined
 
-const getFileUrl = (path: string) => {
-  if (!path) return ''
-  if (/^https?:\/\//i.test(path)) return path
-  const baseURL = import.meta.env.VITE_API_BASE_URL || ''
-  return `${baseURL.replace(/\/$/, '')}${path}`
-}
-
 const avatarUrl = computed(() => resume.value.avatar || defaultResume.avatar)
-const resumeFileUrl = computed(() => getFileUrl(resume.value.resumeFile))
+const canDownloadResume = computed(() => Boolean(resume.value.hasResumeFile))
+const canSubmitResumePassword = computed(() => Boolean(resumePassword.value.trim()) && !isVerifyingResume.value)
 const prefersReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 
-const getResumeFilename = () => {
-  const path = resumeFileUrl.value.split('?')[0]
-  const filename = decodeURIComponent(path.split('/').pop() || '')
-  return filename || 'resume.pdf'
+const downloadResumeFile = (blob: Blob, filename: string) => {
+  const link = document.createElement('a')
+  const url = URL.createObjectURL(blob)
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 0)
 }
 
 const downloadResume = async () => {
-  if (!resumeFileUrl.value) return
+  if (!canDownloadResume.value) return
+  resumePassword.value = ''
+  resumePasswordError.value = ''
+  passwordDialogVisible.value = true
+}
 
-  const link = document.createElement('a')
-  link.download = getResumeFilename()
-
+const submitResumePassword = async () => {
+  if (!canSubmitResumePassword.value) return
+  resumePasswordError.value = ''
+  isVerifyingResume.value = true
   try {
-    const response = await fetch(resumeFileUrl.value)
-    if (!response.ok) throw new Error('resume download failed')
-    const blob = await response.blob()
-    const url = URL.createObjectURL(blob)
-    link.href = url
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    window.setTimeout(() => URL.revokeObjectURL(url), 0)
-  } catch {
-    link.href = resumeFileUrl.value
-    link.target = '_blank'
-    link.rel = 'noopener'
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
+    const file = await downloadResumeWithPassword(resumePassword.value.trim())
+    downloadResumeFile(file.blob, file.filename)
+    passwordDialogVisible.value = false
+  } catch (error) {
+    resumePasswordError.value = error instanceof Error ? error.message : '密码验证失败'
+  } finally {
+    isVerifyingResume.value = false
   }
 }
 
@@ -117,12 +116,38 @@ onUnmounted(() => {
       </div>
       <button
         class="resume-download-btn interactive-lift"
-        :disabled="!resumeFileUrl"
+        :disabled="!canDownloadResume"
         @click="downloadResume"
       >
         下载简历 PDF
         <Download class="resume-download-icon" />
       </button>
+    </div>
+
+    <div v-if="passwordDialogVisible" class="resume-password-overlay" @click.self="passwordDialogVisible = false">
+      <div class="resume-password-dialog">
+        <button class="resume-password-close" type="button" aria-label="关闭" @click="passwordDialogVisible = false">
+          <X class="resume-password-close-icon" />
+        </button>
+        <h2 class="resume-password-title">输入简历密码</h2>
+        <p class="resume-password-desc">验证通过后会自动开始下载。</p>
+        <input
+          v-model="resumePassword"
+          class="resume-password-input"
+          type="password"
+          placeholder="请输入密码"
+          @keydown.enter="submitResumePassword"
+        />
+        <p v-if="resumePasswordError" class="resume-password-error">{{ resumePasswordError }}</p>
+        <button
+          class="resume-password-submit"
+          type="button"
+          :disabled="!canSubmitResumePassword"
+          @click="submitResumePassword"
+        >
+          {{ isVerifyingResume ? '验证中' : '确认下载' }}
+        </button>
+      </div>
     </div>
 
     <div class="resume-grid">
@@ -240,9 +265,25 @@ onUnmounted(() => {
 <style scoped>
 .resume-page-container {
   min-height: 80vh;
-  max-width: 1280px;
+  max-width: min(1440px, var(--site-page-max-width));
   margin: 0 auto;
   padding: 8rem 1.5rem 4rem;
+}
+
+@media (min-width: 2561px) {
+  .resume-page-container {
+    max-width: 1520px;
+    padding-top: 9rem;
+    padding-bottom: 6rem;
+  }
+}
+
+@media (min-width: 3840px) {
+  .resume-page-container {
+    max-width: 1640px;
+    padding-top: 10rem;
+    padding-bottom: 7rem;
+  }
 }
 
 .resume-header-wrapper {
@@ -293,6 +334,105 @@ onUnmounted(() => {
 .resume-download-icon {
   width: 1rem;
   height: 1rem;
+}
+
+.resume-password-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(15, 23, 42, 0.28);
+  backdrop-filter: blur(12px);
+}
+
+.resume-password-dialog {
+  position: relative;
+  width: min(100%, 26rem);
+  padding: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  border-radius: 1.75rem;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.78), rgba(248, 250, 252, 0.58)),
+    rgba(255, 255, 255, 0.72);
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.18);
+}
+
+.resume-password-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.56);
+  color: var(--color-heading);
+  cursor: pointer;
+}
+
+.resume-password-close-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.resume-password-title {
+  margin: 0 2.5rem 0.5rem 0;
+  color: var(--color-heading);
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+.resume-password-desc {
+  margin-bottom: 1.25rem;
+  color: var(--color-text);
+  font-size: 0.92rem;
+}
+
+.resume-password-input {
+  width: 100%;
+  height: 3rem;
+  padding: 0 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.68);
+  color: var(--color-heading);
+  outline: none;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.resume-password-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgba(244, 63, 94, 0.12);
+}
+
+.resume-password-error {
+  margin: 0.75rem 0 0;
+  color: #e11d48;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.resume-password-submit {
+  width: 100%;
+  height: 3rem;
+  margin-top: 1.1rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.resume-password-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
 }
 
 .resume-grid {
@@ -665,6 +805,16 @@ onUnmounted(() => {
 
   .resume-grid {
     grid-template-columns: 4fr 8fr;
+  }
+}
+
+@media (min-width: 2561px) {
+  .resume-page-container {
+    padding-inline: 4rem;
+  }
+
+  .resume-grid {
+    gap: 3.5rem;
   }
 }
 </style>

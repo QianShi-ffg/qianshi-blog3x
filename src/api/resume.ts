@@ -1,54 +1,23 @@
 import { apiClient } from './http'
 import type { ResumeProfile } from '@/types/content'
+import { encryptPassword } from '@/utils/passwordCrypto'
 
 export const defaultResume: ResumeProfile = {
-  title: '关于我',
-  subtitle: '热爱简洁、易用，也喜欢把日常里的想法认真做出来。',
-  name: 'QianShiBlog',
-  role: '前端开发人员',
-  avatar:
-    'https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20minimalist%20avatar%20illustration%2C%20flat%20design%2C%20soft%20colors%2C%20young%20developer&image_size=square',
+  title: '',
+  subtitle: '',
+  name: '',
+  role: '',
+  avatar: '',
   resumeFile: '',
-  location: '中国 · 杭州',
-  email: 'hello@QianShiBlog.dev',
+  hasResumeFile: false,
+  resumeProtected: false,
+  location: '',
+  email: '',
   summary: '',
-  skills: [
-    { name: 'Vue.js / React', level: '精通' },
-    { name: 'TypeScript', level: '掌握' },
-    { name: 'CSS / Tailwind', level: '精通' },
-    { name: 'Node.js', level: '熟悉' },
-  ],
-  experiences: [
-    {
-      title: '前端开发人员',
-      date: '2021 至今',
-      company: '个人项目与产品实践',
-      desc: [
-        '负责个人站点、后台管理和内容展示页面的设计与实现。',
-        '持续优化页面动效、响应式体验和内容维护流程。',
-        '把日常记录、文章和作品整理成可长期维护的个人空间。',
-      ],
-    },
-  ],
-  educations: [
-    {
-      title: '持续学习',
-      date: '长期',
-      school: '自我驱动',
-      desc: '关注界面体验、交互细节和产品表达，也保持对生活本身的观察。',
-    },
-  ],
-  projects: [
-    {
-      title: 'QianShiBlog',
-      date: '长期维护',
-      stack: '个人网站 / 内容管理 / 作品展示',
-      desc: [
-        '维护文章、日记、作品、友链等内容模块。',
-        '让后台管理和前台展示形成一条更顺手的内容链路。',
-      ],
-    },
-  ],
+  skills: [],
+  experiences: [],
+  educations: [],
+  projects: [],
 }
 
 const normalizeListText = (value: string[] | string) => {
@@ -63,18 +32,12 @@ const normalizeResume = (resume: Partial<ResumeProfile> | null): ResumeProfile =
   return {
     ...defaultResume,
     ...resume,
-    avatar: resume.avatar || defaultResume.avatar,
-    resumeFile: resume.resumeFile || defaultResume.resumeFile,
-    skills: resume.skills?.length ? resume.skills : defaultResume.skills,
-    experiences: resume.experiences?.length
-      ? resume.experiences.map((item) => ({ ...item, desc: normalizeListText(item.desc) }))
-      : defaultResume.experiences,
-    educations: resume.educations?.length
-      ? resume.educations.map((item) => ({ ...item, desc: normalizeListText(item.desc) }))
-      : defaultResume.educations,
-    projects: resume.projects?.length
-      ? resume.projects.map((item) => ({ ...item, desc: normalizeListText(item.desc) }))
-      : defaultResume.projects,
+    avatar: resume.avatar || '',
+    resumeFile: resume.resumeFile || '',
+    skills: resume.skills || [],
+    experiences: resume.experiences?.map((item) => ({ ...item, desc: normalizeListText(item.desc) })) || [],
+    educations: resume.educations?.map((item) => ({ ...item, desc: normalizeListText(item.desc) })) || [],
+    projects: resume.projects?.map((item) => ({ ...item, desc: normalizeListText(item.desc) })) || [],
   }
 }
 
@@ -84,4 +47,60 @@ export const getResume = async () => {
   })
 
   return normalizeResume(res)
+}
+
+export const verifyResumePassword = async (password: string) => {
+  return apiClient.post<Record<string, never>>('/resume/verify-password', {
+    password: await encryptPassword(password),
+  })
+}
+
+const getApiUrl = (path: string) => {
+  const baseURL = import.meta.env.VITE_API_BASE_URL || ''
+  return `${baseURL.replace(/\/$/, '')}/${path.replace(/^\//, '')}`
+}
+
+const getFilenameFromDisposition = (disposition: string | null) => {
+  if (!disposition) return 'resume.pdf'
+  const filename = disposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i)?.[1]
+  return filename ? decodeURIComponent(filename) : 'resume.pdf'
+}
+
+const resumeErrorMessageMap: Record<string, string> = {
+  'Resume password is required': '请先设置简历下载密码',
+  'Resume password is not configured': '简历下载密码未配置',
+  'Resume password is incorrect': '简历密码不正确',
+  'Resume file is not configured': '简历文件未配置',
+  'Invalid resume file path': '简历文件路径无效',
+  'Resume file does not exist': '简历文件不存在',
+}
+
+const toResumeErrorMessage = (message?: string) => {
+  if (!message) return '密码验证失败'
+  return resumeErrorMessageMap[message] || message
+}
+
+export const downloadResumeWithPassword = async (password: string) => {
+  const encryptedPassword = await encryptPassword(password)
+  const response = await fetch(getApiUrl('/resume/download'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ password: encryptedPassword }),
+  })
+
+  if (!response.ok) {
+    const contentType = response.headers.get('content-type') || ''
+    if (contentType.includes('application/json')) {
+      const payload = await response.json()
+      throw new Error(toResumeErrorMessage(payload.message))
+    }
+    throw new Error(toResumeErrorMessage(await response.text()))
+  }
+
+  return {
+    blob: await response.blob(),
+    filename: getFilenameFromDisposition(response.headers.get('content-disposition')),
+  }
 }

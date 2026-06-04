@@ -115,6 +115,8 @@ export interface ResumeProfile {
   role: string
   avatar: string
   resumeFile: string
+  hasResumeFile?: boolean
+  resumeProtected?: boolean
   location: string
   email: string
   summary: string

@@ -332,7 +332,7 @@ onUnmounted(() => {
       <div class="recent-header">
         <div>
           <h2 class="recent-title">最新文章</h2>
-          <p class="recent-desc">记录技术与生活的点滴</p>
+          <p class="recent-desc">记录技术与生活的点滴。</p>
         </div>
         <RouterLink to="/blog" class="recent-view-all group">
           查看全部
@@ -385,7 +385,7 @@ onUnmounted(() => {
   padding-right: 1.5rem;
   margin-left: auto;
   margin-right: auto;
-  max-width: 1536px; /* max-w-screen-2xl */
+  max-width: var(--site-page-max-width); /* max-w-screen-2xl */
 }
 @media (min-width: 640px) {
   .home-container {
@@ -407,8 +407,22 @@ onUnmounted(() => {
 }
 @media (min-width: 1280px) {
   .home-container {
-    padding-left: 12rem; /* xl:px-48 */
-    padding-right: 12rem;
+    padding-left: var(--site-page-padding-wide); /* xl:px-48 */
+    padding-right: var(--site-page-padding-wide);
+  }
+}
+
+@media (min-width: 2561px) {
+  .home-container {
+    padding-left: clamp(7rem, 6vw, 9rem);
+    padding-right: clamp(7rem, 6vw, 9rem);
+  }
+}
+
+@media (min-width: 3840px) {
+  .home-container {
+    padding-left: clamp(8rem, 6vw, 12rem);
+    padding-right: clamp(8rem, 6vw, 12rem);
   }
 }
 
@@ -767,6 +781,13 @@ onUnmounted(() => {
 @media (min-width: 1024px) {
   .recent-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 2561px) {
+  .recent-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 2.25rem;
   }
 }
 

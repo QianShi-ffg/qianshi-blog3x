@@ -7,6 +7,7 @@ import ThemeToggle from './ThemeToggle.vue'
 
 const isScrolled = ref(false)
 const menuOpen = ref(false)
+const activeNavPath = ref('')
 const navRoot = ref<HTMLElement | null>(null)
 const desktopNav = ref<HTMLElement | null>(null)
 const hoverPill = ref<HTMLElement | null>(null)
@@ -26,9 +27,11 @@ const navLinks = [
 ]
 
 const isNavLinkActive = (path: string) => {
-  if (path === '/') return route.path === '/'
+  const currentPath = activeNavPath.value || route.path
 
-  return route.path === path || route.path.startsWith(`${path}/`)
+  if (path === '/') return currentPath === '/'
+
+  return currentPath === path || currentPath.startsWith(`${path}/`)
 }
 
 const handleScroll = () => {
@@ -78,11 +81,17 @@ const onNavLinkEnter = (event: MouseEvent) => {
   moveNavPill(event.currentTarget as HTMLElement)
 }
 
+const onNavLinkClick = (path: string, event: MouseEvent) => {
+  activeNavPath.value = path
+  moveNavPill(event.currentTarget as HTMLElement)
+}
+
 const onDesktopNavLeave = () => {
   syncActiveNavPill()
 }
 
 onMounted(() => {
+  activeNavPath.value = route.path
   window.addEventListener('scroll', handleScroll)
   window.addEventListener('resize', handleResize)
   handleScroll()
@@ -119,7 +128,8 @@ onUnmounted(() => {
 
 watch(
   () => route.path,
-  () => {
+  (path) => {
+    activeNavPath.value = path
     nextTick(() => syncActiveNavPill())
   },
 )
@@ -189,6 +199,7 @@ const onMobileMenuLeave = (el: Element, done: () => void) => {
               class="navbar-link"
               :class="{ 'navbar-link-active': isNavLinkActive(link.path) }"
               @mouseenter="onNavLinkEnter"
+              @click="onNavLinkClick(link.path, $event)"
             >
               {{ link.name }}
               <span
@@ -226,7 +237,7 @@ const onMobileMenuLeave = (el: Element, done: () => void) => {
             v-for="link in navLinks"
             :key="link.path"
             :to="link.path"
-            @click="menuOpen = false"
+            @click="activeNavPath = link.path; menuOpen = false"
             class="navbar-mobile-link"
             :class="{ 'navbar-mobile-link-active': isNavLinkActive(link.path) }"
           >
@@ -277,8 +288,7 @@ const onMobileMenuLeave = (el: Element, done: () => void) => {
 }
 
 .navbar-container {
-  margin-left: auto;
-  margin-right: auto;
+  width: 100%;
 }
 
 .navbar-inner {
