@@ -57,6 +57,10 @@
       color 0.3s ease;
   }
 
+  body.lk-scroll-locked .navbar-header {
+    right: var(--lk-scrollbar-compensation, 0px);
+  }
+
   html {
     background-color: var(--color-background);
     opacity: 1;
@@ -137,7 +141,7 @@
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     border: 1px solid var(--color-border);
-    border-radius: 1.5rem;
+    border-radius: 1rem;
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
     transition: all 0.3s ease;
     will-change: transform;
@@ -147,10 +151,10 @@
     position: relative;
     transform: translateZ(0);
     transition:
-      transform 0.28s ease,
-      border-color 0.28s ease,
-      box-shadow 0.28s ease,
-      background-color 0.28s ease;
+      transform 0.28s linear,
+      border-color 0.28s linear,
+      box-shadow 0.28s linear,
+      background-color 0.28s linear;
     will-change: transform;
   }
 
@@ -162,7 +166,7 @@
     pointer-events: none;
     opacity: 0;
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.16), transparent 42%);
-    transition: opacity 0.28s ease;
+    transition: opacity 0.28s linear;
   }
 
   html.dark .interactive-card::after {
@@ -201,7 +205,7 @@
 
   .interactive-media img,
   .interactive-media video {
-    transition: transform 0.7s ease;
+    transition: transform 0.28s linear;
     will-change: transform;
   }
 
@@ -420,4 +424,12 @@
 .page-leave-to {
   opacity: 0;
   transform: translateY(-10px);
+}
+
+
+.vel-modal .vel-btns-wrapper  .vel-toolbar {
+  border-radius: 8% / 50%;
+} 
+.vel-modal .vel-btns-wrapper .btn__close .vel-icon {
+  display: none;
 }

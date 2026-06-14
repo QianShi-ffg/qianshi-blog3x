@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Calendar, Eye, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { Calendar, Eye, ChevronRight } from 'lucide-vue-next'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { listArticles, getClassifyIdList } from '@/api/blog'
@@ -9,6 +9,7 @@ import type { ArticleSummary } from '@/types/content'
 import { date } from '@/utils/date'
 import { useBlogStore } from '@/stores/blog'
 import { registerRouteTransitionCleanup } from '@/utils/route-transition-cleanup'
+import AppPagination from '@/components/AppPagination.vue'
 
 const router = useRouter()
 const blogStore = useBlogStore()
@@ -99,35 +100,6 @@ const totalPages = computed(() => {
   return Math.max(1, Math.ceil(articleTotal.value / pageSize))
 })
 
-const paginationItems = computed(() => {
-  const pages: Array<number | 'ellipsis'> = []
-  const total = totalPages.value
-  const current = blogStore.currentPage
-
-  if (total <= 5) {
-    return Array.from({ length: total }, (_, index) => index + 1)
-  }
-
-  pages.push(1)
-
-  if (current > 3) {
-    pages.push('ellipsis')
-  }
-
-  const start = Math.max(2, current - 1)
-  const end = Math.min(total - 1, current + 1)
-  for (let page = start; page <= end; page += 1) {
-    pages.push(page)
-  }
-
-  if (current < total - 2) {
-    pages.push('ellipsis')
-  }
-
-  pages.push(total)
-  return pages
-})
-
 const readArticleList = (res: unknown) => {
   if (Array.isArray(res)) {
     return res as ArticleSummary[]
@@ -208,6 +180,14 @@ const playArticleListEnterAnimation = () => {
         },
       },
     )
+  })
+}
+
+const scrollToPageTop = () => {
+  window.scrollTo({
+    top: 0,
+    left: 0,
+    behavior: 'auto',
   })
 }
 
@@ -318,6 +298,7 @@ const changePage = async (page: number) => {
   const nextPage = Math.min(Math.max(page, 1), totalPages.value)
   if (nextPage === blogStore.currentPage) return
 
+  scrollToPageTop()
   await loadArticles(nextPage)
 }
 
@@ -593,51 +574,14 @@ const openArticle = (article: ArticleSummary) => {
       </TransitionGroup>
     </div>
 
-    <nav
+    <AppPagination
       v-if="hasLoadedArticles && articleTotal > pageSize"
-      v-motion
-      :initial="{ opacity: 0, y: 16 }"
-      :enter="{ opacity: 1, y: 0, transition: { duration: 520, delay: 120 } }"
-      class="blog-pagination"
-      :class="{ 'blog-pagination-updating': isArticlesLoading }"
+      :current-page="blogStore.currentPage"
+      :total-pages="totalPages"
+      :disabled="isArticlesLoading"
       aria-label="文章分页"
-    >
-      <button
-        type="button"
-        class="blog-pagination-arrow"
-        :disabled="blogStore.currentPage === 1"
-        aria-label="上一页"
-        @click="changePage(blogStore.currentPage - 1)"
-      >
-        <ChevronLeft class="blog-pagination-icon" />
-      </button>
-
-      <div class="blog-pagination-pages">
-        <template v-for="(item, index) in paginationItems" :key="`${item}-${index}`">
-          <span v-if="item === 'ellipsis'" class="blog-pagination-ellipsis">...</span>
-          <button
-            v-else
-            type="button"
-            class="blog-pagination-page"
-            :class="{ 'blog-pagination-page-active': blogStore.currentPage === item }"
-            :aria-current="blogStore.currentPage === item ? 'page' : undefined"
-            @click="changePage(item)"
-          >
-            {{ item }}
-          </button>
-        </template>
-      </div>
-
-      <button
-        type="button"
-        class="blog-pagination-arrow"
-        :disabled="blogStore.currentPage === totalPages"
-        aria-label="下一页"
-        @click="changePage(blogStore.currentPage + 1)"
-      >
-        <ChevronRight class="blog-pagination-icon" />
-      </button>
-    </nav>
+      @change="changePage"
+    />
   </div>
 </template>
 
@@ -1485,142 +1429,6 @@ const openArticle = (article: ArticleSummary) => {
   height: 1rem;
 }
 
-.blog-pagination {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  margin-top: 3rem;
-  padding: 0.5rem;
-}
-
-.blog-pagination-updating {
-  opacity: 0.58;
-  pointer-events: none;
-  transition: opacity 180ms ease;
-}
-
-.blog-pagination-pages {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.35rem;
-  border: 1px solid var(--color-border);
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.56);
-  box-shadow:
-    0 16px 40px -30px rgba(15, 23, 42, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-}
-
-.blog-pagination-arrow,
-.blog-pagination-page {
-  width: 2.5rem;
-  height: 2.5rem;
-  border: 1px solid var(--color-border);
-  border-radius: 9999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text);
-  background: rgba(255, 255, 255, 0.68);
-  cursor: pointer;
-  font-size: 0.875rem;
-  font-weight: 600;
-  transition:
-    transform 200ms ease,
-    color 200ms ease,
-    border-color 200ms ease,
-    background-color 200ms ease,
-    box-shadow 200ms ease;
-}
-
-.blog-pagination-arrow:hover:not(:disabled),
-.blog-pagination-page:hover {
-  transform: translateY(-0.125rem);
-  color: var(--color-primary);
-  border-color: rgba(244, 63, 94, 0.2);
-  background: rgba(255, 241, 242, 0.86);
-  box-shadow: 0 14px 24px -18px rgba(244, 63, 94, 0.55);
-}
-
-.blog-pagination-page-active {
-  color: #ffffff;
-  border-color: transparent;
-  background: var(--color-primary);
-  box-shadow:
-    0 14px 26px -16px rgba(244, 63, 94, 0.8),
-    inset 0 1px 0 rgba(255, 255, 255, 0.24);
-}
-
-.blog-pagination-page-active:hover {
-  color: #ffffff;
-  background: var(--color-primary);
-}
-
-.blog-pagination-arrow:disabled {
-  cursor: not-allowed;
-  opacity: 0.38;
-  transform: none;
-}
-
-.blog-pagination-icon {
-  width: 1rem;
-  height: 1rem;
-}
-
-.blog-pagination-ellipsis {
-  min-width: 1.5rem;
-  color: var(--color-text);
-  text-align: center;
-  font-weight: 600;
-  opacity: 0.55;
-}
-
-:global(html.dark .blog-pagination-pages) {
-  background: rgba(218, 223, 230, 0.045);
-  border-color: rgba(255, 255, 255, 0.08);
-  box-shadow:
-    0 16px 38px -30px rgba(0, 0, 0, 0.72),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
-}
-
-:global(html.dark .blog-pagination-arrow),
-:global(html.dark .blog-pagination-page) {
-  background: rgba(218, 223, 230, 0.05);
-  border-color: rgba(255, 255, 255, 0.08);
-  color: #cbd5e1;
-}
-
-:global(html.dark .blog-pagination-arrow:hover:not(:disabled)),
-:global(html.dark .blog-pagination-page:hover) {
-  background: rgba(244, 63, 94, 0.14);
-  border-color: rgba(244, 63, 94, 0.24);
-  color: var(--color-primary);
-  box-shadow: 0 14px 24px -18px rgba(244, 63, 94, 0.45);
-}
-
-:global(html.dark .blog-pagination-page-active),
-:global(html.dark .blog-pagination-page-active:hover) {
-  color: #ffffff;
-  background: var(--color-primary);
-  border-color: transparent;
-  box-shadow:
-    0 14px 26px -18px rgba(244, 63, 94, 0.7),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-:global(html.dark .blog-pagination-arrow:disabled) {
-  color: rgba(203, 213, 225, 0.42);
-  background: rgba(218, 223, 230, 0.035);
-}
-
-:global(html.dark .blog-pagination-ellipsis) {
-  color: rgba(203, 213, 225, 0.62);
-}
-
 @media (max-width: 640px) {
   .blog-grid-wrapper {
     margin-top: 2rem;
@@ -1689,21 +1497,6 @@ const openArticle = (article: ArticleSummary) => {
     padding-bottom: 0.625rem;
   }
 
-  .blog-pagination {
-    gap: 0.5rem;
-    margin-top: 2.25rem;
-  }
-
-  .blog-pagination-pages {
-    gap: 0.25rem;
-    padding: 0.25rem;
-  }
-
-  .blog-pagination-arrow,
-  .blog-pagination-page {
-    width: 2.75rem;
-    height: 2.75rem;
-  }
 }
 
 /* Transition classes from previous version */

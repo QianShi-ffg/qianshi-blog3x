@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
-import { MapPin, Calendar, ImageIcon, Video, FileText } from 'lucide-vue-next'
+import { MapPin, Calendar, Heart, ImageIcon, Video, FileText } from 'lucide-vue-next'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { listMoments } from '@/api/diary'
 import type { DiaryMomentSummary } from '@/types/content'
 import { registerRouteTransitionCleanup } from '@/utils/route-transition-cleanup'
+import { getPrimaryMedia } from '@/utils/media'
 import WeatherIcon from '@/components/WeatherIcon.vue'
 
 const moments = ref<DiaryMomentSummary[]>([])
@@ -161,9 +162,9 @@ const getMomentText = (content: string) => {
             </div>
 
             <!-- Media Section -->
-            <div v-if="moment.type === 'image' && moment.media" class="diary-media-wrap interactive-media">
+            <div v-if="moment.type === 'image' && getPrimaryMedia(moment.media)" class="diary-media-wrap interactive-media">
               <img
-                :src="moment.media"
+                :src="getPrimaryMedia(moment.media)"
                 alt="Moment"
                 class="diary-media-img"
               />
@@ -201,6 +202,10 @@ const getMomentText = (content: string) => {
                 <span class="diary-meta-location">
                   <MapPin class="diary-icon-xxs" />
                   {{ moment.location }}
+                </span>
+                <span class="diary-meta-likes">
+                  <Heart class="diary-icon-xxs" />
+                  {{ moment.likes || 0 }}
                 </span>
               </div>
             </div>
@@ -367,7 +372,8 @@ const getMomentText = (content: string) => {
 }
 
 .diary-card {
-  @apply rounded-3xl overflow-hidden relative;
+  @apply overflow-hidden relative;
+  border-radius: 1rem;
   background-color: var(--color-card);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -454,10 +460,12 @@ const getMomentText = (content: string) => {
 
 .diary-media-img {
   @apply w-full h-auto object-cover;
+  transition: transform 0.28s linear;
 }
 
 .diary-media-overlay {
-  @apply absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300;
+  @apply absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity;
+  transition-duration: 280ms;
 }
 
 .diary-video-wrap {
@@ -467,6 +475,7 @@ const getMomentText = (content: string) => {
 
 .diary-video-element {
   @apply w-full h-full object-cover;
+  transition: transform 0.28s linear;
 }
 
 .diary-content-wrap {
@@ -536,10 +545,24 @@ const getMomentText = (content: string) => {
   color: var(--color-text);
   border: 1px solid var(--color-border);
 }
+
+.diary-meta-likes {
+  @apply flex items-center gap-1 px-2 py-1 rounded-md;
+  background-color: rgba(244, 63, 94, 0.08);
+  color: #e11d48;
+  border: 1px solid rgba(244, 63, 94, 0.14);
+}
+
 :global(html.dark .diary-meta-location){
   background-color: rgba(255, 255, 255, 0.9);
   color: #1e293b;
   border: none;
+}
+
+:global(html.dark .diary-meta-likes){
+  background-color: rgba(244, 63, 94, 0.16);
+  color: #fb7185;
+  border: 1px solid rgba(251, 113, 133, 0.2);
 }
 :global(html.dark .diary-meta-footer){
   border-top-color: rgba(255, 255, 255, 0.1);

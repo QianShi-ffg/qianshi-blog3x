@@ -1,3 +1,6 @@
+/**
+ * 根据天气名称和后缀查找本地天气图标资源。
+ */
 export const getWeatherUrl: any = (name: string, suffix: string) => {
   let path0 = ''
   const modules: any = import.meta.glob('/src/assets/weather/*.png')

@@ -1,22 +1,81 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, onUnmounted, ref, watch } from 'vue'
 import { ArrowUpRight, Github, ExternalLink } from 'lucide-vue-next'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { listProjects } from '@/api/portfolio'
 import type { Project } from '@/types/content'
 import { registerRouteTransitionCleanup } from '@/utils/route-transition-cleanup'
+import AppPagination from '@/components/AppPagination.vue'
+import defaultProjectCover from '@/assets/img/thumb.png'
 
 const projects = ref<Project[]>([])
 const isProjectsLoading = ref(true)
 const hasCheckedProjects = ref(false)
 const portfolioRoot = ref<HTMLElement | null>(null)
+const activeProjectType = ref<'personal' | 'participated'>('personal')
+const currentPage = ref(1)
+const pageSize = ref(4)
 let hoverCtx: gsap.Context | undefined
 let headerParallaxCtx: gsap.Context | undefined
 let unregisterTransitionCleanup: (() => void) | undefined
 let hoverCleanups: Array<() => void> = []
+let largeScreenQuery: MediaQueryList | undefined
+
+const projectTypeTabs = [
+  { label: '个人作品', value: 'personal' },
+  { label: '参与负责作品', value: 'participated' },
+] as const
 
 const prefersReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+
+const normalizeProjectType = (project: Project) => project.projectType === 'participated' ? 'participated' : 'personal'
+
+const filteredProjects = computed(() => projects.value.filter((project) => normalizeProjectType(project) === activeProjectType.value))
+const selectedProjectTypeLabel = computed(() => projectTypeTabs.find((tab) => tab.value === activeProjectType.value)?.label || '作品')
+const projectTypeCount = (type: 'personal' | 'participated') =>
+  projects.value.filter((project) => normalizeProjectType(project) === type).length
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredProjects.value.length / pageSize.value)))
+const pagedProjects = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  return filteredProjects.value.slice(start, start + pageSize.value)
+})
+const showPagination = computed(() => filteredProjects.value.length > pageSize.value)
+
+const syncPageSize = () => {
+  pageSize.value = largeScreenQuery?.matches ? 6 : 4
+}
+
+const clampCurrentPage = () => {
+  currentPage.value = Math.min(Math.max(1, currentPage.value), totalPages.value)
+}
+
+const scrollToPageTop = () => {
+  window.scrollTo({
+    top: 0,
+    left: 0,
+    behavior: 'auto',
+  })
+}
+
+const changePage = async (page: number) => {
+  currentPage.value = Math.min(Math.max(1, page), totalPages.value)
+  scrollToPageTop()
+  await nextTick()
+  setupPortfolioHover()
+  ScrollTrigger.refresh()
+}
+
+const hasProjectLink = (value?: string) => Boolean(value?.trim())
+const hasProjectActions = (project: Project) => hasProjectLink(project.github) || hasProjectLink(project.demo)
+const getProjectCover = (project: Project) => project.image?.trim() || defaultProjectCover
+const getProjectCategory = (project: Project) => project.category?.trim() || '暂无'
+const handleProjectCoverError = (event: Event) => {
+  const image = event.target as HTMLImageElement | null
+  if (!image || image.dataset.fallbackApplied) return
+  image.dataset.fallbackApplied = 'true'
+  image.src = defaultProjectCover
+}
 
 const setupPortfolioHover = () => {
   hoverCleanups.forEach((cleanup) => cleanup())
@@ -29,7 +88,6 @@ const setupPortfolioHover = () => {
     const cards = gsap.utils.toArray<HTMLElement>('.portfolio-card:not(.portfolio-card-skeleton)')
 
     cards.forEach((card) => {
-      const image = card.querySelector<HTMLElement>('.portfolio-image')
       const overlay = card.querySelector<HTMLElement>('.portfolio-overlay')
       const actions = card.querySelectorAll<HTMLElement>('.portfolio-action-btn')
       const title = card.querySelector<HTMLElement>('.portfolio-project-title')
@@ -38,11 +96,10 @@ const setupPortfolioHover = () => {
       const enter = () => {
         gsap.to(card, {
           filter: 'drop-shadow(0 18px 30px rgba(244, 63, 94, 0.12))',
-          duration: 0.32,
-          ease: 'power2.out',
+          duration: 0.28,
+          ease: 'none',
           overwrite: true,
         })
-        gsap.to(image, { scale: 1.045, duration: 0.8, ease: 'power3.out', overwrite: true })
         gsap.to(overlay, { autoAlpha: 1, duration: 0.36, ease: 'power2.out', overwrite: true })
         gsap.to(actions, {
           autoAlpha: 1,
@@ -60,11 +117,10 @@ const setupPortfolioHover = () => {
       const leave = () => {
         gsap.to(card, {
           filter: 'drop-shadow(0 0 0 rgba(244, 63, 94, 0))',
-          duration: 0.3,
-          ease: 'power2.out',
+          duration: 0.28,
+          ease: 'none',
           overwrite: true,
         })
-        gsap.to(image, { scale: 1, duration: 0.7, ease: 'power3.out', overwrite: true })
         gsap.to(overlay, { autoAlpha: 0, duration: 0.28, ease: 'power2.out', overwrite: true })
         gsap.to(actions, {
           autoAlpha: 0,
@@ -122,6 +178,10 @@ const setupHeaderParallax = () => {
 }
 
 onMounted(async () => {
+  largeScreenQuery = window.matchMedia('(min-width: 3840px)')
+  syncPageSize()
+  largeScreenQuery.addEventListener('change', syncPageSize)
+
   isProjectsLoading.value = true
   try {
     projects.value = await listProjects()
@@ -134,6 +194,20 @@ onMounted(async () => {
   }
 })
 
+watch(activeProjectType, async () => {
+  currentPage.value = 1
+  await nextTick()
+  setupPortfolioHover()
+  ScrollTrigger.refresh()
+})
+
+watch([filteredProjects, pageSize], async () => {
+  clampCurrentPage()
+  await nextTick()
+  setupPortfolioHover()
+  ScrollTrigger.refresh()
+})
+
 onBeforeUnmount(() => {
   hoverCleanups.forEach((cleanup) => cleanup())
   hoverCleanups = []
@@ -141,6 +215,7 @@ onBeforeUnmount(() => {
 })
 
 onUnmounted(() => {
+  largeScreenQuery?.removeEventListener('change', syncPageSize)
   unregisterTransitionCleanup?.()
   headerParallaxCtx?.revert()
 })
@@ -167,6 +242,30 @@ onUnmounted(() => {
       >
         将想法转化为现实。以下是我参与开发的一些开源项目和个人作品。
       </p>
+      <div
+        v-if="projects.length > 0"
+        v-motion
+        :initial="{ opacity: 0, y: 20 }"
+        :enter="{ opacity: 1, y: 0, transition: { duration: 800, delay: 180 } }"
+        class="portfolio-type-tabs"
+        :class="{ 'is-participated': activeProjectType === 'participated' }"
+        role="tablist"
+        aria-label="作品分类"
+      >
+        <button
+          v-for="tab in projectTypeTabs"
+          :key="tab.value"
+          class="portfolio-type-tab"
+          :class="{ active: activeProjectType === tab.value }"
+          type="button"
+          role="tab"
+          :aria-selected="activeProjectType === tab.value"
+          @click="activeProjectType = tab.value"
+        >
+          <span>{{ tab.label }}</span>
+          <small>{{ projectTypeCount(tab.value) }}</small>
+        </button>
+      </div>
     </div>
 
     <!-- Projects Grid -->
@@ -191,9 +290,13 @@ onUnmounted(() => {
       <p class="portfolio-empty-title">暂无作品</p>
       <p class="portfolio-empty-desc">作品整理完成后会在这里展示。</p>
     </div>
+    <div v-else-if="filteredProjects.length === 0" class="portfolio-empty-state" aria-live="polite">
+      <p class="portfolio-empty-title">暂无{{ selectedProjectTypeLabel }}</p>
+      <p class="portfolio-empty-desc">切换分类看看其他作品。</p>
+    </div>
     <div v-else class="portfolio-grid">
       <div
-        v-for="(project, index) in projects"
+        v-for="(project, index) in pagedProjects"
         :key="project.id"
         v-motion
         :initial="{ opacity: 0, y: 30 }"
@@ -201,28 +304,33 @@ onUnmounted(() => {
         class="portfolio-card"
       >
         <!-- Project Image -->
-        <div class="portfolio-image-wrapper interactive-media">
-          <img :src="project.image" :alt="project.title" class="portfolio-image" />
-          <div class="portfolio-overlay">
-            <a :href="project.github" target="_blank" class="portfolio-action-btn">
+        <router-link :to="`/portfolio/${project.id}`" class="portfolio-image-wrapper interactive-media">
+          <img
+            :src="getProjectCover(project)"
+            :alt="project.title"
+            class="portfolio-image"
+            @error="handleProjectCoverError"
+          />
+          <div v-if="hasProjectActions(project)" class="portfolio-overlay">
+            <a v-if="hasProjectLink(project.github)" :href="project.github" target="_blank" class="portfolio-action-btn" @click.stop>
               <Github class="portfolio-icon" />
             </a>
-            <a :href="project.demo" target="_blank" class="portfolio-action-btn">
+            <a v-if="hasProjectLink(project.demo)" :href="project.demo" target="_blank" class="portfolio-action-btn" @click.stop>
               <ExternalLink class="portfolio-icon" />
             </a>
           </div>
-        </div>
+        </router-link>
 
         <!-- Project Info -->
         <router-link :to="`/portfolio/${project.id}`" class="portfolio-content-link block cursor-pointer">
           <div class="portfolio-category-wrapper">
             <span class="portfolio-category-badge">
-              {{ project.category }}
+              {{ getProjectCategory(project) }}
             </span>
           </div>
 
           <h2 class="portfolio-project-title">
-            {{ project.title }}
+            <span class="portfolio-project-title-text">{{ project.title }}</span>
             <ArrowUpRight class="portfolio-arrow-icon interactive-arrow" />
           </h2>
 
@@ -238,6 +346,13 @@ onUnmounted(() => {
         </router-link>
       </div>
     </div>
+    <AppPagination
+      v-if="showPagination"
+      :current-page="currentPage"
+      :total-pages="totalPages"
+      aria-label="作品分页"
+      @change="changePage"
+    />
   </div>
 </template>
 
@@ -305,9 +420,102 @@ onUnmounted(() => {
   color: var(--color-text);
 }
 
+.portfolio-type-tabs {
+  position: relative;
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(10rem, 1fr));
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 1.75rem;
+  padding: 0.35rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: rgba(248, 250, 252, 0.7);
+  box-shadow: 0 16px 42px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.portfolio-type-tabs::before {
+  content: '';
+  position: absolute;
+  top: 0.35rem;
+  bottom: 0.35rem;
+  left: 0.35rem;
+  z-index: -1;
+  width: calc((100% - 1.05rem) / 2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    0 14px 32px rgba(244, 63, 94, 0.12),
+    0 8px 18px rgba(15, 23, 42, 0.05);
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.portfolio-type-tabs.is-participated::before {
+  transform: translateX(calc(100% + 0.35rem));
+}
+
+.portfolio-type-tab {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 3rem;
+  min-width: 0;
+  padding: 0 1.25rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-heading);
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.portfolio-type-tab:hover {
+  color: var(--color-primary);
+  transform: translateY(-1px);
+}
+
+.portfolio-type-tab.active {
+  color: var(--color-primary);
+}
+
+.portfolio-type-tab small {
+  min-width: 1.35rem;
+  height: 1.35rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: rgba(244, 63, 94, 0.1);
+  color: var(--color-primary);
+  font-size: 0.72rem;
+  line-height: 1.35rem;
+}
+
+:global(html.dark .portfolio-type-tabs) {
+  border-color: rgba(148, 163, 184, 0.14);
+  background: rgba(15, 23, 42, 0.46);
+}
+
+:global(html.dark .portfolio-type-tabs::before) {
+  background: rgba(244, 63, 94, 0.14);
+  box-shadow:
+    0 14px 32px rgba(244, 63, 94, 0.14),
+    0 8px 18px rgba(0, 0, 0, 0.16);
+}
+
 .portfolio-grid {
   @apply grid grid-cols-1 gap-12;
 }
+
 @media (min-width: 1024px) {
   .portfolio-grid {
     @apply grid-cols-2 gap-16;
@@ -400,8 +608,9 @@ onUnmounted(() => {
 }
 
 .portfolio-card {
-  border-radius: 1.5rem;
+  border-radius: 1rem;
   padding-bottom: 0.25rem;
+  transition: filter 0.28s linear;
   will-change: filter;
 }
 
@@ -430,7 +639,7 @@ onUnmounted(() => {
 }
 
 .portfolio-skeleton-image {
-  border-radius: 1.5rem;
+  border-radius: 1rem;
 }
 
 .portfolio-skeleton-chip {
@@ -467,20 +676,27 @@ onUnmounted(() => {
 }
 
 .portfolio-image-wrapper {
-  @apply relative overflow-hidden rounded-3xl aspect-[16/10];
+  @apply relative overflow-hidden aspect-[16/10];
+  border-radius: 1rem;
+  display: block;
   margin-bottom: 1rem;
   background-color: var(--color-card);
+  background-image:
+    radial-gradient(circle at 32% 28%, rgba(244, 63, 94, 0.12), transparent 32%),
+    radial-gradient(circle at 72% 62%, rgba(147, 197, 253, 0.16), transparent 34%);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  cursor: pointer;
 }
 
 .portfolio-content-link {
+  min-width: 0;
   padding: 0 20px;
 }
 
 .portfolio-image {
   @apply w-full h-full object-cover;
-  transition: transform 0.7s ease;
+  transition: transform 0.28s linear;
   will-change: transform;
 }
 
@@ -529,6 +745,21 @@ onUnmounted(() => {
 }
 
 @media (max-width: 767px) {
+  .portfolio-type-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    margin-top: 1.25rem;
+  }
+
+  .portfolio-type-tab {
+    flex: 1;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 0.65rem;
+    font-size: 0.84rem;
+  }
+
   .portfolio-grid {
     display: flex;
     flex-direction: column;
@@ -603,18 +834,29 @@ onUnmounted(() => {
 
 .portfolio-category-badge {
   @apply px-3 py-1 rounded-full text-xs font-medium;
-  background-color: var(--color-secondary);
-  color: var(--color-primary);
+  background-color: var(--color-primary);
+  color: #fff;
 }
 :global(html.dark .portfolio-category-badge){
-  background-color: rgba(244, 63, 94, 0.15);
-  color: var(--color-primary);
+  background-color: var(--color-primary);
+  color: #fff;
 }
 
 .portfolio-project-title {
-  @apply text-2xl font-bold mb-3 flex items-center gap-2;
+  @apply text-2xl font-bold mb-3 flex items-start gap-2;
+  min-width: 0;
   color: var(--color-heading);
   transition: color 0.22s ease;
+}
+
+.portfolio-project-title-text {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .portfolio-card:hover .portfolio-project-title {
@@ -623,6 +865,8 @@ onUnmounted(() => {
 
 .portfolio-arrow-icon {
   @apply w-5 h-5 opacity-0 -translate-x-2;
+  flex: 0 0 auto;
+  margin-top: 0.22rem;
   transition:
     opacity 0.28s ease,
     transform 0.28s ease;
@@ -636,6 +880,13 @@ onUnmounted(() => {
 
 .portfolio-project-desc {
   @apply leading-relaxed mb-6;
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
   color: var(--color-text);
 }
 

@@ -334,7 +334,8 @@ const submitReply = async (commentId: number) => {
 }
 
 .input-container {
-  @apply flex-1 rounded-2xl p-4 transition-colors flex flex-col gap-2;
+  @apply flex-1 p-4 transition-colors flex flex-col gap-2;
+  border-radius: 1rem;
   background-color: var(--color-background);
   border: 1px solid var(--color-border);
 
@@ -381,6 +382,7 @@ const submitReply = async (commentId: number) => {
 
 .cancel-btn {
   color: var(--color-text);
+  transition: all 0.3s;
   &:hover {
     color: var(--color-heading);
   }
@@ -412,7 +414,8 @@ const submitReply = async (commentId: number) => {
 }
 
 .comment-item {
-  @apply flex flex-col gap-4 rounded-2xl p-3;
+  @apply flex flex-col gap-4 p-3;
+  border-radius: 1rem;
   position: relative;
   overflow: hidden;
 }

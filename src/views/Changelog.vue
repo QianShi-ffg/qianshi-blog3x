@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 import type { Component } from 'vue'
-import { GitCommit, Star, Bug, Rocket } from 'lucide-vue-next'
+import { GitCommit, Star, Bug, Rocket, RefreshCw } from 'lucide-vue-next'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { listChangelogs } from '@/api/changelog'
@@ -16,6 +16,7 @@ interface ChangelogView extends Changelog {
   icon: Component
   iconColor: string
   bgColor: string
+  tagClass: string
 }
 
 const prefersReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
@@ -51,30 +52,40 @@ const setupHeaderParallax = () => {
   ScrollTrigger.refresh()
 }
 
-const defaultTagMeta: Pick<ChangelogView, 'icon' | 'iconColor' | 'bgColor'> = {
+const defaultTagMeta: Pick<ChangelogView, 'icon' | 'iconColor' | 'bgColor' | 'tagClass'> = {
   icon: Star,
   iconColor: 'cl-icon-amber',
   bgColor: 'cl-bg-amber',
+  tagClass: 'cl-tag-amber',
 }
 
-const tagMetaMap: Record<string, Pick<ChangelogView, 'icon' | 'iconColor' | 'bgColor'>> = {
+const tagMetaMap: Record<string, Pick<ChangelogView, 'icon' | 'iconColor' | 'bgColor' | 'tagClass'>> = {
   MAJOR: {
     icon: Rocket,
-    iconColor: 'cl-icon-rose',
-    bgColor: 'cl-bg-rose',
+    iconColor: 'cl-icon-violet',
+    bgColor: 'cl-bg-violet',
+    tagClass: 'cl-tag-violet',
   },
   FEATURE: {
     ...defaultTagMeta,
+  },
+  UPDATE: {
+    icon: RefreshCw,
+    iconColor: 'cl-icon-teal',
+    bgColor: 'cl-bg-teal',
+    tagClass: 'cl-tag-teal',
   },
   RELEASE: {
     icon: GitCommit,
     iconColor: 'cl-icon-blue',
     bgColor: 'cl-bg-blue',
+    tagClass: 'cl-tag-blue',
   },
   FIX: {
     icon: Bug,
     iconColor: 'cl-icon-rose',
     bgColor: 'cl-bg-rose',
+    tagClass: 'cl-tag-rose',
   },
 }
 
@@ -89,6 +100,7 @@ const decorateChangelog = (log: Changelog): ChangelogView => {
     icon: meta.icon,
     iconColor: meta.iconColor,
     bgColor: meta.bgColor,
+    tagClass: meta.tagClass,
   }
 }
 
@@ -113,9 +125,10 @@ const getBadgeClass = (type: string) => {
 
 const getBadgeText = (type: string) => {
   switch (type) {
-    case 'feat': return 'NEW'
-    case 'fix': return 'FIX'
-    case 'refactor': return 'UPDATE'
+    case 'feat': return '新增'
+    case 'fix': return '修复'
+    case 'refactor': return '调整'
+    case 'docs': return '文档'
     default: return type.toUpperCase()
   }
 }
@@ -220,7 +233,7 @@ onUnmounted(() => {
                 <div>
                   <div class="cl-log-version-wrap">
                     <h2 class="cl-log-version">{{ log.version }}</h2>
-                    <span class="cl-log-tag">
+                    <span class="cl-log-tag" :class="log.tagClass">
                       {{ log.tag }}
                     </span>
                   </div>
@@ -317,7 +330,8 @@ onUnmounted(() => {
 }
 
 .cl-empty-state {
-  @apply rounded-3xl px-6 py-10 text-center border;
+  @apply px-6 py-10 text-center border;
+  border-radius: 1rem;
   background-color: var(--color-card);
   border-color: var(--color-border);
 }
@@ -423,13 +437,19 @@ onUnmounted(() => {
 }
 
 .cl-glass-card {
-  @apply rounded-3xl transition-all duration-300 p-6 md:p-8;
+  @apply transition-all duration-300 p-6 md:p-8;
+  border-radius: 1rem;
   background-color: var(--color-card);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--color-border);
   box-shadow: 0 8px 30px rgba(0,0,0,0.04);
 }
+
+.cl-glass-card.interactive-card {
+  border-radius: 1rem;
+}
+
 :global(html.dark .cl-glass-card){
   box-shadow: 0 8px 30px rgba(0,0,0,0.2);
 }
@@ -454,10 +474,71 @@ onUnmounted(() => {
   color: var(--color-text);
   border: 1px solid var(--color-border);
 }
+
+.cl-tag-amber {
+  border-color: rgba(245, 158, 11, 0.28);
+  background-color: rgba(245, 158, 11, 0.1);
+  color: #d97706;
+}
+
+.cl-tag-blue {
+  border-color: rgba(59, 130, 246, 0.28);
+  background-color: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
+}
+
+.cl-tag-rose {
+  border-color: rgba(244, 63, 94, 0.28);
+  background-color: rgba(244, 63, 94, 0.1);
+  color: var(--color-primary);
+}
+
+.cl-tag-violet {
+  border-color: rgba(139, 92, 246, 0.28);
+  background-color: rgba(139, 92, 246, 0.1);
+  color: #7c3aed;
+}
+
+.cl-tag-teal {
+  border-color: rgba(20, 184, 166, 0.28);
+  background-color: rgba(20, 184, 166, 0.1);
+  color: #0f766e;
+}
+
 :global(html.dark .cl-log-tag){
   background-color: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.1);
   color: #cbd5e1;
+}
+
+:global(html.dark .cl-log-tag.cl-tag-amber) {
+  border-color: rgba(245, 158, 11, 0.2);
+  background-color: rgba(245, 158, 11, 0.14);
+  color: #f59e0b;
+}
+
+:global(html.dark .cl-log-tag.cl-tag-blue) {
+  border-color: rgba(59, 130, 246, 0.2);
+  background-color: rgba(59, 130, 246, 0.14);
+  color: #60a5fa;
+}
+
+:global(html.dark .cl-log-tag.cl-tag-rose) {
+  border-color: rgba(244, 63, 94, 0.2);
+  background-color: rgba(244, 63, 94, 0.14);
+  color: #fb7185;
+}
+
+:global(html.dark .cl-log-tag.cl-tag-violet) {
+  border-color: rgba(139, 92, 246, 0.2);
+  background-color: rgba(139, 92, 246, 0.14);
+  color: #a78bfa;
+}
+
+:global(html.dark .cl-log-tag.cl-tag-teal) {
+  border-color: rgba(20, 184, 166, 0.2);
+  background-color: rgba(20, 184, 166, 0.14);
+  color: #2dd4bf;
 }
 
 .cl-log-card-title {
@@ -586,6 +667,14 @@ onUnmounted(() => {
 .cl-icon-blue { @apply text-blue-500; }
 .cl-bg-blue { @apply bg-blue-100; }
 :global(html.dark .cl-bg-blue){ background-color: rgba(59, 130, 246, 0.15); }
+
+.cl-icon-violet { @apply text-violet-500; }
+.cl-bg-violet { background-color: rgba(139, 92, 246, 0.14); }
+:global(html.dark .cl-bg-violet){ background-color: rgba(139, 92, 246, 0.16); }
+
+.cl-icon-teal { @apply text-teal-500; }
+.cl-bg-teal { background-color: rgba(20, 184, 166, 0.14); }
+:global(html.dark .cl-bg-teal){ background-color: rgba(20, 184, 166, 0.16); }
 
 /* Badge Colors */
 .cl-badge-emerald { @apply bg-emerald-50 text-emerald-600; }

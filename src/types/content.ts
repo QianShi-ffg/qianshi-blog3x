@@ -46,12 +46,14 @@ export interface DiaryMomentSummary {
   location: string
   date: string
   weather: string
+  likes: number
 }
 
 export interface Project {
   id: number
   title: string
   category: string
+  projectType?: 'personal' | 'participated'
   desc: string
   longDesc: string
   image: string
@@ -117,6 +119,7 @@ export interface ResumeProfile {
   resumeFile: string
   hasResumeFile?: boolean
   resumeProtected?: boolean
+  locked?: boolean
   location: string
   email: string
   summary: string

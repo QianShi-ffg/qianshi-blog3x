@@ -4,6 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { ArrowLeft, Github, ExternalLink, Calendar, User, LayoutGrid } from 'lucide-vue-next'
 import { getProjectById } from '@/api/portfolio'
 import type { Project } from '@/types/content'
+import { lockBodyScroll, unlockBodyScroll } from '@/utils/body-scroll-lock'
+import VueEasyLightbox from 'vue-easy-lightbox'
 
 const route = useRoute()
 const router = useRouter()
@@ -12,11 +14,15 @@ const project = ref<Project | null>(null)
 const isLoading = ref(true)
 const backButtonAnchor = ref<HTMLElement | null>(null)
 const showFloatingBack = ref(false)
+const mainImageLoadFailed = ref(false)
+const previewVisible = ref(false)
+const previewIndex = ref(0)
 
 onMounted(async () => {
   isLoading.value = true
   try {
     project.value = await getProjectById(projectId)
+    mainImageLoadFailed.value = false
   } catch {
     project.value = null
   } finally {
@@ -27,6 +33,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   backButtonObserver?.disconnect()
+  unlockBodyScroll()
 })
 
 const hasProjectContent = computed(() => {
@@ -38,6 +45,29 @@ const hasProjectContent = computed(() => {
     || project.value.images?.length,
   )
 })
+
+const projectCategory = computed(() => project.value?.category?.trim() || '暂无')
+const projectImage = computed(() => project.value?.image?.trim() || '')
+const hasMainImage = computed(() => Boolean(projectImage.value) && !mainImageLoadFailed.value)
+const hasGithubLink = computed(() => Boolean(project.value?.github?.trim()))
+const hasDemoLink = computed(() => Boolean(project.value?.demo?.trim()))
+const hasProjectActions = computed(() => hasGithubLink.value || hasDemoLink.value)
+const galleryImages = computed(() => project.value?.images || [])
+
+const handleMainImageError = () => {
+  mainImageLoadFailed.value = true
+}
+
+const openGalleryPreview = (index: number) => {
+  previewIndex.value = index
+  lockBodyScroll()
+  previewVisible.value = true
+}
+
+const closeGalleryPreview = () => {
+  previewVisible.value = false
+  window.setTimeout(unlockBodyScroll, 300)
+}
 
 const goBack = () => {
   router.push('/portfolio')
@@ -64,6 +94,7 @@ const setupFloatingBackButton = () => {
 
 
 <template>
+  <div class="pd-page-root">
   <div v-if="isLoading" class="pd-container" aria-live="polite" aria-busy="true">
     <div class="pd-back-wrapper">
       <div class="pd-loading-back"></div>
@@ -118,17 +149,17 @@ const setupFloatingBackButton = () => {
       <div class="pd-hero-layout">
         <div class="pd-hero-copy">
           <div class="pd-hero-meta">
-            <span class="pd-category">{{ project.category }}</span>
+            <span class="pd-category">{{ projectCategory }}</span>
           </div>
           <h1 class="pd-title">{{ project.title }}</h1>
           <p class="pd-desc">{{ project.desc }}</p>
 
-          <div class="pd-actions">
-            <a :href="project.github" target="_blank" class="pd-btn pd-btn-outline">
+          <div v-if="hasProjectActions" class="pd-actions">
+            <a v-if="hasGithubLink" :href="project.github" target="_blank" class="pd-btn pd-btn-outline">
               <Github class="w-5 h-5" />
               查看源码
             </a>
-            <a :href="project.demo" target="_blank" class="pd-btn pd-btn-primary">
+            <a v-if="hasDemoLink" :href="project.demo" target="_blank" class="pd-btn pd-btn-primary">
               <ExternalLink class="w-5 h-5" />
               访问演示
             </a>
@@ -172,7 +203,17 @@ const setupFloatingBackButton = () => {
 
     <!-- Main Cover Image -->
     <div class="pd-main-media interactive-media" v-motion :initial="{ opacity: 0, y: 40 }" :enter="{ opacity: 1, y: 0, transition: { duration: 800, delay: 200 } }">
-      <img :src="project.image" :alt="project.title" class="pd-main-img" />
+      <img
+        v-if="hasMainImage"
+        :src="projectImage"
+        :alt="project.title"
+        class="pd-main-img"
+        @error="handleMainImageError"
+      />
+      <div v-else class="pd-main-image-empty" aria-live="polite">
+        <p class="pd-empty-title">暂无图片</p>
+        <p class="pd-empty-desc">作品封面还没有上传。</p>
+      </div>
     </div>
 
     <!-- Content Section -->
@@ -189,7 +230,8 @@ const setupFloatingBackButton = () => {
           <div class="pd-video-container">
             <video controls class="pd-video" :poster="project.image">
               <source :src="project.videoUrl" type="video/mp4">
-              您的浏览器不支持 HTML5 视频�?            </video>
+              您的浏览器不支持 HTML5 视频。
+            </video>
           </div>
         </div>
 
@@ -197,9 +239,16 @@ const setupFloatingBackButton = () => {
         <div v-if="project.images && project.images.length > 0" class="pd-gallery mt-12">
           <h2 class="pd-section-title">项目截图</h2>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div v-for="(img, index) in project.images" :key="index" class="pd-gallery-item interactive-media">
+            <button
+              v-for="(img, index) in project.images"
+              :key="index"
+              type="button"
+              class="pd-gallery-item interactive-media"
+              :aria-label="`预览项目截图 ${index + 1}`"
+              @click="openGalleryPreview(index)"
+            >
               <img :src="img" alt="Gallery image" class="pd-gallery-img" />
-            </div>
+            </button>
           </div>
         </div>
       </template>
@@ -224,6 +273,15 @@ const setupFloatingBackButton = () => {
       <p class="pd-empty-title">暂无作品详情</p>
       <p class="pd-empty-desc">这个作品可能已经下架，或还没有发布完整内容。</p>
     </div>
+  </div>
+
+  <VueEasyLightbox
+    :visible="previewVisible"
+    :imgs="galleryImages"
+    :index="previewIndex"
+    :scroll-disabled="false"
+    @hide="closeGalleryPreview"
+  />
   </div>
 </template>
 
@@ -421,7 +479,7 @@ const setupFloatingBackButton = () => {
 }
 
 .pd-loading-media {
-  border-radius: 2rem;
+  border-radius: 1rem;
 }
 
 .pd-loading-content {
@@ -468,20 +526,28 @@ const setupFloatingBackButton = () => {
   }
 
   .pd-category {
-    @apply px-4 py-1.5 rounded-full bg-rose-50 text-rose-600 text-sm font-semibold tracking-wide border border-rose-100 shadow-[0_0_8px_rgba(244,63,94,0.1)];
+    @apply px-4 py-1.5 rounded-full text-sm font-semibold tracking-wide;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    background-color: var(--color-primary);
+    color: #fff;
   }
 
   .pd-title {
     @apply text-4xl md:text-5xl font-bold text-slate-900 tracking-tight mb-6 leading-tight;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   .pd-desc {
     @apply text-xl text-slate-500 leading-relaxed mb-8 max-w-3xl;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   .pd-project-brief {
     min-width: 0;
-    border-radius: 1.5rem;
+    border-radius: 1rem;
     border: 1px solid rgba(226, 232, 240, 0.46);
     background:
       linear-gradient(135deg, rgba(255, 255, 255, 0.58), rgba(255, 247, 250, 0.24)),
@@ -553,6 +619,7 @@ const setupFloatingBackButton = () => {
     @apply text-xs font-semibold text-slate-400 uppercase tracking-wider;
     display: block;
     margin-bottom: 0.2rem;
+    overflow-wrap: anywhere;
   }
 
   .pd-brief-value {
@@ -602,7 +669,8 @@ const setupFloatingBackButton = () => {
 }
 
 .pd-main-media {
-  @apply w-full aspect-[16/9] md:aspect-[21/9] rounded-[2rem] overflow-hidden mb-16 relative;
+  @apply w-full aspect-[16/9] md:aspect-[21/9] overflow-hidden mb-16 relative;
+  border-radius: 1rem;
   box-shadow: 0 20px 40px -15px rgba(0,0,0,0.1);
   border: 1px solid var(--color-border);
   background-color: var(--color-background);
@@ -612,8 +680,47 @@ const setupFloatingBackButton = () => {
   }
 }
 
+.pd-main-image-empty {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 46% 35%, rgba(244, 63, 94, 0.08), transparent 34%),
+    linear-gradient(135deg, rgba(248, 250, 252, 0.88), rgba(255, 241, 242, 0.42));
+}
+
+.pd-main-image-empty::before {
+  content: '';
+  position: absolute;
+  inset: 18% 24%;
+  z-index: -1;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 38% 45%, rgba(244, 63, 94, 0.1), transparent 36%),
+    radial-gradient(circle at 62% 46%, rgba(147, 197, 253, 0.14), transparent 34%);
+  filter: blur(28px);
+  opacity: 0.72;
+}
+
+.pd-main-image-empty::after {
+  content: '';
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-top: 1rem;
+  border-radius: 9999px;
+  background: var(--color-primary);
+  opacity: 0.38;
+}
+
 .pd-content-section {
-  @apply rounded-[2rem] p-8 md:p-12;
+  @apply p-8 md:p-12;
+  border-radius: 1rem;
   background-color: var(--color-card);
   border: 1px solid var(--color-border);
   box-shadow: 0 8px 30px rgba(0,0,0,0.04);
@@ -638,6 +745,8 @@ const setupFloatingBackButton = () => {
 
   .pd-text-paragraph {
     @apply text-lg text-slate-600 leading-relaxed space-y-4;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 }
 
@@ -658,7 +767,7 @@ const setupFloatingBackButton = () => {
 }
 
 .pd-detail-empty-state {
-  border-radius: 2rem;
+  border-radius: 1rem;
   background-color: var(--color-card);
   border: 1px solid var(--color-border);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
@@ -706,7 +815,8 @@ const setupFloatingBackButton = () => {
   @apply w-full;
 
   .pd-video-container {
-    @apply relative w-full rounded-2xl overflow-hidden shadow-lg border border-slate-100 bg-black aspect-video;
+    @apply relative w-full overflow-hidden shadow-lg border border-slate-100 bg-black aspect-video;
+    border-radius: 1rem;
 
     .pd-video {
       @apply w-full h-full object-contain;
@@ -715,7 +825,13 @@ const setupFloatingBackButton = () => {
 }
 
 .pd-gallery-item {
-  @apply rounded-2xl overflow-hidden shadow-md border border-slate-100;
+  @apply overflow-hidden shadow-md border border-slate-100;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border-radius: 1rem;
+  background: transparent;
+  cursor: zoom-in;
   transition:
     border-color 0.3s ease,
     box-shadow 0.3s ease;
@@ -734,6 +850,9 @@ const setupFloatingBackButton = () => {
 .pd-tech-tag {
   @apply px-3 py-1 rounded-full text-sm font-medium;
   flex: 0 0 auto;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   background-color: rgba(255, 255, 255, 0.62);
   color: var(--color-text);
   border: 1px solid rgba(226, 232, 240, 0.76);
@@ -824,6 +943,21 @@ const setupFloatingBackButton = () => {
   color: #fb7185;
   background: rgba(244, 63, 94, 0.1);
   border-color: rgba(244, 63, 94, 0.28);
+}
+
+:global(html.dark .pd-container .pd-category) {
+  background-color: var(--color-primary);
+  color: #fff;
+}
+
+:global(html.dark .pd-container .pd-main-image-empty) {
+  background:
+    radial-gradient(circle at 46% 35%, rgba(244, 63, 94, 0.12), transparent 34%),
+    linear-gradient(135deg, rgba(15, 23, 42, 0.72), rgba(30, 41, 59, 0.44));
+}
+
+:global(html.dark .pd-container .pd-main-image-empty::before) {
+  opacity: 0.32;
 }
 
 :global(html.dark .pd-container .pd-project-brief) {

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { Briefcase, Download, FolderGit2, GraduationCap, Mail, MapPin, X } from 'lucide-vue-next'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { Briefcase, Download, Eye, FolderGit2, GraduationCap, Mail, MapPin, X } from 'lucide-vue-next'
 import { gsap } from 'gsap'
-import { defaultResume, downloadResumeWithPassword, getResume } from '@/api/resume'
+import { defaultResume, downloadResumeWithPassword, getFullResume, getResume } from '@/api/resume'
 import type { ResumeProfile, ResumeSkill, ResumeTimelineItem } from '@/types/content'
 
 const resumeRoot = ref<HTMLElement | null>(null)
@@ -11,12 +11,81 @@ const passwordDialogVisible = ref(false)
 const resumePassword = ref('')
 const resumePasswordError = ref('')
 const isVerifyingResume = ref(false)
+const passwordDialogMode = ref<'unlock' | 'download'>('unlock')
+const isResumeLoaded = ref(false)
 let ctx: gsap.Context | undefined
 
 const avatarUrl = computed(() => resume.value.avatar || defaultResume.avatar)
 const canDownloadResume = computed(() => Boolean(resume.value.hasResumeFile))
 const canSubmitResumePassword = computed(() => Boolean(resumePassword.value.trim()) && !isVerifyingResume.value)
+const isResumeLocked = computed(() => Boolean(resume.value.locked))
+const passwordDialogTitle = computed(() => passwordDialogMode.value === 'download' ? '输入简历密码' : '查看完整简历')
+const passwordDialogDesc = computed(() => passwordDialogMode.value === 'download'
+  ? '验证通过后会自动开始下载。'
+  : '验证通过后会展示完整经历、技能和项目内容。')
+const passwordSubmitText = computed(() => {
+  if (isVerifyingResume.value) return '验证中'
+  return passwordDialogMode.value === 'download' ? '确认下载' : '查看完整内容'
+})
 const prefersReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+
+const withResumeContext = (callback: () => void) => {
+  if (!resumeRoot.value || prefersReducedMotion()) return
+  if (!ctx) {
+    ctx = gsap.context(() => {}, resumeRoot.value)
+  }
+  ctx.add(callback)
+}
+
+const setupResumeMotion = () => {
+  withResumeContext(() => {
+    gsap.to('.resume-avatar-orbit', {
+      rotation: 360,
+      duration: 18,
+      repeat: -1,
+      ease: 'none',
+    })
+
+  })
+}
+
+const runResumeEntry = () => {
+  withResumeContext(() => {
+    const entryItems = resumeRoot.value?.querySelectorAll(
+      '.resume-header-wrapper, .resume-profile-card, .resume-skills-card, .resume-right-column > section, .resume-locked-mask',
+    )
+
+    if (!entryItems?.length) return
+
+    gsap.fromTo(
+      entryItems,
+      { autoAlpha: 0, y: 26 },
+      {
+        autoAlpha: 1,
+        y: 0,
+        duration: 0.72,
+        stagger: 0.08,
+        ease: 'power3.out',
+        clearProps: 'opacity,visibility,transform',
+      },
+    )
+
+    gsap.fromTo(
+      '.resume-section-icon-large',
+      { scale: 0.72, rotation: -8, autoAlpha: 0 },
+      {
+        scale: 1,
+        rotation: 0,
+        autoAlpha: 1,
+        duration: 0.5,
+        stagger: 0.08,
+        ease: 'back.out(1.8)',
+        delay: 0.18,
+        clearProps: 'opacity,visibility,transform',
+      },
+    )
+  })
+}
 
 const downloadResumeFile = (blob: Blob, filename: string) => {
   const link = document.createElement('a')
@@ -29,11 +98,20 @@ const downloadResumeFile = (blob: Blob, filename: string) => {
   window.setTimeout(() => URL.revokeObjectURL(url), 0)
 }
 
-const downloadResume = async () => {
-  if (!canDownloadResume.value) return
+const openPasswordDialog = (mode: 'unlock' | 'download') => {
+  if (mode === 'download' && !canDownloadResume.value) return
+  passwordDialogMode.value = mode
   resumePassword.value = ''
   resumePasswordError.value = ''
   passwordDialogVisible.value = true
+}
+
+const downloadResume = () => {
+  openPasswordDialog('download')
+}
+
+const unlockResumeContent = () => {
+  openPasswordDialog('unlock')
 }
 
 const submitResumePassword = async () => {
@@ -41,8 +119,13 @@ const submitResumePassword = async () => {
   resumePasswordError.value = ''
   isVerifyingResume.value = true
   try {
-    const file = await downloadResumeWithPassword(resumePassword.value.trim())
-    downloadResumeFile(file.blob, file.filename)
+    if (passwordDialogMode.value === 'download') {
+      const file = await downloadResumeWithPassword(resumePassword.value.trim())
+      downloadResumeFile(file.blob, file.filename)
+    } else {
+      resume.value = await getFullResume(resumePassword.value.trim())
+      resume.value.locked = false
+    }
     passwordDialogVisible.value = false
   } catch (error) {
     resumePasswordError.value = error instanceof Error ? error.message : '密码验证失败'
@@ -63,43 +146,17 @@ const itemDescList = (item: ResumeTimelineItem) => {
   return String(item.desc).split('\n').map((value) => value.trim()).filter(Boolean)
 }
 
-onMounted(() => {
-  getResume()
-    .then((data) => {
-      resume.value = data
-    })
-    .catch(() => {
-      resume.value = defaultResume
-    })
+onMounted(async () => {
+  try {
+    resume.value = await getResume()
+  } catch {
+    resume.value = defaultResume
+  }
 
-  if (!resumeRoot.value || prefersReducedMotion()) return
-
-  ctx = gsap.context(() => {
-    gsap.to('.resume-avatar-orbit', {
-      rotation: 360,
-      duration: 18,
-      repeat: -1,
-      ease: 'none',
-    })
-
-    gsap.to('.resume-timeline-dot-active', {
-      scale: 1.42,
-      duration: 1.15,
-      repeat: -1,
-      yoyo: true,
-      ease: 'sine.inOut',
-    })
-
-    gsap.from('.resume-section-icon-large', {
-      scale: 0.6,
-      rotation: -10,
-      autoAlpha: 0,
-      duration: 0.5,
-      stagger: 0.08,
-      ease: 'back.out(1.8)',
-      delay: 0.25,
-    })
-  }, resumeRoot.value)
+  isResumeLoaded.value = true
+  await nextTick()
+  setupResumeMotion()
+  runResumeEntry()
 })
 
 onUnmounted(() => {
@@ -108,13 +165,14 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="resumeRoot" class="resume-page-container">
+  <div ref="resumeRoot" class="resume-page-container" :class="{ 'resume-page-ready': isResumeLoaded }">
     <div class="resume-header-wrapper">
       <div>
         <h1 class="resume-title">{{ resume.title }}</h1>
         <p class="resume-subtitle">{{ resume.subtitle }}</p>
       </div>
       <button
+        v-if="!isResumeLocked"
         class="resume-download-btn interactive-lift"
         :disabled="!canDownloadResume"
         @click="downloadResume"
@@ -129,8 +187,8 @@ onUnmounted(() => {
         <button class="resume-password-close" type="button" aria-label="关闭" @click="passwordDialogVisible = false">
           <X class="resume-password-close-icon" />
         </button>
-        <h2 class="resume-password-title">输入简历密码</h2>
-        <p class="resume-password-desc">验证通过后会自动开始下载。</p>
+        <h2 class="resume-password-title">{{ passwordDialogTitle }}</h2>
+        <p class="resume-password-desc">{{ passwordDialogDesc }}</p>
         <input
           v-model="resumePassword"
           class="resume-password-input"
@@ -145,12 +203,12 @@ onUnmounted(() => {
           :disabled="!canSubmitResumePassword"
           @click="submitResumePassword"
         >
-          {{ isVerifyingResume ? '验证中' : '确认下载' }}
+          {{ passwordSubmitText }}
         </button>
       </div>
     </div>
 
-    <div class="resume-grid">
+    <div class="resume-grid" :class="{ 'is-resume-locked': isResumeLocked }">
       <div class="resume-left-column">
         <div class="resume-profile-card interactive-card">
           <div class="resume-avatar-wrapper">
@@ -165,7 +223,7 @@ onUnmounted(() => {
               <MapPin class="resume-contact-icon" />
               <span>{{ resume.location }}</span>
             </div>
-            <div class="resume-contact-item">
+            <div v-if="resume.email" class="resume-contact-item">
               <Mail class="resume-contact-icon" />
               <a :href="`mailto:${resume.email}`" class="resume-contact-link">{{ resume.email }}</a>
             </div>
@@ -191,72 +249,147 @@ onUnmounted(() => {
       </div>
 
       <div class="resume-right-column">
-        <section class="resume-experience-card interactive-card">
-          <div class="resume-section-header-large">
-            <Briefcase class="resume-section-icon-large" />
-            <h3 class="resume-section-title-large">工作经历</h3>
-          </div>
-
-          <div class="resume-timeline-spaced">
-            <div
-              v-for="(item, index) in resume.experiences"
-              :key="`experience-${index}`"
-              class="resume-timeline-item"
-            >
-              <div :class="index === 0 ? 'resume-timeline-dot-active' : 'resume-timeline-dot'"></div>
-              <div class="resume-timeline-header">
-                <h4 class="resume-timeline-title">{{ item.title }}</h4>
-                <span :class="index === 0 ? 'resume-timeline-date-active' : 'resume-timeline-date'">
-                  {{ item.date }}
-                </span>
-              </div>
-              <p v-if="item.company" class="resume-timeline-company">{{ item.company }}</p>
-              <ul class="resume-timeline-desc">
-                <li v-for="desc in itemDescList(item)" :key="desc">{{ desc }}</li>
-              </ul>
+        <template v-if="isResumeLocked">
+          <section class="resume-experience-card interactive-card">
+            <div class="resume-section-header-large">
+              <Briefcase class="resume-section-icon-large" />
+              <h3 class="resume-section-title-large">工作经历</h3>
             </div>
-          </div>
-        </section>
 
-        <section class="resume-education-card interactive-card">
-          <div class="resume-section-header-large">
-            <GraduationCap class="resume-section-icon-large" />
-            <h3 class="resume-section-title-large">教育背景</h3>
-          </div>
-
-          <div class="resume-timeline">
-            <div v-for="(item, index) in resume.educations" :key="`education-${index}`" class="resume-timeline-item">
-              <div class="resume-timeline-dot"></div>
-              <div class="resume-timeline-header">
-                <h4 class="resume-timeline-title">{{ item.title }}</h4>
-                <span class="resume-timeline-date">{{ item.date }}</span>
+            <div class="resume-timeline-spaced">
+              <div class="resume-timeline-item resume-preview-item">
+                <div class="resume-timeline-dot"></div>
+                <div class="resume-timeline-header">
+                  <h4 class="resume-timeline-title">近期工作经历</h4>
+                  <span class="resume-timeline-date-active">已保护</span>
+                </div>
+                <p class="resume-timeline-company">完整公司、时间与职责需输入简历密码后查看</p>
+                <div class="resume-preview-lines" aria-hidden="true">
+                  <span class="resume-preview-line resume-preview-line-wide"></span>
+                  <span class="resume-preview-line resume-preview-line-mid"></span>
+                  <span class="resume-preview-line resume-preview-line-short"></span>
+                </div>
               </div>
-              <p v-if="item.school" class="resume-timeline-company">{{ item.school }}</p>
-              <p class="resume-timeline-desc-inline">{{ itemDescList(item).join(' ') }}</p>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <section class="resume-education-card interactive-card">
-          <div class="resume-section-header-large">
-            <FolderGit2 class="resume-section-icon-large" />
-            <h3 class="resume-section-title-large">项目经历</h3>
-          </div>
+          <section class="resume-education-card interactive-card">
+            <div class="resume-section-header-large">
+              <GraduationCap class="resume-section-icon-large" />
+              <h3 class="resume-section-title-large">教育背景</h3>
+            </div>
 
-          <div class="resume-timeline">
-            <div v-for="(item, index) in resume.projects" :key="`project-${index}`" class="resume-timeline-item project-item">
-              <div class="resume-timeline-dot"></div>
-              <div class="resume-timeline-header">
-                <h4 class="resume-timeline-title">{{ item.title }}</h4>
-                <span class="resume-timeline-date">{{ item.date }}</span>
+            <div class="resume-timeline">
+              <div class="resume-timeline-item resume-preview-item">
+                <div class="resume-timeline-dot"></div>
+                <div class="resume-timeline-header">
+                  <h4 class="resume-timeline-title">教育经历</h4>
+                  <span class="resume-timeline-date">已保护</span>
+                </div>
+                <div class="resume-preview-lines" aria-hidden="true">
+                  <span class="resume-preview-line resume-preview-line-mid"></span>
+                  <span class="resume-preview-line resume-preview-line-short"></span>
+                </div>
               </div>
-              <p v-if="item.stack" class="resume-timeline-company">{{ item.stack }}</p>
-              <ul class="resume-timeline-desc">
-                <li v-for="desc in itemDescList(item)" :key="desc">{{ desc }}</li>
-              </ul>
             </div>
-          </div>
-        </section>
+          </section>
+
+          <section class="resume-education-card interactive-card">
+            <div class="resume-section-header-large">
+              <FolderGit2 class="resume-section-icon-large" />
+              <h3 class="resume-section-title-large">项目经历</h3>
+            </div>
+
+            <div class="resume-timeline">
+              <div class="resume-timeline-item resume-preview-item">
+                <div class="resume-timeline-dot"></div>
+                <div class="resume-timeline-header">
+                  <h4 class="resume-timeline-title">项目经历</h4>
+                  <span class="resume-timeline-date">已保护</span>
+                </div>
+                <div class="resume-preview-lines" aria-hidden="true">
+                  <span class="resume-preview-line resume-preview-line-wide"></span>
+                  <span class="resume-preview-line resume-preview-line-mid"></span>
+                  <span class="resume-preview-line resume-preview-line-short"></span>
+                </div>
+              </div>
+            </div>
+          </section>
+        </template>
+
+        <template v-else>
+          <section class="resume-experience-card interactive-card">
+            <div class="resume-section-header-large">
+              <Briefcase class="resume-section-icon-large" />
+              <h3 class="resume-section-title-large">工作经历</h3>
+            </div>
+
+            <div class="resume-timeline-spaced">
+              <div
+                v-for="(item, index) in resume.experiences"
+                :key="`experience-${index}`"
+                class="resume-timeline-item"
+              >
+                <div class="resume-timeline-dot"></div>
+                <div class="resume-timeline-header">
+                  <h4 class="resume-timeline-title">{{ item.title }}</h4>
+                  <span class="resume-timeline-date">{{ item.date }}</span>
+                </div>
+                <p v-if="item.company" class="resume-timeline-company">{{ item.company }}</p>
+                <ul class="resume-timeline-desc">
+                  <li v-for="desc in itemDescList(item)" :key="desc">{{ desc }}</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section class="resume-education-card interactive-card">
+            <div class="resume-section-header-large">
+              <GraduationCap class="resume-section-icon-large" />
+              <h3 class="resume-section-title-large">教育背景</h3>
+            </div>
+
+            <div class="resume-timeline">
+              <div v-for="(item, index) in resume.educations" :key="`education-${index}`" class="resume-timeline-item">
+                <div class="resume-timeline-dot"></div>
+                <div class="resume-timeline-header">
+                  <h4 class="resume-timeline-title">{{ item.title }}</h4>
+                  <span class="resume-timeline-date">{{ item.date }}</span>
+                </div>
+                <p v-if="item.school" class="resume-timeline-company">{{ item.school }}</p>
+                <p class="resume-timeline-desc-inline">{{ itemDescList(item).join(' ') }}</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="resume-education-card interactive-card">
+            <div class="resume-section-header-large">
+              <FolderGit2 class="resume-section-icon-large" />
+              <h3 class="resume-section-title-large">项目经历</h3>
+            </div>
+
+            <div class="resume-timeline">
+              <div v-for="(item, index) in resume.projects" :key="`project-${index}`" class="resume-timeline-item project-item">
+                <div class="resume-timeline-dot"></div>
+                <div class="resume-timeline-header">
+                  <h4 class="resume-timeline-title">{{ item.title }}</h4>
+                  <span class="resume-timeline-date">{{ item.date }}</span>
+                </div>
+                <p v-if="item.stack" class="resume-timeline-company">{{ item.stack }}</p>
+                <ul class="resume-timeline-desc">
+                  <li v-for="desc in itemDescList(item)" :key="desc">{{ desc }}</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+        </template>
+      </div>
+
+      <div v-if="isResumeLocked" class="resume-locked-mask">
+        <button class="resume-more-btn interactive-lift" type="button" @click="unlockResumeContent">
+          <Eye class="resume-more-icon" />
+          查看更多
+        </button>
       </div>
     </div>
   </div>
@@ -265,14 +398,23 @@ onUnmounted(() => {
 <style scoped>
 .resume-page-container {
   min-height: 80vh;
-  max-width: min(1440px, var(--site-page-max-width));
+  max-width: min(1280px, var(--site-page-max-width));
   margin: 0 auto;
   padding: 8rem 1.5rem 4rem;
 }
 
+.resume-page-container:not(.resume-page-ready) .resume-header-wrapper,
+.resume-page-container:not(.resume-page-ready) .resume-profile-card,
+.resume-page-container:not(.resume-page-ready) .resume-skills-card,
+.resume-page-container:not(.resume-page-ready) .resume-right-column > section,
+.resume-page-container:not(.resume-page-ready) .resume-locked-mask {
+  opacity: 0;
+  visibility: hidden;
+}
+
 @media (min-width: 2561px) {
   .resume-page-container {
-    max-width: 1520px;
+    max-width: 1360px;
     padding-top: 9rem;
     padding-bottom: 6rem;
   }
@@ -280,7 +422,7 @@ onUnmounted(() => {
 
 @media (min-width: 3840px) {
   .resume-page-container {
-    max-width: 1640px;
+    max-width: 1440px;
     padding-top: 10rem;
     padding-bottom: 7rem;
   }
@@ -436,9 +578,15 @@ onUnmounted(() => {
 }
 
 .resume-grid {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr;
   gap: 3rem;
+}
+
+.resume-grid.is-resume-locked {
+  max-height: 38rem;
+  overflow: hidden;
 }
 
 .resume-left-column,
@@ -454,7 +602,7 @@ onUnmounted(() => {
 .resume-education-card {
   padding: 2rem;
   border: 1px solid var(--color-border);
-  border-radius: 1.5rem;
+  border-radius: 1rem;
   background: var(--color-card);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
 }
@@ -531,6 +679,119 @@ onUnmounted(() => {
   color: var(--color-primary);
 }
 
+:global(html.dark .resume-password-dialog) {
+  border-color: rgba(148, 163, 184, 0.2);
+  background:
+    linear-gradient(145deg, rgba(30, 41, 59, 0.88), rgba(15, 23, 42, 0.82)),
+    var(--color-card);
+}
+
+:global(html.dark .resume-password-close),
+:global(html.dark .resume-password-input) {
+  background: rgba(15, 23, 42, 0.58);
+}
+
+.resume-preview-lines {
+  display: grid;
+  gap: 0.65rem;
+  padding-top: 0.2rem;
+}
+
+.resume-preview-line {
+  display: block;
+  height: 0.72rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0.22), rgba(148, 163, 184, 0.08));
+}
+
+.resume-preview-line-wide {
+  width: 92%;
+}
+
+.resume-preview-line-mid {
+  width: 74%;
+}
+
+.resume-preview-line-short {
+  width: 48%;
+}
+
+.resume-locked-mask {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 8;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 17rem;
+  padding-bottom: 2rem;
+  background: linear-gradient(
+    180deg,
+    rgba(252, 252, 252, 0),
+    rgba(252, 252, 252, 0.9) 52%,
+    var(--color-background) 100%
+  );
+}
+
+.resume-more-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  min-width: 10.75rem;
+  min-height: 3rem;
+  padding: 0 1.45rem;
+  border: 1px solid rgba(244, 63, 94, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 241, 242, 0.92);
+  color: var(--color-primary);
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(244, 63, 94, 0.08);
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+
+.resume-more-btn:hover {
+  border-color: rgba(244, 63, 94, 0.28);
+  background: rgba(255, 228, 230, 0.98);
+  box-shadow: 0 10px 24px rgba(244, 63, 94, 0.1);
+}
+
+.resume-more-btn:focus-visible {
+  outline: 3px solid rgba(244, 63, 94, 0.24);
+  outline-offset: 4px;
+}
+
+.resume-more-icon {
+  display: inline-flex;
+  width: 1rem;
+  height: 1rem;
+  color: currentColor;
+}
+
+:global(html.dark .resume-locked-mask) {
+  background: linear-gradient(
+    180deg,
+    rgba(11, 19, 32, 0),
+    rgba(11, 19, 32, 0.88) 52%,
+    var(--color-background) 100%
+  );
+}
+
+:global(html.dark .resume-more-btn) {
+  border-color: transparent;
+  background: var(--color-secondary);
+  box-shadow: none;
+}
+
+:global(html.dark .resume-more-btn:hover) {
+  border-color: transparent;
+  background: rgba(244, 63, 94, 0.1);
+  box-shadow: 0 10px 15px -3px rgba(244, 63, 94, 0.12);
+}
+
 @media (max-width: 767px) {
   .resume-profile-card,
   .resume-skills-card,
@@ -597,8 +858,7 @@ onUnmounted(() => {
     padding-left: 0;
   }
 
-  .resume-timeline-dot,
-  .resume-timeline-dot-active {
+  .resume-timeline-dot {
     display: none;
   }
 
@@ -609,6 +869,21 @@ onUnmounted(() => {
   .resume-timeline-desc {
     gap: 0.35rem;
     line-height: 1.6;
+  }
+
+  .resume-grid.is-resume-locked {
+    max-height: 34rem;
+  }
+
+  .resume-locked-mask {
+    min-height: 14rem;
+    padding-inline: 1rem;
+    padding-bottom: 1.5rem;
+  }
+
+  .resume-more-btn {
+    width: 100%;
+    min-height: 44px;
   }
 }
 
@@ -703,23 +978,44 @@ onUnmounted(() => {
   margin-bottom: 0.5rem;
 }
 
-.resume-timeline-dot,
-.resume-timeline-dot-active {
+.resume-timeline-dot {
   position: absolute;
   top: 0.4rem;
   left: -0.34rem;
   width: 0.65rem;
   height: 0.65rem;
   border-radius: 999px;
+  background: var(--color-border);
   box-shadow: 0 0 0 4px var(--color-background);
+  transition: background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 
-.resume-timeline-dot {
-  background: var(--color-text);
-}
-
-.resume-timeline-dot-active {
+.resume-timeline-item:hover > .resume-timeline-dot {
+  animation: resume-dot-breath 1.15s ease-in-out infinite;
   background: var(--color-primary);
+}
+
+@keyframes resume-dot-breath {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 4px var(--color-background),
+      0 0 0 0 rgba(244, 63, 94, 0.22);
+  }
+
+  50% {
+    transform: scale(1.28);
+    box-shadow:
+      0 0 0 4px var(--color-background),
+      0 0 0 0.45rem rgba(244, 63, 94, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .resume-timeline-item:hover > .resume-timeline-dot {
+    animation: none;
+  }
 }
 
 .resume-timeline-header {
@@ -733,6 +1029,7 @@ onUnmounted(() => {
   color: var(--color-heading);
   font-size: 1.05rem;
   font-weight: 800;
+  overflow-wrap: anywhere;
 }
 
 .resume-timeline-date,
@@ -742,6 +1039,7 @@ onUnmounted(() => {
   border-radius: 999px;
   font-size: 0.875rem;
   font-weight: 700;
+  transition: border-color 180ms ease, background 180ms ease, color 180ms ease;
 }
 
 .resume-timeline-date {
@@ -755,10 +1053,18 @@ onUnmounted(() => {
   color: var(--color-primary);
 }
 
+.resume-timeline-item:hover .resume-timeline-date,
+.resume-timeline-item:hover .resume-timeline-date-active {
+  border-color: rgba(244, 63, 94, 0.2);
+  background: var(--color-secondary);
+  color: var(--color-primary);
+}
+
 .resume-timeline-company {
   margin-bottom: 1rem;
   color: var(--color-heading);
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .resume-timeline-desc {
@@ -767,12 +1073,16 @@ onUnmounted(() => {
   color: var(--color-text);
   font-size: 0.92rem;
   line-height: 1.75;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .resume-timeline-desc-inline {
   color: var(--color-text);
   font-size: 0.92rem;
   line-height: 1.75;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .interactive-card,
@@ -804,7 +1114,7 @@ onUnmounted(() => {
   }
 
   .resume-grid {
-    grid-template-columns: 4fr 8fr;
+    grid-template-columns: minmax(16rem, 0.85fr) minmax(0, 1.65fr);
   }
 }
 

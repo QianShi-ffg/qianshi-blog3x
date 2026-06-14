@@ -18,7 +18,10 @@ import WeatherIcon from '@/components/WeatherIcon.vue'
 import { getMomentById } from '@/api/diary'
 import { getLikeStatus, likeDiary } from '@/api/comment'
 import type { DiaryMoment } from '@/types/content'
+import { parseMediaList } from '@/utils/media'
+import { lockBodyScroll, unlockBodyScroll } from '@/utils/body-scroll-lock'
 import { MdPreview } from 'md-editor-v3'
+import VueEasyLightbox from 'vue-easy-lightbox'
 import 'md-editor-v3/lib/style.css'
 
 const route = useRoute()
@@ -33,6 +36,17 @@ const backButtonAnchor = ref<HTMLElement | null>(null)
 const showFloatingBack = ref(false)
 const previewId = `diary-preview-${momentId}`
 const diaryContent = computed(() => moment.value?.longContent || moment.value?.content || '')
+const diaryImages = computed(() => parseMediaList(moment.value?.media).slice(0, 9))
+const previewVisible = ref(false)
+const previewIndex = ref(0)
+const imageGridClass = computed(() => {
+  const count = diaryImages.value.length
+  if (count === 1) return 'dd-media-grid-single'
+  if (count <= 3) return 'dd-media-grid-row'
+  if (count === 4) return 'dd-media-grid-four'
+  if (count <= 6) return 'dd-media-grid-six'
+  return 'dd-media-grid-nine'
+})
 
 onMounted(async () => {
   isLoading.value = true
@@ -48,6 +62,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   backButtonObserver?.disconnect()
+  unlockBodyScroll()
 })
 
 const getTypeIcon = (type: string) => {
@@ -58,6 +73,17 @@ const getTypeIcon = (type: string) => {
 
 const goBack = () => {
   router.push('/diary')
+}
+
+const openImagePreview = (index: number) => {
+  previewIndex.value = index
+  lockBodyScroll()
+  previewVisible.value = true
+}
+
+const closeImagePreview = () => {
+  previewVisible.value = false
+  window.setTimeout(unlockBodyScroll, 300)
 }
 
 let backButtonObserver: IntersectionObserver | undefined
@@ -170,7 +196,7 @@ const syncCommentCount = (count: number) => {
         <header class="dd-meta-header">
           <div class="dd-meta-item">
             <Calendar class="w-4 h-4 text-rose-500" />
-            <span class="font-medium dd-meta-text">{{ moment.date }}</span>
+            <span class="font-medium dd-meta-text">{{ moment.date }}1111111111</span>
           </div>
           <div class="flex items-center gap-4 dd-meta-text">
             <div class="dd-meta-item">
@@ -185,8 +211,19 @@ const syncCommentCount = (count: number) => {
         </header>
   
         <!-- Media Section -->
-        <div v-if="moment.type === 'image' && moment.media" class="dd-media-section interactive-media">
-          <img :src="moment.media" alt="Diary cover" class="dd-media-img" />
+        <div v-if="moment.type === 'image' && diaryImages.length" class="dd-media-section">
+          <div class="dd-media-grid" :class="imageGridClass">
+            <button
+              v-for="(image, index) in diaryImages"
+              :key="`${image}-${index}`"
+              type="button"
+              class="dd-media-image-button interactive-media"
+              :aria-label="`预览日记图片 ${index + 1}`"
+              @click="openImagePreview(index)"
+            >
+              <img :src="image" alt="Diary cover" class="dd-media-img" />
+            </button>
+          </div>
         </div>
   
         <div v-else-if="moment.type === 'video' && moment.media" class="dd-media-section">
@@ -236,6 +273,14 @@ const syncCommentCount = (count: number) => {
     <div v-else-if="`${null}`" class="dd-page-container dd-empty-state" aria-live="polite">
       <p class="dd-empty-title">暂无日记详情</p>
     </div>
+
+    <VueEasyLightbox
+      :visible="previewVisible"
+      :imgs="diaryImages"
+      :index="previewIndex"
+      :scroll-disabled="false"
+      @hide="closeImagePreview"
+    />
   </div>
 </template>
 
@@ -468,7 +513,8 @@ const syncCommentCount = (count: number) => {
 }
 
 .dd-article-card {
-  @apply rounded-[1.5rem] overflow-hidden relative;
+  @apply overflow-hidden relative;
+  border-radius: 1rem;
   background-color: var(--color-card);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
@@ -539,11 +585,68 @@ const syncCommentCount = (count: number) => {
   border-bottom: 1px solid rgba(226, 232, 240, 0.62);
 }
 
+.dd-media-grid {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.5rem;
+}
+
+.dd-media-grid-single {
+  display: block;
+  padding: 0;
+}
+
+.dd-media-grid-row {
+  grid-template-columns: repeat(var(--diary-image-count, 3), minmax(0, 1fr));
+}
+
+.dd-media-grid-row:has(.dd-media-image-button:nth-child(2):last-child) {
+  --diary-image-count: 2;
+}
+
+.dd-media-grid-row:has(.dd-media-image-button:nth-child(3):last-child) {
+  --diary-image-count: 3;
+}
+
+.dd-media-grid-four {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dd-media-grid-six,
+.dd-media-grid-nine {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.dd-media-image-button {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0.85rem;
+  background: transparent;
+  padding: 0;
+  cursor: zoom-in;
+}
+
+.dd-media-grid-single .dd-media-image-button {
+  border-radius: 0;
+}
+
+.dd-media-grid:not(.dd-media-grid-single) .dd-media-image-button {
+  aspect-ratio: 1 / 1;
+}
+
 .dd-media-img {
-  @apply w-full h-auto object-cover object-center;
+  @apply w-full object-cover object-center;
+  display: block;
+  height: 100%;
   max-height: min(52vh, 560px);
-  transition: transform 0.7s ease;
+  transition: transform 0.5s ease;
   will-change: transform;
+}
+
+.dd-media-grid-single .dd-media-img {
+  height: auto;
 }
 
 .dd-media-video {
@@ -552,11 +655,11 @@ const syncCommentCount = (count: number) => {
   height: min(52vh, 560px);
 }
 
-.dd-article-card:hover .dd-media-img {
-  transform: none;
-}
+// .dd-article-card .dd-media-img:hover {
+//   transform: none;
+// }
 
-.dd-media-section:hover .dd-media-img {
+.dd-media-section .dd-media-img:hover {
   transform: scale(1.045);
 }
 

@@ -180,9 +180,9 @@ onMounted(() => {
 
   const imageWrapper = homeRoot.value.querySelector<HTMLElement>('.hero-image-wrapper')
   if (imageWrapper) {
-    const rotateTo = gsap.quickTo(imageWrapper, 'rotation', { duration: 0.45, ease: 'power3.out' })
-    const scaleXTo = gsap.quickTo(imageWrapper, 'scaleX', { duration: 0.45, ease: 'power3.out' })
-    const scaleYTo = gsap.quickTo(imageWrapper, 'scaleY', { duration: 0.45, ease: 'power3.out' })
+    const rotateTo = gsap.quickTo(imageWrapper, 'rotation', { duration: 0.45, ease: 'none' })
+    const scaleXTo = gsap.quickTo(imageWrapper, 'scaleX', { duration: 0.45, ease: 'none' })
+    const scaleYTo = gsap.quickTo(imageWrapper, 'scaleY', { duration: 0.45, ease: 'none' })
     const enter = () => {
       rotateTo(0)
       scaleXTo(1.02)
@@ -204,9 +204,9 @@ onMounted(() => {
 
   homeRoot.value.querySelectorAll<HTMLElement>('.post-card').forEach((card) => {
     const enter = () =>
-      gsap.to(card, { y: -8, scaleX: 1.01, scaleY: 1.01, duration: 0.28, ease: 'power2.out' })
+      gsap.to(card, { y: -8, scaleX: 1.01, scaleY: 1.01, duration: 0.28, ease: 'none' })
     const leave = () =>
-      gsap.to(card, { y: 0, scaleX: 1, scaleY: 1, duration: 0.28, ease: 'power2.out' })
+      gsap.to(card, { y: 0, scaleX: 1, scaleY: 1, duration: 0.28, ease: 'none' })
 
     card.addEventListener('mouseenter', enter)
     card.addEventListener('mouseleave', leave)
@@ -293,11 +293,20 @@ onUnmounted(() => {
         <!-- Image / Visual Content -->
         <div class="hero-visual">
           <div class="hero-image-wrapper">
-            <img
+            <!-- <img
               src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20minimalist%20and%20fresh%20workspace%2C%20bright%20lighting%2C%20a%20plant%2C%20soft%20colors&image_size=square"
               alt="Workspace"
               class="hero-image"
-            />
+            /> -->
+            <video
+              autoplay
+              loop
+              muted
+              playsinline
+              class="hero-image"
+            >
+            <source src="/11.mp4" type="video/mp4" />
+          </video>
             <!-- Floating badge 1 -->
             <div class="floating-badge-shell badge-1">
               <div class="floating-badge">
@@ -600,7 +609,7 @@ onUnmounted(() => {
   margin-right: auto;
   transform: rotate(3deg);
   background-color: var(--color-card);
-  border-radius: 1.5rem;
+  border-radius: 1rem;
   will-change: transform;
   box-shadow:
     0 0 0 #000000,
@@ -759,7 +768,7 @@ onUnmounted(() => {
 
 .recent-empty {
   padding: 3rem 1.5rem;
-  border-radius: 1.5rem;
+  border-radius: 1rem;
   background-color: var(--color-card);
   color: var(--color-text);
   text-align: center;
@@ -798,7 +807,7 @@ onUnmounted(() => {
   text-decoration: none;
   display: block;
   background-color: var(--color-card); /* bg-white */
-  border-radius: 1.5rem; /* rounded-3xl */
+  border-radius: 1rem;
   /* box-shadow: 0 4px 6px -1px rgba(158, 158, 158, 0.05), 0 2px 4px -1px rgba(110, 110, 110, 0.05);  */
   box-shadow:
     0 -1px 0 0 rgb(0, 0, 0, 0.02),

@@ -5,6 +5,7 @@ import { onMounted, onUnmounted, ref } from 'vue';
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { registerRouteTransitionCleanup } from '@/utils/route-transition-cleanup'
+import { lockBodyScroll, unlockBodyScroll } from '@/utils/body-scroll-lock'
 
 
 const links = ref<any[]>([]);
@@ -23,28 +24,6 @@ const applyForm = ref({
 const linksRoot = ref<HTMLElement | null>(null)
 let headerParallaxCtx: gsap.Context | undefined
 let unregisterTransitionCleanup: (() => void) | undefined
-let previousBodyOverflow = ''
-let previousBodyPaddingRight = ''
-
-const lockBodyScroll = () => {
-  const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
-
-  previousBodyOverflow = document.body.style.overflow
-  previousBodyPaddingRight = document.body.style.paddingRight
-  document.body.style.overflow = 'hidden'
-  if (scrollbarWidth > 0) {
-    document.body.style.paddingRight = `${scrollbarWidth}px`
-  }
-  document.body.style.setProperty('--lk-scrollbar-compensation', `${scrollbarWidth}px`)
-  document.body.classList.add('lk-scroll-locked')
-}
-
-const unlockBodyScroll = () => {
-  document.body.style.overflow = previousBodyOverflow
-  document.body.style.paddingRight = previousBodyPaddingRight
-  document.body.style.removeProperty('--lk-scrollbar-compensation')
-  document.body.classList.remove('lk-scroll-locked')
-}
 
 const prefersReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 
@@ -210,7 +189,7 @@ onUnmounted(() => {
         :visible-once="{ opacity: 1, y: 0, transition: { duration: 500, delay: index * 100 } }"
         class="lk-card interactive-card group"
       >
-        <!-- 网站缩略�?(Hover显示) -->
+        <!-- 网站缩略图(Hover显示) -->
         <div
           v-if="link.screenShot"
           class="lk-card-preview interactive-media"
@@ -225,8 +204,8 @@ onUnmounted(() => {
 
         <div class="lk-card-inner relative z-10">
           <div class="lk-card-content">
-            <div class="lk-icon-wrap">
-              <!-- <component :is="link.icon" class="lk-icon" :class="link.color" /> -->
+            <div class="lk-icon-wrap" style="overflow: hidden;">
+              <img :src="link.icon" class="lk-icon" :class="link.color" style="width: 100%; height: 100%; object-fit: cover;" />
             </div>
             <div class="lk-info-wrap">
               <h2 class="lk-link-name">
@@ -371,6 +350,18 @@ onUnmounted(() => {
   cursor: pointer;
 }
 
+:global(html.dark .lk-btn-apply) {
+  background-color: var(--color-secondary);
+  color: var(--color-primary);
+  border: 0;
+  box-shadow: none;
+}
+
+:global(html.dark .lk-btn-apply:hover) {
+  background-color: rgba(244, 63, 94, 0.1);
+  box-shadow: 0 10px 15px -3px rgba(244, 63, 94, 0.12);
+}
+
 .lk-btn-apply-icon {
   @apply w-4 h-4;
 }
@@ -399,7 +390,8 @@ onUnmounted(() => {
 }
 
 .lk-card {
-  @apply rounded-3xl p-6 h-full flex flex-col justify-center relative overflow-hidden;
+  @apply p-6 h-full flex flex-col justify-center relative overflow-hidden;
+  border-radius: 1rem;
   background-color: var(--color-card);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -432,7 +424,8 @@ onUnmounted(() => {
 }
 
 .lk-card-preview {
-  @apply absolute inset-0 z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none rounded-3xl overflow-hidden;
+  @apply absolute inset-0 z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none overflow-hidden;
+  border-radius: inherit;
 }
 
 .lk-card-preview-img {
@@ -555,7 +548,8 @@ onUnmounted(() => {
 }
 
 .lk-apply-section {
-  @apply rounded-3xl transition-all duration-300 p-8 md:p-12;
+  @apply transition-all duration-300 p-8 md:p-12;
+  border-radius: 1rem;
   width: 100%;
   background-color: var(--color-card);
   backdrop-filter: blur(12px);
@@ -854,10 +848,6 @@ onUnmounted(() => {
 .lk-dialog-fade-leave-from .lk-apply-dialog {
   opacity: 1;
   transform: translateY(0) scale(1);
-}
-
-:global(body.lk-scroll-locked .navbar-header) {
-  right: var(--lk-scrollbar-compensation, 0px);
 }
 
 :global(html.dark .lk-apply-dialog) {

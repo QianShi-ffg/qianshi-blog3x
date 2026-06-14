@@ -336,12 +336,14 @@ const scrollToHeading = (headingId: string) => {
         class="post-article-container"
       >
         <div class="post-reading-layout">
-          <MdPreview
-            :editorId="id"
-            :modelValue="article.articleContent"
-            :theme="colorMode === 'dark' ? 'dark' : 'light'"
-            :sanitize="markdownSanitize"
-          />
+          <section class="post-content-card">
+            <MdPreview
+              :editorId="id"
+              :modelValue="article.articleContent"
+              :theme="colorMode === 'dark' ? 'dark' : 'light'"
+              :sanitize="markdownSanitize"
+            />
+          </section>
 
           <aside v-if="tocItems.length" class="post-toc" aria-label="文章目录">
             <p class="post-toc-title">目录</p>
@@ -499,7 +501,7 @@ const scrollToHeading = (headingId: string) => {
   width: 100%;
   min-height: 28rem;
   padding: 2rem;
-  border-radius: 1.5rem;
+  border-radius: 1rem;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.64));
   border: 1px solid rgba(255, 255, 255, 0.68);
   box-shadow: 0 24px 70px rgba(15, 23, 42, 0.12);
@@ -511,7 +513,7 @@ const scrollToHeading = (headingId: string) => {
   width: 100%;
   min-height: 18rem;
   padding: 3rem 2rem;
-  border-radius: 1.5rem;
+  border-radius: 1rem;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.64));
   border: 1px solid rgba(255, 255, 255, 0.68);
   box-shadow: 0 24px 70px rgba(15, 23, 42, 0.12);
@@ -575,7 +577,7 @@ const scrollToHeading = (headingId: string) => {
 @media (min-width: 768px) {
   .post-loading-card {
     padding: 4rem;
-    border-radius: 2.5rem;
+    border-radius: 1rem;
   }
 }
 
@@ -696,7 +698,7 @@ const scrollToHeading = (headingId: string) => {
 }
 
 .post-back-btn-wrap {
-  @apply absolute top-24 md:top-32 left-4 md:left-8 z-10;
+  @apply absolute top-24 md:top-32 left-4 md:left-20 z-10;
 }
 
 .post-back-btn {
@@ -827,7 +829,12 @@ const scrollToHeading = (headingId: string) => {
 }
 
 .post-article-container {
-  @apply rounded-3xl md:rounded-[2.5rem] p-6 sm:p-10 md:p-16 w-full relative z-10;
+  @apply w-full relative z-10;
+}
+
+.post-content-card {
+  padding: 1.5rem;
+  border-radius: 1rem;
   overflow: hidden;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0.70));
   border: 1px solid rgba(255, 255, 255, 0.68);
@@ -835,7 +842,20 @@ const scrollToHeading = (headingId: string) => {
   backdrop-filter: blur(22px) saturate(1.12);
   -webkit-backdrop-filter: blur(22px) saturate(1.12);
 }
-:global(html.dark .post-article-container){
+
+@media (min-width: 640px) {
+  .post-content-card {
+    padding: 2.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .post-content-card {
+    padding: 4rem;
+  }
+}
+
+:global(html.dark .post-content-card){
   background: linear-gradient(180deg, rgba(30, 41, 59, 0.62), rgba(15, 23, 42, 0.7));
   border-color: rgba(255, 255, 255, 0.08);
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
@@ -845,8 +865,8 @@ const scrollToHeading = (headingId: string) => {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 14rem;
-  gap: 3rem;
+  grid-template-columns: minmax(0, 1fr) 17rem;
+  gap: 1.2rem;
   align-items: start;
 }
 
@@ -856,8 +876,13 @@ const scrollToHeading = (headingId: string) => {
   max-height: calc(100vh - 8rem);
   overflow-y: auto;
   overflow-x: hidden;
-  padding-left: 1.25rem;
-  border-left: 1px solid var(--color-border);
+  padding: 1.25rem;
+  border-radius: 1rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.58));
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  box-shadow: 0 18px 46px rgba(15, 23, 42, 0.1);
+  backdrop-filter: blur(18px) saturate(1.08);
+  -webkit-backdrop-filter: blur(18px) saturate(1.08);
   overscroll-behavior: contain;
 }
 
@@ -913,7 +938,9 @@ const scrollToHeading = (headingId: string) => {
 }
 
 :global(html.dark .post-toc){
-  border-left-color: rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.62), rgba(15, 23, 42, 0.7));
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.36);
 }
 
 .post-nav-bottom {
